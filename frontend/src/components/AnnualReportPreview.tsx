@@ -787,17 +787,19 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7"
                         value={(() => {
                           const amount = editedAmounts[item.variable_name] ?? item.amount ?? 0;
-                          // For editing, always show positive value (user edits the magnitude)
+                          // For pension tax, show actual value; for others, show positive value
+                          const displayAmount = item.variable_name === 'INK_sarskild_loneskatt' ? amount : Math.abs(amount);
                           return new Intl.NumberFormat('sv-SE', {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0
-                          }).format(Math.abs(amount));
+                          }).format(displayAmount);
                         })()}
                         onChange={(e) => {
                           // Parse the formatted value (remove spaces and handle Swedish number format)
                           const cleanValue = e.target.value.replace(/\s/g, '').replace(/,/g, '.');
-                          const rawValue = Math.abs(parseFloat(cleanValue)) || 0;
-                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? rawValue : rawValue;
+                          const parsedValue = parseFloat(cleanValue) || 0;
+                          // For pension tax, allow negative values; for others, enforce positive
+                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? parsedValue : Math.abs(parsedValue);
                           setEditedAmounts(prev => ({
                             ...prev,
                             [item.variable_name]: value
@@ -807,8 +809,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                           // Parse the formatted value (remove spaces and handle Swedish number format)
                           const cleanValue = e.target.value.replace(/\s/g, '').replace(/,/g, '.');
                           const rawValue = parseFloat(cleanValue) || 0;
-                          // Force positive values for all fields (pension tax stores as positive but displays the current value)
-                          const finalValue = Math.abs(rawValue);
+                          // For pension tax, allow negative values; for others, enforce positive
+                          const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? rawValue : Math.abs(rawValue);
                           const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                           setEditedAmounts(updatedAmounts);
                           recalculateValues(updatedAmounts);
@@ -818,8 +820,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                             // Parse the formatted value (remove spaces and handle Swedish number format)
                             const cleanValue = e.currentTarget.value.replace(/\s/g, '').replace(/,/g, '.');
                             const rawValue = parseFloat(cleanValue) || 0;
-                            // Force positive values for all fields (pension tax stores as positive but displays the current value)
-                            const finalValue = Math.abs(rawValue);
+                            // For pension tax, allow negative values; for others, enforce positive
+                            const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? rawValue : Math.abs(rawValue);
                             const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                             setEditedAmounts(updatedAmounts);
                             recalculateValues(updatedAmounts);
