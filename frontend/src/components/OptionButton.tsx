@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface OptionButtonProps {
   children: React.ReactNode;
@@ -16,13 +17,29 @@ export function OptionButton({
   className,
   disabled = false 
 }: OptionButtonProps) {
+  const [isPressed, setIsPressed] = useState(false);
+
+  const handleClick = () => {
+    setIsPressed(true);
+    onClick();
+    // Reset pressed state after a short delay to show feedback
+    setTimeout(() => setIsPressed(false), 150);
+  };
+
   return (
     <Button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       variant={variant === "success" ? "default" : variant}
       className={cn(
-        "w-full justify-start text-left py-3 px-4 h-auto font-normal text-sm border-border hover:bg-muted/50 transition-colors",
+        "w-full justify-start text-left py-3 px-4 h-auto font-normal font-sans text-sm border-border transition-all duration-200",
+        // Delicate shadow
+        "shadow-sm hover:shadow-md",
+        // Normal state
+        "hover:bg-muted/50",
+        // Pressed state with blue background and white text
+        isPressed && "bg-blue-600 text-white border-blue-600",
+        // Success variant
         variant === "success" && "bg-primary hover:bg-primary/90 text-primary-foreground border-primary",
         className
       )}

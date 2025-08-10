@@ -202,13 +202,20 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
     try {
       console.log('Recalculating with amounts:', updatedAmounts);
       
+      // Preserve existing justering_sarskild_loneskatt value if it exists
+      const preservedAmounts = { ...updatedAmounts };
+      if (companyData.justeringSarskildLoneskatt !== null && companyData.justeringSarskildLoneskatt !== undefined) {
+        preservedAmounts.justering_sarskild_loneskatt = companyData.justeringSarskildLoneskatt;
+        console.log('Preserving existing justering_sarskild_loneskatt:', companyData.justeringSarskildLoneskatt);
+      }
+      
       // Call backend API to recalculate INK2 values using API service
       const result = await apiService.recalculateInk2({
         current_accounts: seFileData?.current_accounts || {},
         fiscal_year: seFileData?.company_info?.fiscal_year,
         rr_data: seFileData?.rr_data || [],
         br_data: seFileData?.br_data || [],
-        manual_amounts: updatedAmounts
+        manual_amounts: preservedAmounts
       });
       
       if (result.success) {
@@ -662,7 +669,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       </PopoverTrigger>
                       <PopoverContent className="w-96 p-4 bg-white border shadow-lg">
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm">{item.row_title}</h4>
+                          <h4 className="font-medium text-sm">Detaljer för {item.row_title}</h4>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>

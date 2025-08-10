@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { OptionButton } from "./OptionButton";
@@ -77,6 +77,10 @@ export function AnnualReportChat() {
       emoji: "📁"
     }
   ]);
+  
+  // Scroll ref for auto-scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const [companyData, setCompanyData] = useState<CompanyData>({
     result: null,
@@ -116,6 +120,32 @@ export function AnnualReportChat() {
       }, 100);
     }
   }, [currentStep]);
+
+  // Auto-scroll chat to bottom when messages change or when showing 3+ option buttons
+  const scrollToBottom = () => {
+    if (messagesEndRef.current && chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      const messagesEnd = messagesEndRef.current;
+      
+      // Calculate if we need extra space for option buttons
+      const optionButtons = container.querySelectorAll('[role="button"]');
+      const hasMultipleOptions = optionButtons.length >= 3;
+      
+      // Scroll with extra offset if multiple options are shown
+      const scrollOffset = hasMultipleOptions ? 200 : 50;
+      
+      container.scrollTo({
+        top: messagesEnd.offsetTop - scrollOffset,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, [messages, currentStep]);
 
   // Debug logging - after all state declarations
 
@@ -707,7 +737,7 @@ export function AnnualReportChat() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-auto">
+            <div ref={chatContainerRef} className="flex-1 overflow-auto">
               <div className="px-6 py-6 space-y-1">
                 {messages.map((message, index) => (
                   <ChatMessage
@@ -717,6 +747,8 @@ export function AnnualReportChat() {
                     emoji={message.emoji}
                   />
                 ))}
+                {/* Invisible div to mark the end of messages for scrolling */}
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
