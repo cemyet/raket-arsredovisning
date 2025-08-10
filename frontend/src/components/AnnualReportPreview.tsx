@@ -565,7 +565,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
           <div className="space-y-4 bg-gradient-to-r from-yellow-50 to-amber-50 p-4 rounded-lg border border-yellow-200" data-section="tax-calculation">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-foreground border-b pb-2">Skatteberäkning</h2>
-              <p className="text-xs leading-relaxed font-normal font-sans text-foreground mt-3 ml-4">
+              <p className="text-sm leading-relaxed font-normal font-sans text-foreground mt-3">
                 Här nedan visas endast de vanligaste skattemässiga justeringarna. Belopp har automatiskt hämtats från bokföringen, men det går bra att justera dem manuellt här. Fullständiga justeringar är möjliga att göra i INK2S-blanketten innan inlämning.
               </p>
             </div>
