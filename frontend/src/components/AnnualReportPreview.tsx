@@ -722,8 +722,9 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                     </Popover>
                   )}
                   
-                  {/* Custom SHOW button for INK_sarskild_loneskatt */}
-                  {item.variable_name === 'INK_sarskild_loneskatt' && (
+                  {/* Custom SHOW button for INK_sarskild_loneskatt - only show if there's a discrepancy */}
+                  {item.variable_name === 'INK_sarskild_loneskatt' && 
+                   companyData.sarskildLoneskattPensionCalculated > companyData.sarskildLoneskattPension && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="ml-2 h-5 px-2 text-xs">
