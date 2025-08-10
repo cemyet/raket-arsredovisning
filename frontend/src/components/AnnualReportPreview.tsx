@@ -742,26 +742,10 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                 {/* Sum row with special calculation - merged columns */}
                                 <tr className="border-t border-gray-300">
                                   <td className="py-2" colSpan={2}>
-                                    <div className="flex items-center gap-2">
-                                      <span>Särskild löneskatt (24,26%)</span>
-                                      {/* Add explainer i-button */}
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <button className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center hover:bg-blue-200">
-                                              i
-                                            </button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-xs font-normal">Särskild löneskatt beräknas på pensionspremier enligt gällande skattesats 24,26%</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
+                                    Särskild löneskatt (24,26%)
                                   </td>
                                   <td className="text-right py-2">
                                     {(() => {
-                                      const pensionPremier = companyData.pensionPremier || 0;
                                       const rate = companyData.sarskildLoneskattPensionCalculated || 0;
                                       return new Intl.NumberFormat('sv-SE', {
                                         minimumFractionDigits: 2,
@@ -828,6 +812,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                           // Show integers (no decimals) for these specific variables
                           const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
                           const shouldShowInteger = integerVariables.includes(item.variable_name);
+                          
+
                           
                           return new Intl.NumberFormat('sv-SE', {
                             minimumFractionDigits: shouldShowInteger ? 0 : 2,

@@ -866,11 +866,15 @@ class DatabaseParser:
             # pension_premier * sarskild_loneskatt (global variable)
             pension_premier = abs(float(accounts.get('7410', 0.0)))
             rate = float(self.global_variables.get('sarskild_loneskatt', 0.0))
-            return pension_premier * rate
+            result = pension_premier * rate
+            # Round to 2 decimals to avoid floating point precision issues
+            return round(result, 2)
         if variable_name == 'INK_sarskild_loneskatt':
             # Hardcoded formula: -justering_sarskild_loneskatt
             justering = float(ink_values.get('justering_sarskild_loneskatt', 0.0)) if ink_values else 0.0
             result = -justering
+            # Round to 2 decimals to ensure clean display
+            result = round(result, 2)
             print(f"INK_sarskild_loneskatt: justering={justering}, result={result}")
             return result
         
