@@ -181,7 +181,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
       const currentData = recalculatedData.length > 0 ? recalculatedData : ink2Data;
       const amounts: Record<string, number> = {};
       currentData.forEach((item: any) => {
-        if (!item.is_calculated && item.show_amount) {
+        if ((!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) {
           amounts[item.variable_name] = item.amount || 0;
         }
       });
@@ -703,17 +703,80 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       </PopoverContent>
                     </Popover>
                   )}
+                  
+                  {/* Custom SHOW button for INK_sarskild_loneskatt */}
+                  {item.variable_name === 'INK_sarskild_loneskatt' && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-2 h-5 px-2 text-xs">
+                          SHOW
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-96 p-4 bg-white border shadow-lg">
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm">Detaljer för {item.row_title}</h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="text-left py-2">Konto</th>
+                                  <th className="text-left py-2"></th>
+                                  <th className="text-right py-2">{seFileData?.company_info?.fiscal_year || 'Belopp'}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {/* Account 7410 - Pension premier */}
+                                <tr className="border-b">
+                                  <td className="py-2">7410</td>
+                                  <td className="py-2">Pensionspremier</td>
+                                  <td className="text-right py-2">
+                                    {(() => {
+                                      const pensionPremier = companyData.pensionPremier || 0;
+                                      return new Intl.NumberFormat('sv-SE', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      }).format(pensionPremier);
+                                    })()}
+                                  </td>
+                                </tr>
+                                {/* Sum row with special calculation */}
+                                <tr className="border-t border-gray-300">
+                                  <td className="py-2">Särskild löneskatt (24,26%)</td>
+                                  <td className="py-2"></td>
+                                  <td className="text-right py-2">
+                                    {(() => {
+                                      const pensionPremier = companyData.pensionPremier || 0;
+                                      const rate = companyData.sarskildLoneskattPensionCalculated || 0;
+                                      return new Intl.NumberFormat('sv-SE', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      }).format(rate);
+                                    })()}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
                  <span className="text-right font-medium">
                   {!item.show_amount ? '' : 
-                    (editableAmounts && !item.is_calculated && item.show_amount) ? (
+                    (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       <input
                         type="number"
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={editedAmounts[item.variable_name] ?? item.amount ?? 0}
+                        value={
+                          item.variable_name === 'INK_sarskild_loneskatt' 
+                            ? Math.abs(editedAmounts[item.variable_name] ?? item.amount ?? 0)
+                            : (editedAmounts[item.variable_name] ?? item.amount ?? 0)
+                        }
                         onChange={(e) => {
                           // Only allow positive values for manual editing
-                          const value = Math.abs(parseFloat(e.target.value)) || 0;
+                          const rawValue = Math.abs(parseFloat(e.target.value)) || 0;
+                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? -rawValue : rawValue;
                           setEditedAmounts(prev => ({
                             ...prev,
                             [item.variable_name]: value
@@ -723,7 +786,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                           const rawValue = parseFloat(e.target.value) || 0;
                           // Force positive values only
                           const correctedValue = Math.abs(rawValue);
-                          const updatedAmounts = { ...editedAmounts, [item.variable_name]: correctedValue };
+                          const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                          const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                           setEditedAmounts(updatedAmounts);
                           recalculateValues(updatedAmounts);
                         }}
@@ -732,7 +796,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                             const rawValue = parseFloat(e.currentTarget.value) || 0;
                             // Force positive values only
                             const correctedValue = Math.abs(rawValue);
-                            const updatedAmounts = { ...editedAmounts, [item.variable_name]: correctedValue };
+                            const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                            const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                             setEditedAmounts(updatedAmounts);
                             recalculateValues(updatedAmounts);
                             e.currentTarget.blur(); // Remove focus
