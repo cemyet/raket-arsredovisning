@@ -686,8 +686,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                     <td className="py-2">{detail.account_text}</td>
                                     <td className="text-right py-2">
                                       {new Intl.NumberFormat('sv-SE', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
                                       }).format(detail.balance)} kr
                                     </td>
                                   </tr>
@@ -698,8 +698,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                   <td className="py-2"></td>
                                   <td className="text-right py-2">
                                     {new Intl.NumberFormat('sv-SE', {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 0
                                     }).format(item.account_details.reduce((sum: number, detail: any) => sum + detail.balance, 0))} kr
                                   </td>
                                 </tr>
@@ -740,8 +740,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                     {(() => {
                                       const pensionPremier = companyData.pensionPremier || 0;
                                       const formatted = new Intl.NumberFormat('sv-SE', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
                                       }).format(pensionPremier);
                                       return `${formatted} kr`;
                                     })()}
@@ -756,8 +756,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                     {(() => {
                                       const rate = companyData.sarskildLoneskattPensionCalculated || 0;
                                       const formatted = new Intl.NumberFormat('sv-SE', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
                                       }).format(rate);
                                       return `${formatted} kr`;
                                     })()}
@@ -818,13 +818,10 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                     ) : (
                       (item.amount !== null && item.amount !== undefined) ? 
                         (item.amount === 0 || item.amount === -0 ? '0 kr' : (() => {
-                          // Show integers (no decimals) for these specific variables
-                          const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
-                          const shouldShowInteger = integerVariables.includes(item.variable_name);
-                          
+                          // All tax module values show as integers (no decimals)
                           const formattedAmount = new Intl.NumberFormat('sv-SE', {
-                            minimumFractionDigits: shouldShowInteger ? 0 : 2,
-                            maximumFractionDigits: shouldShowInteger ? 0 : 2
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
                           }).format(item.amount);
                           
                           return `${formattedAmount} kr`;
