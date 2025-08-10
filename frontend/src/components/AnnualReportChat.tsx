@@ -304,22 +304,25 @@ export function AnnualReportChat() {
     setShowInput(false);
     setInputValue("");
     
-    // Show confirmation message immediately and set step
+    // Show confirmation message immediately and set step - NO RECALCULATION YET
     setTimeout(() => {
       console.log('🔥 Setting step to 0.37 and showing confirmation message');
       addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
       setCurrentStep(0.37); // New step for "Gå vidare" option
-      
-      // Trigger recalculation in background after UI is updated
-      setTimeout(() => {
-        triggerUnusedTaxLossRecalculation(positiveAmount);
-      }, 500);
     }, 500);
   };
 
-  const handleUnusedTaxLossContinue = () => {
+  const handleUnusedTaxLossContinue = async () => {
     console.log('🔥 handleUnusedTaxLossContinue called');
     addMessage("Gå vidare", false);
+    
+    // Trigger recalculation with the stored amount
+    const amount = companyData.ink41aAdjusted || 0;
+    if (amount > 0) {
+      console.log('🔥 Triggering recalculation with amount:', amount);
+      await triggerUnusedTaxLossRecalculation(amount);
+    }
+    
     setTimeout(() => {
       console.log('🔥 Calling askFinalTaxQuestion from handleUnusedTaxLossContinue');
       // Go directly to final tax question - pension check already happened before unused tax loss
