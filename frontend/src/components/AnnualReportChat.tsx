@@ -296,24 +296,32 @@ export function AnnualReportChat() {
     const amount = parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0;
     const positiveAmount = Math.abs(amount); // Ensure positive value
     
+    console.log('🔥 handleUnusedTaxLossSubmit called with amount:', positiveAmount);
+    
     setCompanyData(prev => ({ ...prev, ink41aAdjusted: positiveAmount }));
     addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
     
-    // Trigger recalculation with the new unused tax loss amount
-    await triggerUnusedTaxLossRecalculation(positiveAmount);
-    
-    setTimeout(() => {
-      addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
-      setCurrentStep(0.37); // New step for "Gå vidare" option
-    }, 1000);
-    
     setShowInput(false);
     setInputValue("");
+    
+    // Show confirmation message immediately and set step
+    setTimeout(() => {
+      console.log('🔥 Setting step to 0.37 and showing confirmation message');
+      addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
+      setCurrentStep(0.37); // New step for "Gå vidare" option
+      
+      // Trigger recalculation in background after UI is updated
+      setTimeout(() => {
+        triggerUnusedTaxLossRecalculation(positiveAmount);
+      }, 500);
+    }, 500);
   };
 
   const handleUnusedTaxLossContinue = () => {
+    console.log('🔥 handleUnusedTaxLossContinue called');
     addMessage("Gå vidare", false);
     setTimeout(() => {
+      console.log('🔥 Calling askFinalTaxQuestion from handleUnusedTaxLossContinue');
       // Go directly to final tax question - pension check already happened before unused tax loss
       askFinalTaxQuestion();
     }, 1000);
