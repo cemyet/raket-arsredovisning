@@ -202,9 +202,17 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
     try {
       console.log('Recalculating with amounts:', updatedAmounts);
       
-      // Preserve existing justering_sarskild_loneskatt value if it exists
+      // Handle pension tax field mapping and preserve existing values
       const preservedAmounts = { ...updatedAmounts };
-      if (companyData.justeringSarskildLoneskatt !== null && companyData.justeringSarskildLoneskatt !== undefined) {
+      
+      // If user edited INK_sarskild_loneskatt, convert it to justering_sarskild_loneskatt for backend
+      if ('INK_sarskild_loneskatt' in updatedAmounts) {
+        // Frontend stores positive value, backend expects justering_sarskild_loneskatt (positive = increase, negative = decrease)
+        preservedAmounts.justering_sarskild_loneskatt = updatedAmounts.INK_sarskild_loneskatt;
+        delete preservedAmounts.INK_sarskild_loneskatt; // Remove the INK version
+        console.log('Converting INK_sarskild_loneskatt to justering_sarskild_loneskatt:', preservedAmounts.justering_sarskild_loneskatt);
+      } else if (companyData.justeringSarskildLoneskatt !== null && companyData.justeringSarskildLoneskatt !== undefined) {
+        // Preserve existing value if not being edited
         preservedAmounts.justering_sarskild_loneskatt = companyData.justeringSarskildLoneskatt;
         console.log('Preserving existing justering_sarskild_loneskatt:', companyData.justeringSarskildLoneskatt);
       }
@@ -777,15 +785,11 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       <input
                         type="number"
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={
-                          item.variable_name === 'INK_sarskild_loneskatt' 
-                            ? Math.abs(editedAmounts[item.variable_name] ?? item.amount ?? 0)
-                            : (editedAmounts[item.variable_name] ?? item.amount ?? 0)
-                        }
+                        value={editedAmounts[item.variable_name] ?? item.amount ?? 0}
                         onChange={(e) => {
-                          // Only allow positive values for manual editing
+                          // Only allow positive values for all fields except pension tax adjustment
                           const rawValue = Math.abs(parseFloat(e.target.value)) || 0;
-                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? -rawValue : rawValue;
+                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? rawValue : rawValue;
                           setEditedAmounts(prev => ({
                             ...prev,
                             [item.variable_name]: value
@@ -793,9 +797,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                         }}
                         onBlur={(e) => {
                           const rawValue = parseFloat(e.target.value) || 0;
-                          // Force positive values only
-                          const correctedValue = Math.abs(rawValue);
-                          const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                          // Force positive values for all fields (pension tax stores as positive but displays the current value)
+                          const finalValue = Math.abs(rawValue);
                           const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                           setEditedAmounts(updatedAmounts);
                           recalculateValues(updatedAmounts);
@@ -803,9 +806,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             const rawValue = parseFloat(e.currentTarget.value) || 0;
-                            // Force positive values only
-                            const correctedValue = Math.abs(rawValue);
-                            const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                            // Force positive values for all fields (pension tax stores as positive but displays the current value)
+                            const finalValue = Math.abs(rawValue);
                             const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
                             setEditedAmounts(updatedAmounts);
                             recalculateValues(updatedAmounts);
