@@ -728,7 +728,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                 {/* Account 7410 - Pension premier */}
                                 <tr className="border-b">
                                   <td className="py-2">7410</td>
-                                  <td className="py-2">Pensionspremier</td>
+                                  <td className="py-2 text-left">Pensionspremier</td>
                                   <td className="text-right py-2">
                                     {(() => {
                                       const pensionPremier = companyData.pensionPremier || 0;
@@ -739,10 +739,26 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                     })()}
                                   </td>
                                 </tr>
-                                {/* Sum row with special calculation */}
+                                {/* Sum row with special calculation - merged columns */}
                                 <tr className="border-t border-gray-300">
-                                  <td className="py-2">Särskild löneskatt (24,26%)</td>
-                                  <td className="py-2"></td>
+                                  <td className="py-2" colSpan={2}>
+                                    <div className="flex items-center gap-2">
+                                      <span>Särskild löneskatt (24,26%)</span>
+                                      {/* Add explainer i-button */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <button className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center hover:bg-blue-200">
+                                              i
+                                            </button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs font-normal">Särskild löneskatt beräknas på pensionspremier enligt gällande skattesats 24,26%</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  </td>
                                   <td className="text-right py-2">
                                     {(() => {
                                       const pensionPremier = companyData.pensionPremier || 0;
