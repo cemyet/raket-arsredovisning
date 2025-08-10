@@ -783,12 +783,19 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                   {!item.show_amount ? '' : 
                     (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       <input
-                        type="number"
-                        className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={editedAmounts[item.variable_name] ?? item.amount ?? 0}
+                        type="text"
+                        className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7"
+                        value={(() => {
+                          const amount = editedAmounts[item.variable_name] ?? item.amount ?? 0;
+                          return new Intl.NumberFormat('sv-SE', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(Math.abs(amount));
+                        })()}
                         onChange={(e) => {
-                          // Only allow positive values for all fields except pension tax adjustment
-                          const rawValue = Math.abs(parseFloat(e.target.value)) || 0;
+                          // Parse the formatted value (remove spaces and handle Swedish number format)
+                          const cleanValue = e.target.value.replace(/\s/g, '').replace(/,/g, '.');
+                          const rawValue = Math.abs(parseFloat(cleanValue)) || 0;
                           const value = item.variable_name === 'INK_sarskild_loneskatt' ? rawValue : rawValue;
                           setEditedAmounts(prev => ({
                             ...prev,
@@ -796,7 +803,9 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                           }));
                         }}
                         onBlur={(e) => {
-                          const rawValue = parseFloat(e.target.value) || 0;
+                          // Parse the formatted value (remove spaces and handle Swedish number format)
+                          const cleanValue = e.target.value.replace(/\s/g, '').replace(/,/g, '.');
+                          const rawValue = parseFloat(cleanValue) || 0;
                           // Force positive values for all fields (pension tax stores as positive but displays the current value)
                           const finalValue = Math.abs(rawValue);
                           const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
@@ -805,7 +814,9 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            const rawValue = parseFloat(e.currentTarget.value) || 0;
+                            // Parse the formatted value (remove spaces and handle Swedish number format)
+                            const cleanValue = e.currentTarget.value.replace(/\s/g, '').replace(/,/g, '.');
+                            const rawValue = parseFloat(cleanValue) || 0;
                             // Force positive values for all fields (pension tax stores as positive but displays the current value)
                             const finalValue = Math.abs(rawValue);
                             const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
@@ -814,8 +825,6 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                             e.currentTarget.blur(); // Remove focus
                           }
                         }}
-                        step="0.01"
-                        min="0"
                       />
                     ) : (
                       (item.amount !== null && item.amount !== undefined) ? 
