@@ -714,7 +714,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       </PopoverTrigger>
                       <PopoverContent className="w-96 p-4 bg-white border shadow-lg">
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm">Detaljer för {item.row_title}</h4>
+                          <h4 className="font-medium text-sm">{item.row_title}</h4>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>
