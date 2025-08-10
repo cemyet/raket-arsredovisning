@@ -45,7 +45,7 @@ interface CompanyData {
   justeringSarskildLoneskatt?: number | null;
   sarskildLoneskattPensionSubmitted?: number | null;
   // Unused tax loss variables
-  ink41aAdjusted?: number | null;
+  unusedTaxLossAmount?: number | null;
 }
 
 const TOTAL_STEPS = 5;
@@ -110,7 +110,7 @@ export function AnnualReportChat() {
     justeringSarskildLoneskatt: null,
     sarskildLoneskattPensionSubmitted: null,
     // Unused tax loss variables
-    ink41aAdjusted: null
+    unusedTaxLossAmount: null
   });
 
   // Auto-scroll to tax section when step becomes 0.3
@@ -296,7 +296,7 @@ export function AnnualReportChat() {
     const amount = parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0;
     const positiveAmount = Math.abs(amount); // Ensure positive value
     
-    setCompanyData(prev => ({ ...prev, ink41aAdjusted: positiveAmount }));
+    setCompanyData(prev => ({ ...prev, unusedTaxLossAmount: positiveAmount }));
     addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
     
     // Show confirmation message immediately and set step - NO RECALCULATION YET
@@ -315,7 +315,7 @@ export function AnnualReportChat() {
     addMessage("Gå vidare", false);
     
     // Trigger recalculation with the stored amount
-    const amount = companyData.ink41aAdjusted || 0;
+    const amount = companyData.unusedTaxLossAmount || 0;
     if (amount > 0) {
       console.log('🔥 Triggering recalculation with amount:', amount);
       await triggerUnusedTaxLossRecalculation(amount);
