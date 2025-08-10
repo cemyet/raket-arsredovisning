@@ -734,13 +734,7 @@ class DatabaseParser:
             ink_values['justering_sarskild_loneskatt'] = manual_amounts['justering_sarskild_loneskatt']
             print(f"Injected justering_sarskild_loneskatt: {manual_amounts['justering_sarskild_loneskatt']}")
         
-        # Inject unused tax loss values if provided
-        if 'INK4.1a_adjusted' in manual_amounts:
-            ink_values['INK4.1a_adjusted'] = manual_amounts['INK4.1a_adjusted']
-            print(f"Injected INK4.1a_adjusted: {manual_amounts['INK4.1a_adjusted']}")
-        if 'INK4.14a' in manual_amounts:
-            ink_values['INK4.14a'] = manual_amounts['INK4.14a']
-            print(f"Injected INK4.14a: {manual_amounts['INK4.14a']}")
+
         
         for mapping in sorted_mappings:
             try:
@@ -889,17 +883,7 @@ class DatabaseParser:
             print(f"INK_sarskild_loneskatt: justering={justering}, result={result}")
             return result
         
-        # Unused tax loss variables
-        if variable_name == 'INK4.1a_adjusted':
-            # This will come from manual_amounts when user enters it
-            if ink_values and 'INK4.1a_adjusted' in ink_values:
-                return float(ink_values['INK4.1a_adjusted'])
-            return 0.0
-        if variable_name == 'INK4.14a':
-            # Should equal INK4.1a_adjusted
-            if ink_values and 'INK4.1a_adjusted' in ink_values:
-                return float(ink_values['INK4.1a_adjusted'])
-            return 0.0
+
         
         if variable_name == 'INK_skattemassigt_resultat':
             def v(name: str) -> float:

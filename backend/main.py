@@ -488,6 +488,50 @@ async def add_sarskild_loneskatt_mapping():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding sarskild loneskatt mapping: {str(e)}")
 
+class RecalculateRequest(BaseModel):
+    current_accounts: dict
+    fiscal_year: Optional[int] = None
+    rr_data: List[dict]
+    br_data: List[dict]
+    manual_amounts: dict
+    justering_sarskild_loneskatt: Optional[float] = 0.0
+    ink4_14a_outnyttjat_underskott: Optional[float] = 0.0
+
+@app.post("/api/recalculate-ink2")
+async def recalculate_ink2(request: RecalculateRequest):
+    """
+    Recalculate INK2 data with manual amounts and adjustments
+    """
+    try:
+        parser = DatabaseParser()
+        
+        # Convert current_accounts to have float values
+        current_accounts = {k: float(v) for k, v in request.current_accounts.items()}
+        
+        # Inject special adjustment values into manual_amounts
+        manual_amounts = dict(request.manual_amounts)
+        if request.ink4_14a_outnyttjat_underskott and request.ink4_14a_outnyttjat_underskott > 0:
+            manual_amounts['INK4.14a'] = request.ink4_14a_outnyttjat_underskott
+        
+        # Parse INK2 data with manual overrides
+        ink2_data = parser.parse_ink2_data_with_overrides(
+            current_accounts=current_accounts,
+            fiscal_year=request.fiscal_year or datetime.now().year,
+            rr_data=request.rr_data,
+            br_data=request.br_data,
+            manual_amounts=manual_amounts,
+            justering_sarskild_loneskatt=request.justering_sarskild_loneskatt
+        )
+        
+        return {
+            "success": True,
+            "ink2_data": ink2_data
+        }
+        
+    except Exception as e:
+        print(f"Error in recalculate_ink2: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error recalculating INK2: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     import os

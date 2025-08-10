@@ -343,10 +343,8 @@ export function AnnualReportChat() {
         fiscal_year: companyData.fiscalYear,
         rr_data: companyData.seFileData.rr_data || [],
         br_data: companyData.seFileData.br_data || [],
-        manual_amounts: {
-          'INK4.1a_adjusted': amount,
-          'INK4.14a': amount
-        },
+        manual_amounts: {},
+        ink4_14a_outnyttjat_underskott: amount,
         justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt || 0
       });
       

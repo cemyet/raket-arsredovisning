@@ -92,6 +92,7 @@ class ApiService {
     br_data: any[];
     manual_amounts: Record<string, number>;
     justering_sarskild_loneskatt?: number;
+    ink4_14a_outnyttjat_underskott?: number;
   }): Promise<{ success: boolean; ink2_data: any[] }> {
     return this.makeRequest(API_ENDPOINTS.recalculateInk2, {
       method: 'POST',
