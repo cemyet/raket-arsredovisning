@@ -787,6 +787,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7"
                         value={(() => {
                           const amount = editedAmounts[item.variable_name] ?? item.amount ?? 0;
+                          // For editing, always show positive value (user edits the magnitude)
                           return new Intl.NumberFormat('sv-SE', {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0
