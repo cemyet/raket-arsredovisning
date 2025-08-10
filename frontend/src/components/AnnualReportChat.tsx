@@ -44,6 +44,8 @@ interface CompanyData {
   sarskildLoneskattPensionCalculated?: number | null;
   justeringSarskildLoneskatt?: number | null;
   sarskildLoneskattPensionSubmitted?: number | null;
+  // Unused tax loss variables
+  ink41aAdjusted?: number | null;
 }
 
 const TOTAL_STEPS = 5;
@@ -106,7 +108,9 @@ export function AnnualReportChat() {
     sarskildLoneskattPension: null,
     sarskildLoneskattPensionCalculated: null,
     justeringSarskildLoneskatt: null,
-    sarskildLoneskattPensionSubmitted: null
+    sarskildLoneskattPensionSubmitted: null,
+    // Unused tax loss variables
+    ink41aAdjusted: null
   });
 
   // Auto-scroll to tax section when step becomes 0.3
@@ -251,8 +255,15 @@ export function AnnualReportChat() {
       }, 1000);
     } else {
       // No discrepancy, go directly to final tax question
-      askFinalTaxQuestion();
+      askUnusedTaxLossQuestion();
     }
+  };
+
+  const askUnusedTaxLossQuestion = () => {
+    setTimeout(() => {
+      addMessage(`Outnyttjat underskott från föregående år är det samlade beloppet av tidigare års skattemässiga förluster som ännu inte har kunnat kvittas mot vinster. Om företaget går med vinst ett senare år kan hela eller delar av det outnyttjade underskottet användas för att minska den beskattningsbara inkomsten och därmed skatten. Denna uppgift går inte att hämta från tidigare årsredovisningar utan behöver tas från årets förtryckta deklaration eller från förra årets inlämnade skattedeklaration. Klicka här för att se läsa mer hur man hämtar denna information. Vill du...`, true, "📋");
+      setCurrentStep(0.34); // Step for unused tax loss question
+    }, 1000);
   };
 
   const askFinalTaxQuestion = () => {
@@ -261,6 +272,82 @@ export function AnnualReportChat() {
       addMessage(`Beräknad skatt efter skattemässiga justeringar är ${beraknadSkatt} kr. Vill du godkänna denna skatt eller vill du göra manuella ändringar? Eller vill du hellre att vi godkänner och använder den bokförda skatten?`, true, "⚖️");
       setCurrentStep(0.35); // Step for tax choice
     }, 1000);
+  };
+
+  const handleUnusedTaxLossChoice = (choice: string) => {
+    if (choice === 'none') {
+      // Option 1: No unused tax loss
+      addMessage("Finns inget outnyttjat underskott kvar", false);
+      setTimeout(() => {
+        askFinalTaxQuestion();
+      }, 1000);
+    } else if (choice === 'enter_amount') {
+      // Option 2: Enter amount
+      addMessage("Ange belopp outnyttjat underskott", false);
+      setTimeout(() => {
+        addMessage("Ange beloppet för outnyttjat underskott från föregående år:", true, "💰");
+        setShowInput(true);
+        setCurrentStep(0.36); // Step for unused tax loss input
+      }, 1000);
+    }
+  };
+
+  const handleUnusedTaxLossSubmit = async () => {
+    const amount = parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0;
+    const positiveAmount = Math.abs(amount); // Ensure positive value
+    
+    setCompanyData(prev => ({ ...prev, ink41aAdjusted: positiveAmount }));
+    addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
+    
+    // Trigger recalculation with the new unused tax loss amount
+    await triggerUnusedTaxLossRecalculation(positiveAmount);
+    
+    setTimeout(() => {
+      addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr.`, true, "✅");
+      setTimeout(() => {
+        askFinalTaxQuestion();
+      }, 1000);
+    }, 1000);
+    
+    setShowInput(false);
+    setInputValue("");
+  };
+
+  const triggerUnusedTaxLossRecalculation = async (amount: number) => {
+    console.log('🔥 triggerUnusedTaxLossRecalculation called with amount:', amount);
+    if (!companyData.seFileData) {
+      console.log('❌ No seFileData available for recalculation');
+      return;
+    }
+    
+    try {
+      const result = await apiService.recalculateInk2({
+        current_accounts: companyData.seFileData.current_accounts || {},
+        fiscal_year: companyData.fiscalYear,
+        rr_data: companyData.seFileData.rr_data || [],
+        br_data: companyData.seFileData.br_data || [],
+        manual_amounts: {
+          'INK4.1a_adjusted': amount,
+          'INK4.14a': amount
+        },
+        justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt || 0
+      });
+      
+      if (result.success) {
+        console.log('DEBUG: Unused tax loss recalculation successful');
+        console.log('DEBUG: New ink2_data length:', result.ink2_data.length);
+        
+        // Update company data with new INK2 data including the unused tax loss adjustment
+        setCompanyData(prev => ({
+          ...prev,
+          ink2Data: result.ink2_data,
+          // Update calculated tax amounts from the recalculated data
+          inkBeraknadSkatt: result.ink2_data.find((item: any) => item.variable_name === 'INK_beraknad_skatt')?.amount || prev.inkBeraknadSkatt
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to recalculate unused tax loss:', error);
+    }
   };
 
   const handlePensionTaxChoice = (choice: string) => {
@@ -284,7 +371,7 @@ export function AnnualReportChat() {
       setTimeout(() => {
         addMessage("Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkning till höger.", true, "✅");
         setTimeout(() => {
-          askFinalTaxQuestion();
+          askUnusedTaxLossQuestion();
         }, 1000);
       }, 1000);
       
@@ -292,7 +379,7 @@ export function AnnualReportChat() {
       // Option 2: Keep current booked amount
       addMessage(`Behåll nuvarande bokförd särskild löneskatt ${Math.round(sarskildLoneskattPension).toLocaleString('sv-SE')} kr`, false);
       setTimeout(() => {
-        askFinalTaxQuestion();
+        askUnusedTaxLossQuestion();
       }, 1000);
       
     } else if (choice === 'custom') {
@@ -326,7 +413,7 @@ export function AnnualReportChat() {
     setTimeout(() => {
       addMessage("Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkning till höger.", true, "✅");
       setTimeout(() => {
-        askFinalTaxQuestion();
+        askUnusedTaxLossQuestion();
       }, 1000);
     }, 1000);
     
@@ -755,7 +842,7 @@ export function AnnualReportChat() {
             {/* Clean Input Area */}
             <div className="px-6 py-4">
               {/* Text input area with arrow button */}
-              {(showInput && (currentStep < 1 || currentStep === 1 || currentStep === 0.5)) && (
+              {(showInput && (currentStep < 1 || currentStep === 1 || currentStep === 0.5 || currentStep === 0.33 || currentStep === 0.36)) && (
                 <div className="flex items-end gap-3">
                   {currentStep < 1 ? (
                     <Input
@@ -776,6 +863,17 @@ export function AnnualReportChat() {
                       placeholder="Ange utdelningsbelopp i kr..."
                       className="flex-1 border-none bg-transparent text-base focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
                     />
+                  ) : currentStep === 0.36 ? (
+                    <Input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => {
+                        const formatted = formatNumberInput(e.target.value);
+                        setInputValue(formatted);
+                      }}
+                      placeholder="Ange belopp för outnyttjat underskott i kr..."
+                      className="flex-1 border-none bg-transparent text-base focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
+                    />
                   ) : (
                     <Textarea
                       value={inputValue}
@@ -785,7 +883,7 @@ export function AnnualReportChat() {
                     />
                   )}
                   <Button
-                    onClick={currentStep < 1 ? handleResultInput : currentStep === 0.33 ? handleCustomPensionTaxSubmit : currentStep === 0.5 ? handleCustomDividendInput : handleEventsText}
+                    onClick={currentStep < 1 ? handleResultInput : currentStep === 0.33 ? handleCustomPensionTaxSubmit : currentStep === 0.36 ? handleUnusedTaxLossSubmit : currentStep === 0.5 ? handleCustomDividendInput : handleEventsText}
                     className="w-7 h-7 rounded-full bg-foreground hover:bg-foreground/90 p-0 flex-shrink-0"
                   >
                     <svg
@@ -833,6 +931,18 @@ export function AnnualReportChat() {
                   </OptionButton>
                   <OptionButton onClick={() => handleTaxApproval(false)}>
                     Nej, jag vill se över justeringarna
+                  </OptionButton>
+                </div>
+              )}
+
+              {/* Unused tax loss options - Step 0.34 */}
+              {currentStep === 0.34 && (
+                <div className="space-y-3">
+                  <OptionButton onClick={() => handleUnusedTaxLossChoice('none')}>
+                    Finns inget outnyttjat underskott kvar
+                  </OptionButton>
+                  <OptionButton onClick={() => handleUnusedTaxLossChoice('enter_amount')}>
+                    Ange belopp outnyttjat underskott
                   </OptionButton>
                 </div>
               )}
