@@ -279,7 +279,7 @@ export function AnnualReportChat() {
       // Option 1: No unused tax loss
       addMessage("Finns inget outnyttjat underskott kvar", false);
       setTimeout(() => {
-        askFinalTaxQuestion();
+        checkPensionTax();
       }, 1000);
     } else if (choice === 'enter_amount') {
       // Option 2: Enter amount
@@ -305,7 +305,7 @@ export function AnnualReportChat() {
     setTimeout(() => {
       addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr.`, true, "✅");
       setTimeout(() => {
-        askFinalTaxQuestion();
+        checkPensionTax();
       }, 1000);
     }, 1000);
     
