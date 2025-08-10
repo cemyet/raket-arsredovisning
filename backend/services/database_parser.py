@@ -749,6 +749,9 @@ class DatabaseParser:
                 else:
                     # Calculate normally (or force recalculate for dependent values)
                     amount = self.calculate_ink2_variable_value(mapping, current_accounts, fiscal_year, rr_data, ink_values, br_data)
+                    # Round all INK2 values to 0 decimals (skattemässigt resultat already has special rounding)
+                    if variable_name != 'INK_skattemassigt_resultat':
+                        amount = round(amount, 0)
                     # IMPORTANT: Store calculated values for later formulas
                     ink_values[variable_name] = amount
                     if variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']:
@@ -867,14 +870,14 @@ class DatabaseParser:
             pension_premier = abs(float(accounts.get('7410', 0.0)))
             rate = float(self.global_variables.get('sarskild_loneskatt', 0.0))
             result = pension_premier * rate
-            # Round to 2 decimals to avoid floating point precision issues
-            return round(result, 2)
+            # Round to 0 decimals for tax module
+            return round(result, 0)
         if variable_name == 'INK_sarskild_loneskatt':
             # Hardcoded formula: -justering_sarskild_loneskatt
             justering = float(ink_values.get('justering_sarskild_loneskatt', 0.0)) if ink_values else 0.0
             result = -justering
-            # Round to 2 decimals to ensure clean display
-            result = round(result, 2)
+            # Round to 0 decimals for tax module
+            result = round(result, 0)
             print(f"INK_sarskild_loneskatt: justering={justering}, result={result}")
             return result
         

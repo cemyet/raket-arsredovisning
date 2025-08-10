@@ -37,8 +37,8 @@ export function OptionButton({
         "shadow-sm hover:shadow-md",
         // Normal state
         "hover:bg-muted/50",
-        // Pressed state with blue background and white text
-        isPressed && "bg-blue-600 text-white border-blue-600",
+        // Pressed state with blue background and white text (matching button style)
+        isPressed && "bg-blue-500 text-white border-blue-500",
         // Success variant
         variant === "success" && "bg-primary hover:bg-primary/90 text-primary-foreground border-primary",
         className
