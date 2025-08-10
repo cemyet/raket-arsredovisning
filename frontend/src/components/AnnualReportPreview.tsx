@@ -580,21 +580,8 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
             {(() => {
               const allData = recalculatedData.length > 0 ? recalculatedData : ink2Data;
               
-              // Debug: Check if INK_sarskild_loneskatt is in the data
+              // Find INK_sarskild_loneskatt row for conditional logic
               const sarskildRow = allData.find((item: any) => item.variable_name === 'INK_sarskild_loneskatt');
-              if (sarskildRow) {
-                console.log('DEBUG INK_sarskild_loneskatt FOUND:', {
-                  amount: sarskildRow.amount,
-                  show_amount: sarskildRow.show_amount,
-                  always_show: sarskildRow.always_show,
-                  always_show_type: typeof sarskildRow.always_show,
-                  block: sarskildRow.block,
-                  header: sarskildRow.header
-                });
-              } else {
-                console.log('DEBUG INK_sarskild_loneskatt NOT FOUND in allData. Total rows:', allData.length);
-                console.log('DEBUG All variable names:', allData.map((item: any) => item.variable_name));
-              }
               
               // Helper function to check if any row in a block should be shown
               const shouldShowBlockContent = (blockName: string): boolean => {
@@ -616,20 +603,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
               };
               
               return allData.filter((item: any) => {
-                // Debug logging to see what we're getting
-                if (item.variable_name && (item.variable_name.includes('INK4.15') || item.variable_name.includes('INK4.16') || item.variable_name.includes('INK4.21') || item.variable_name.includes('INK_bokford_skatt'))) {
-                  console.log(`DEBUG ${item.variable_name}:`, {
-                    always_show: item.always_show,
-                    always_show_type: typeof item.always_show,
-                    show_amount: item.show_amount,
-                    amount: item.amount,
-                    header: item.header,
-                    block: item.block,
-                    interpretation: item.always_show === true ? 'ALWAYS SHOW' : 
-                                   item.always_show === false ? 'NEVER SHOW' : 
-                                   'CONDITIONAL (show if amount != 0)'
-                  });
-                }
+                // Filter logic for tax rows
                 
                 // Always exclude show_amount = NEVER
                 if (item.show_amount === 'NEVER') return false;
