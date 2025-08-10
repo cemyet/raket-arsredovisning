@@ -496,6 +496,7 @@ class RecalculateRequest(BaseModel):
     manual_amounts: dict
     justering_sarskild_loneskatt: Optional[float] = 0.0
     ink4_14a_outnyttjat_underskott: Optional[float] = 0.0
+    ink4_16_underskott_adjustment: Optional[float] = 0.0
 
 @app.post("/api/recalculate-ink2")
 async def recalculate_ink2(request: RecalculateRequest):
@@ -512,6 +513,8 @@ async def recalculate_ink2(request: RecalculateRequest):
         manual_amounts = dict(request.manual_amounts)
         if request.ink4_14a_outnyttjat_underskott and request.ink4_14a_outnyttjat_underskott > 0:
             manual_amounts['INK4.14a'] = request.ink4_14a_outnyttjat_underskott
+        if request.ink4_16_underskott_adjustment and request.ink4_16_underskott_adjustment != 0:
+            manual_amounts['ink4_16_underskott_adjustment'] = request.ink4_16_underskott_adjustment
         
         # Parse INK2 data with manual overrides
         ink2_data = parser.parse_ink2_data_with_overrides(

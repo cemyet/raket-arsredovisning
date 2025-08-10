@@ -279,7 +279,7 @@ export function AnnualReportChat() {
       // Option 1: No unused tax loss
       addMessage("Finns inget outnyttjat underskott kvar", false);
       setTimeout(() => {
-        checkPensionTax();
+        askFinalTaxQuestion();
       }, 1000);
     } else if (choice === 'enter_amount') {
       // Option 2: Enter amount
@@ -299,11 +299,10 @@ export function AnnualReportChat() {
     setCompanyData(prev => ({ ...prev, unusedTaxLossAmount: positiveAmount }));
     addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
     
-    // Show confirmation message immediately and set step - NO RECALCULATION YET
+    // Show confirmation and keep tax module visible
     setTimeout(() => {
-      console.log('🔥 Setting step to 0.37 and showing confirmation message');
       addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
-      setCurrentStep(0.37); // New step for "Gå vidare" option
+      setCurrentStep(0.37);
     }, 500);
     
     setShowInput(false);
@@ -311,21 +310,24 @@ export function AnnualReportChat() {
   };
 
   const handleUnusedTaxLossContinue = async () => {
-    console.log('🔥 handleUnusedTaxLossContinue called');
-    addMessage("Gå vidare", false);
+    addMessage("Ja, gå vidare", false);
     
-    // Trigger recalculation with the stored amount
     const amount = companyData.unusedTaxLossAmount || 0;
-    if (amount > 0) {
-      console.log('🔥 Triggering recalculation with amount:', amount);
-      await triggerUnusedTaxLossRecalculation(amount);
+    if (amount > 0 && companyData.seFileData) {
+      await apiService.recalculateInk2({
+        current_accounts: companyData.seFileData.current_accounts || {},
+        fiscal_year: companyData.fiscalYear,
+        rr_data: companyData.seFileData.rr_data || [],
+        br_data: companyData.seFileData.br_data || [],
+        manual_amounts: {},
+        ink4_16_underskott_adjustment: amount,
+        justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt || 0
+      });
     }
     
     setTimeout(() => {
-      console.log('🔥 Calling askFinalTaxQuestion from handleUnusedTaxLossContinue');
-      // Go directly to final tax question - pension check already happened before unused tax loss
       askFinalTaxQuestion();
-    }, 1000);
+    }, 800);
   };
 
   const triggerUnusedTaxLossRecalculation = async (amount: number) => {
@@ -964,7 +966,7 @@ export function AnnualReportChat() {
               {currentStep === 0.37 && (
                 <div className="space-y-3">
                   <OptionButton onClick={handleUnusedTaxLossContinue}>
-                    Gå vidare
+                    Ja, gå vidare
                   </OptionButton>
                 </div>
               )}

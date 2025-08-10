@@ -734,7 +734,11 @@ class DatabaseParser:
             ink_values['justering_sarskild_loneskatt'] = manual_amounts['justering_sarskild_loneskatt']
             print(f"Injected justering_sarskild_loneskatt: {manual_amounts['justering_sarskild_loneskatt']}")
         
-
+        # Inject underskott adjustment for INK4.16 if provided
+        if 'ink4_16_underskott_adjustment' in manual_amounts:
+            ink_values['ink4_16_underskott_adjustment'] = manual_amounts['ink4_16_underskott_adjustment']
+            print(f"Injected ink4_16_underskott_adjustment: {manual_amounts['ink4_16_underskott_adjustment']}")
+        
         
         for mapping in sorted_mappings:
             try:
