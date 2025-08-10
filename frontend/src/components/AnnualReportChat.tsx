@@ -296,13 +296,8 @@ export function AnnualReportChat() {
     const amount = parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0;
     const positiveAmount = Math.abs(amount); // Ensure positive value
     
-    console.log('🔥 handleUnusedTaxLossSubmit called with amount:', positiveAmount);
-    
     setCompanyData(prev => ({ ...prev, ink41aAdjusted: positiveAmount }));
     addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
-    
-    setShowInput(false);
-    setInputValue("");
     
     // Show confirmation message immediately and set step - NO RECALCULATION YET
     setTimeout(() => {
@@ -310,6 +305,9 @@ export function AnnualReportChat() {
       addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
       setCurrentStep(0.37); // New step for "Gå vidare" option
     }, 500);
+    
+    setShowInput(false);
+    setInputValue("");
   };
 
   const handleUnusedTaxLossContinue = async () => {
