@@ -662,7 +662,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       </PopoverTrigger>
                       <PopoverContent className="w-96 p-4 bg-white border shadow-lg">
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm">Detaljer för {item.row_title}</h4>
+                          <h4 className="font-medium text-sm">{item.row_title}</h4>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>
@@ -681,7 +681,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                       {new Intl.NumberFormat('sv-SE', {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2
-                                      }).format(detail.balance)}
+                                      }).format(detail.balance)} kr
                                     </td>
                                   </tr>
                                 ))}
@@ -693,7 +693,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                     {new Intl.NumberFormat('sv-SE', {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2
-                                    }).format(item.account_details.reduce((sum: number, detail: any) => sum + detail.balance, 0))}
+                                    }).format(item.account_details.reduce((sum: number, detail: any) => sum + detail.balance, 0))} kr
                                   </td>
                                 </tr>
                               </tbody>
@@ -732,10 +732,11 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                   <td className="text-right py-2">
                                     {(() => {
                                       const pensionPremier = companyData.pensionPremier || 0;
-                                      return new Intl.NumberFormat('sv-SE', {
+                                      const formatted = new Intl.NumberFormat('sv-SE', {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2
                                       }).format(pensionPremier);
+                                      return `${formatted} kr`;
                                     })()}
                                   </td>
                                 </tr>
@@ -747,10 +748,11 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                                   <td className="text-right py-2">
                                     {(() => {
                                       const rate = companyData.sarskildLoneskattPensionCalculated || 0;
-                                      return new Intl.NumberFormat('sv-SE', {
+                                      const formatted = new Intl.NumberFormat('sv-SE', {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2
                                       }).format(rate);
+                                      return `${formatted} kr`;
                                     })()}
                                   </td>
                                 </tr>
@@ -808,18 +810,18 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       />
                     ) : (
                       (item.amount !== null && item.amount !== undefined) ? 
-                        (item.amount === 0 || item.amount === -0 ? '0' : (() => {
+                        (item.amount === 0 || item.amount === -0 ? '0 kr' : (() => {
                           // Show integers (no decimals) for these specific variables
                           const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
                           const shouldShowInteger = integerVariables.includes(item.variable_name);
                           
-
-                          
-                          return new Intl.NumberFormat('sv-SE', {
+                          const formattedAmount = new Intl.NumberFormat('sv-SE', {
                             minimumFractionDigits: shouldShowInteger ? 0 : 2,
                             maximumFractionDigits: shouldShowInteger ? 0 : 2
                           }).format(item.amount);
-                        })()) : '0'
+                          
+                          return `${formattedAmount} kr`;
+                        })()) : '0 kr'
                     )
                   }
                 </span>
