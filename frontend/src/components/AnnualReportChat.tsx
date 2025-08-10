@@ -303,14 +303,20 @@ export function AnnualReportChat() {
     await triggerUnusedTaxLossRecalculation(positiveAmount);
     
     setTimeout(() => {
-      addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr.`, true, "✅");
-      setTimeout(() => {
-        checkPensionTax();
-      }, 1000);
+      addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
+      setCurrentStep(0.37); // New step for "Gå vidare" option
     }, 1000);
     
     setShowInput(false);
     setInputValue("");
+  };
+
+  const handleUnusedTaxLossContinue = () => {
+    addMessage("Gå vidare", false);
+    setTimeout(() => {
+      // Go directly to final tax question - pension check already happened before unused tax loss
+      askFinalTaxQuestion();
+    }, 1000);
   };
 
   const triggerUnusedTaxLossRecalculation = async (amount: number) => {
@@ -943,6 +949,15 @@ export function AnnualReportChat() {
                   </OptionButton>
                   <OptionButton onClick={() => handleUnusedTaxLossChoice('enter_amount')}>
                     Ange belopp outnyttjat underskott
+                  </OptionButton>
+                </div>
+              )}
+
+              {/* Continue after unused tax loss - Step 0.37 */}
+              {currentStep === 0.37 && (
+                <div className="space-y-3">
+                  <OptionButton onClick={handleUnusedTaxLossContinue}>
+                    Gå vidare
                   </OptionButton>
                 </div>
               )}
