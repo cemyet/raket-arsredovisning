@@ -304,7 +304,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             setShowInput(true);
             setInputType(action_data?.input_type || 'text');
             setInputPlaceholder(action_data?.placeholder || '');
-            return; // Don't navigate to next step yet
+            // Continue to navigate to next step (the input step)
+            break;
             
           case 'api_call':
             await handleApiCall(action_data);
