@@ -630,6 +630,9 @@ async def recalculate_ink2(request: RecalculateRequest):
         if request.ink4_16_underskott_adjustment and request.ink4_16_underskott_adjustment != 0:
             manual_amounts['ink4_16_underskott_adjustment'] = request.ink4_16_underskott_adjustment
             print(f"📊 Injecting ink4_16_underskott_adjustment: {request.ink4_16_underskott_adjustment}")
+        if request.justering_sarskild_loneskatt and request.justering_sarskild_loneskatt != 0:
+            manual_amounts['justering_sarskild_loneskatt'] = request.justering_sarskild_loneskatt
+            print(f"💰 Injecting pension tax adjustment: {request.justering_sarskild_loneskatt}")
         
         # Parse INK2 data with manual overrides
         ink2_data = parser.parse_ink2_data_with_overrides(
@@ -637,8 +640,7 @@ async def recalculate_ink2(request: RecalculateRequest):
             fiscal_year=request.fiscal_year or datetime.now().year,
             rr_data=request.rr_data,
             br_data=request.br_data,
-            manual_amounts=manual_amounts,
-            justering_sarskild_loneskatt=request.justering_sarskild_loneskatt
+            manual_amounts=manual_amounts
         )
         
         return {
