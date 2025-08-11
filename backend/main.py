@@ -563,6 +563,8 @@ async def process_chat_choice(request: dict):
         option_value = request.get("option_value")
         context = request.get("context", {})
         
+        print(f"🔍 Processing choice: step={step_number}, option={option_value}, context={context}")
+        
         # Get the current step to find the selected option
         step_data = await get_chat_flow_step(step_number)
         if not step_data["success"]:
