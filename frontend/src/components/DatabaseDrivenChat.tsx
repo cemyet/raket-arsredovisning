@@ -208,12 +208,6 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       addMessage(optionText, false);
 
       // Handle special cases first
-      if (option.option_value === 'continue_after_underskott') {
-        // Navigate directly to the tax question step
-        setTimeout(() => loadChatStep(601), 1000); // Step 601 is the tax approval question
-        return;
-      }
-      
       // Handle custom tax options to bypass API call
       if (option.option_value === 'approve_tax') {
         // Go directly to dividends
@@ -658,7 +652,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   // Special handler for unused tax loss submission
   const handleUnusedTaxLossSubmission = async (amount: number) => {
     try {
-              console.log('🔥 Handling unused tax loss submission:', amount);
+      console.log('🔥 Handling unused tax loss submission:', amount);
       console.log('💰 Current companyData:', { 
         justeringSarskildLoneskatt: companyData.justeringSarskildLoneskatt,
         sarskildLoneskattPensionCalculated: companyData.sarskildLoneskattPensionCalculated,
@@ -716,29 +710,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       setShowInput(false);
       setInputValue('');
 
-      // Show confirmation message after a short delay
+      // Navigate to step 303 after a short delay
       setTimeout(() => {
-        const formattedAmount = new Intl.NumberFormat('sv-SE', { 
-          minimumFractionDigits: 0, 
-          maximumFractionDigits: 0 
-        }).format(amount);
-        
-        addMessage(
-          `Outnyttjat underskott från föregående år har blivit uppdaterat med ${formattedAmount} kr. Vill du gå vidare?`, 
-          true, 
-          '✅'
-        );
-
-        // Set up the "Ja, gå vidare" option
-        setCurrentOptions([{
-          option_order: 1,
-          option_text: 'Ja, gå vidare',
-          option_value: 'continue_after_underskott',
-          next_step: 601, // Go to tax question step
-          action_type: 'navigate',
-          action_data: null
-        }]);
-        
+        loadChatStep(303);
       }, 1000);
 
     } catch (error) {
