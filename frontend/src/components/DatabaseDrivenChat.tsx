@@ -213,6 +213,19 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         setTimeout(() => loadChatStep(601), 1000); // Step 601 is the tax approval question
         return;
       }
+      
+      // Handle custom tax options to bypass API call
+      if (option.option_value === 'approve_tax') {
+        // Go directly to dividends
+        setTimeout(() => loadChatStep(501), 1000);
+        return;
+      }
+      
+      if (option.option_value === 'review_adjustments') {
+        // Go directly to pension tax check
+        setTimeout(() => loadChatStep(201), 1000);
+        return;
+      }
 
       // Process the choice through the API
       const context = {
@@ -408,7 +421,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         );
       }
       if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
-        sumAretsResultat = Math.round(sumAretsResultatItem.current_amount);
+        sumAretsResultat = Math.abs(Math.round(sumAretsResultatItem.current_amount));
         console.log('📊 Found SumAretsResultat:', sumAretsResultat, 'from item:', sumAretsResultatItem);
       } else {
         console.log('❌ Could not find SumAretsResultat in RR or BR data');
@@ -496,11 +509,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     // Add the success message manually (step 102)
     addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
     
-            // Add the result overview message manually (step 103)
-        const resultText = sumAretsResultat 
-          ? `Årets resultat är: ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
-          : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
-        addMessage(resultText, true, '💰');
+                // Add the result overview message manually (step 103)
+    const resultText = sumAretsResultat 
+      ? `Årets resultat har beräknats och är ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
+      : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
+    addMessage(resultText, true, '💰');
         
         // Add debugging for tax amount
         console.log('🏛️ Tax amount for step 104:', skattAretsResultat);
@@ -518,7 +531,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           {
             option_order: 1,
             option_text: 'Ja, godkänn den bokförda skatten.',
-            option_value: 'continue',
+            option_value: 'approve_tax',
             next_step: 501,
             action_type: 'navigate',
             action_data: null
@@ -526,7 +539,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           {
             option_order: 2,
             option_text: 'Låt mig se över justeringarna!',
-            option_value: 'continue',
+            option_value: 'review_adjustments',
             next_step: 201,
             action_type: 'navigate',
             action_data: null
