@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '@/services/api';
 import { ChatMessage } from './ChatMessage';
 import { OptionButton } from './OptionButton';
+import { FileUpload } from './FileUpload';
 
 interface ChatFlowProps {
   companyData: any;
@@ -44,6 +45,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   const [inputValue, setInputValue] = useState('');
   const [inputType, setInputType] = useState('text');
   const [inputPlaceholder, setInputPlaceholder] = useState('');
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -234,6 +236,10 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             // Enable tax editing mode
             onDataUpdate({ taxEditingEnabled: true });
             break;
+
+          case 'show_file_upload':
+            setShowFileUpload(true);
+            return; // Don't navigate to next step yet
         }
 
         // Navigate to next step
@@ -312,6 +318,21 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         setTimeout(() => loadChatStep(submitOption.next_step!), 500);
       }
     }
+  };
+
+  // Handle file upload
+  const handleFileProcessed = (fileData: any) => {
+    console.log('📁 File processed:', fileData);
+    onDataUpdate({ 
+      seFileData: fileData,
+      fiscalYear: fileData.fiscal_year || new Date().getFullYear()
+    });
+    setShowFileUpload(false);
+    
+    // Navigate to next step after file upload
+    setTimeout(() => {
+      loadChatStep(103); // Go to next step after file upload
+    }, 1000);
   };
 
   // Special handler for unused tax loss submission
@@ -433,7 +454,14 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
       {/* Input Area */}
       <div className="border-t bg-white p-4">
-        {showInput ? (
+        {showFileUpload ? (
+          <div className="space-y-4">
+            <div className="text-center text-gray-600 mb-4">
+              Ladda upp din SE-fil här:
+            </div>
+            <FileUpload onFileProcessed={handleFileProcessed} />
+          </div>
+        ) : showInput ? (
           <div className="flex gap-2">
             <input
               type="text"
