@@ -509,7 +509,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     
     // Only start if we have basic setup
     try {
-      loadChatStep(101); // Start with welcome message that shows file upload
+      // Start directly with file upload instead of welcome message
+      addMessage('Välkommen till Raketrapport! Ladda upp din SE-fil så börjar vi analysera din årsredovisning.', true, '👋');
+      setShowFileUpload(true);
     } catch (error) {
       console.error('❌ Error initializing chat:', error);
       addMessage('Något gick fel vid start av chatten. Växla till gammal chat.', true, '❌');

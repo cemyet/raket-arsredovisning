@@ -20,10 +20,10 @@ INSERT INTO public.chat_flow (step_number, block_number, question_text, question
 (101, 10, 'Välkommen till Raketrapport! Ladda upp din SE-fil så börjar vi analysera din årsredovisning.', '👋', 'message', 'Ladda upp SE-fil', 'upload_se_file', 102, 'show_file_upload');
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(102, 10, 'Bra! Jag har analyserat din SE-fil. Här är en översikt över dina data:', '📊', 'message', 'Fortsätt', 'continue', 103, 'navigate');
+(102, 10, 'Bra! Jag har analyserat din SE-fil. Här är en översikt över dina data:', '📊', 'message', 'Fortsätt', 'continue', 104, 'navigate');
 
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(103, 10, 'Vad blev årets resultat?', '💰', 'message', 'Fortsätt', 'continue', 201, 'navigate');
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
+(104, 10, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
 (104, 10, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
