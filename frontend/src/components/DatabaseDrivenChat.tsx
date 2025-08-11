@@ -423,8 +423,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       ? Math.abs(parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0)
       : inputValue.trim();
     
-    console.log('🔴 handleInputSubmit called with:', { inputValue, value, inputType });
-    console.log('🔴 Current options:', currentOptions);
+    console.log('📤 Input submit - Current step:', currentStep, 'Options:', currentOptions);
+    
+
 
     // Add user message
     const displayValue = inputType === 'amount' 
@@ -434,11 +435,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
     // Find the submit option for this step
     const submitOption = currentOptions.find(opt => opt.option_value === 'submit');
-    console.log('🔴 Submit option found:', submitOption);
+
     if (submitOption) {
       // Store the input value based on action data
       if (submitOption.action_data?.variable) {
-        console.log('🔴 Processing variable:', submitOption.action_data.variable, 'with value:', value);
+
         onDataUpdate({ [submitOption.action_data.variable]: value });
 
         // Note: Unused tax loss recalculation happens in step 303 via api_call, not here
