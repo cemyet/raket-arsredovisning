@@ -507,49 +507,59 @@ class RecalculateRequest(BaseModel):
 @app.get("/api/chat-flow/{step_number}")
 async def get_chat_flow_step(step_number: int):
     """
-    Get a specific chat flow step with its options
+    Get chat flow step by step number
     """
     try:
         supabase = get_supabase_client()
         
-        # Get the question from the new table structure
-        question_result = supabase.table('chat_flow').select('*').eq('step_number', step_number).execute()
+        # Query the chat_flow table with new structure
+        result = supabase.table('chat_flow').select('*').eq('step_number', step_number).execute()
         
-        if not question_result.data:
-            raise HTTPException(status_code=404, detail=f"Chat flow step {step_number} not found")
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Step not found")
         
-        question_data = question_result.data[0]
+        step_data = result.data[0]
         
-        # Convert the new format to the expected format
-        question = {
-            "step_number": question_data["step_number"],
-            "block_number": question_data["block_number"],
-            "subblock_number": question_data["subblock_number"],
-            "question_text": question_data["question_text"],
-            "question_icon": question_data["question_icon"],
-            "question_type": question_data["question_type"],
-            "input_type": question_data.get("input_type"),
-            "input_placeholder": question_data.get("input_placeholder"),
-            "show_conditions": question_data.get("show_conditions")
-        }
-        
-        # Convert option columns to options array
+        # Convert to new format with options array
         options = []
-        for i in range(1, 5):  # option1 through option4
-            option_text = question_data.get(f"option{i}_text")
-            if option_text:
+        
+        # Add no_option if it exists
+        if step_data.get('no_option_value'):
+            options.append({
+                "option_order": 0,
+                "option_text": None,
+                "option_value": step_data['no_option_value'],
+                "next_step": step_data.get('no_option_next_step'),
+                "action_type": step_data.get('no_option_action_type'),
+                "action_data": step_data.get('no_option_action_data')
+            })
+        
+        # Add regular options
+        for i in range(1, 5):
+            option_text = step_data.get(f'option{i}_text')
+            option_value = step_data.get(f'option{i}_value')
+            
+            if option_text and option_value:
                 options.append({
                     "option_order": i,
                     "option_text": option_text,
-                    "option_value": question_data.get(f"option{i}_value"),
-                    "next_step": question_data.get(f"option{i}_next_step"),
-                    "action_type": question_data.get(f"option{i}_action_type"),
-                    "action_data": question_data.get(f"option{i}_action_data")
+                    "option_value": option_value,
+                    "next_step": step_data.get(f'option{i}_next_step'),
+                    "action_type": step_data.get(f'option{i}_action_type'),
+                    "action_data": step_data.get(f'option{i}_action_data')
                 })
         
+        # Return the step data with new structure
         return {
             "success": True,
-            "question": question,
+            "step_number": step_data['step_number'],
+            "block": step_data.get('block'),
+            "question_text": step_data['question_text'],
+            "question_icon": step_data.get('question_icon'),
+            "question_type": step_data['question_type'],
+            "input_type": step_data.get('input_type'),
+            "input_placeholder": step_data.get('input_placeholder'),
+            "show_conditions": step_data.get('show_conditions'),
             "options": options
         }
         

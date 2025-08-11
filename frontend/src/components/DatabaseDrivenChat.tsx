@@ -4,13 +4,9 @@ import { ChatMessage } from './ChatMessage';
 import { OptionButton } from './OptionButton';
 import { FileUpload } from './FileUpload';
 
-interface ChatFlowProps {
-  companyData: any;
-  onDataUpdate: (updates: Partial<any>) => void;
-}
-
 interface ChatStep {
   step_number: number;
+  block?: string;
   question_text: string;
   question_icon?: string;
   question_type: string;
@@ -21,7 +17,7 @@ interface ChatStep {
 
 interface ChatOption {
   option_order: number;
-  option_text: string;
+  option_text: string | null;
   option_value: string;
   next_step?: number;
   action_type: string;
@@ -34,6 +30,24 @@ interface ChatMessage {
   isBot: boolean;
   icon?: string;
   timestamp: Date;
+}
+
+interface ChatFlowProps {
+  companyData: any;
+  onDataUpdate: (updates: Partial<any>) => void;
+}
+
+interface ChatFlowResponse {
+  success: boolean;
+  step_number: number;
+  block?: string;
+  question_text: string;
+  question_icon?: string;
+  question_type: string;
+  input_type?: string;
+  input_placeholder?: string;
+  show_conditions?: any;
+  options: ChatOption[];
 }
 
 const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate }) => {
@@ -113,51 +127,48 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   // Load a chat step
   const loadChatStep = async (stepNumber: number) => {
     try {
-      setIsLoading(true);
       console.log(`🔄 Loading step ${stepNumber}...`);
-      
-      const response = await apiService.getChatFlowStep(stepNumber);
-      console.log('📦 API Response:', response);
+      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber);
       
       if (response.success) {
-        setCurrentQuestion(response.question);
-        setCurrentOptions(response.options);
         setCurrentStep(stepNumber);
-
-        // Check if we should show this step based on conditions
-        if (response.question.show_conditions) {
-          const conditionsMet = evaluateConditions(response.question.show_conditions);
-          if (!conditionsMet) {
-            // Skip to next step
-            const nextResponse = await apiService.getNextChatFlowStep(stepNumber);
-            if (nextResponse.success && nextResponse.question) {
-              return loadChatStep(nextResponse.question.step_number);
-            }
-            return;
-          }
+        
+        // Handle no_option automatically if it exists
+        const noOption = response.options.find(opt => opt.option_order === 0);
+        if (noOption) {
+          console.log('🚀 Auto-executing no_option:', noOption);
+          await handleOptionSelect(noOption);
+          return; // Don't show the message since no_option handles it
         }
-
-        // Add question to chat
-        const questionText = substituteVariables(response.question.question_text);
-        addMessage(questionText, true, response.question.question_icon);
-
-        // Handle different question types
-        if (response.question.question_type === 'input') {
+        
+        // Substitute variables in question text
+        const questionText = substituteVariables(response.question_text, {
+          SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
+          SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
+          pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE').format(companyData.pensionPremier) : '0',
+          sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPensionCalculated) : '0',
+          sarskild_loneskatt_pension: companyData.sarskildLoneskattPension ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPension) : '0',
+          inkBeraknadSkatt: companyData.inkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBeraknadSkatt) : '0',
+          inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
+          unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
+        });
+        
+        // Add the question message
+        addMessage(questionText, true, response.question_icon);
+        
+        // Store options for this step
+        setCurrentOptions(response.options.filter(opt => opt.option_order > 0)); // Exclude no_option
+        
+        // Check if we should show input instead of options
+        if (response.question_type === 'input') {
           setShowInput(true);
-          setInputType(response.question.input_type || 'text');
-          setInputPlaceholder(response.question.input_placeholder || '');
-        } else {
-          setShowInput(false);
+          setInputType(response.input_type || 'text');
+          setInputPlaceholder(response.input_placeholder || '');
         }
-      } else {
-        console.error('Failed to load step:', response);
-        addMessage('Något gick fel. Försök igen.', true, '❌');
       }
     } catch (error) {
-      console.error('Error loading chat step:', error);
-      addMessage('Något gick fel. Försök igen.', true, '❌');
-    } finally {
-      setIsLoading(false);
+      console.error('❌ Error loading chat step:', error);
+      addMessage('Något gick fel vid laddning av chatten. Växla till gammal chat.', true, '❌');
     }
   };
 
@@ -187,7 +198,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   const handleOptionSelect = async (option: ChatOption) => {
     try {
       // Add user message
-      const optionText = substituteVariables(option.option_text);
+      const optionText = substituteVariables(option.option_text || '');
       addMessage(optionText, false);
 
       // Handle special cases first
@@ -586,7 +597,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
                 key={option.option_order}
                 onClick={() => handleOptionSelect(option)}
               >
-                {substituteVariables(option.option_text)}
+                {substituteVariables(option.option_text || '')}
               </OptionButton>
             ))}
           </div>

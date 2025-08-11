@@ -85,14 +85,14 @@ class ApiService {
     return this.makeRequest(`${API_ENDPOINTS.companyInfo}/${orgNumber}`);
   }
 
-  async getChatFlowStep(stepNumber: number): Promise<{
-    success: boolean;
-    question: any;
-    options: any[];
-  }> {
-    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/${stepNumber}`, {
-      method: 'GET',
-    });
+  async getChatFlowStep(stepNumber: number) {
+    try {
+      const response = await this.makeRequest(`${API_ENDPOINTS.chatFlow}/${stepNumber}`);
+      return response;
+    } catch (error) {
+      console.error('Error getting chat flow step:', error);
+      throw error;
+    }
   }
 
   async getNextChatFlowStep(currentStep: number): Promise<{
@@ -101,9 +101,7 @@ class ApiService {
     options?: any[];
     next_step?: number;
   }> {
-    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/next/${currentStep}`, {
-      method: 'GET',
-    });
+    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/next/${currentStep}`);
   }
 
   async processChatChoice(data: {
@@ -141,4 +139,4 @@ class ApiService {
   }
 }
 
-export const apiService = new ApiService(); 
+export const apiService = new ApiService();
