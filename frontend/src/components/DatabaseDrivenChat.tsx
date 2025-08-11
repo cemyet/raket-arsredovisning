@@ -390,15 +390,23 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       
       // Extract SumAretsResultat for chat options (check RR first, then BR)
       let sumAretsResultatItem = fileData.data.rr_data.find((item: any) => 
-        item.variable_name === 'SumAretsResultat'
+        item.variable_name === 'SumAretsResultat' || 
+        item.id === 'ÅR' || 
+        item.label?.toLowerCase().includes('årets resultat')
       );
       if (!sumAretsResultatItem && fileData.data?.br_data) {
         sumAretsResultatItem = fileData.data.br_data.find((item: any) => 
-          item.variable_name === 'SumAretsResultat'
+          item.variable_name === 'SumAretsResultat' ||
+          item.id === 'ÅR' ||
+          item.label?.toLowerCase().includes('årets resultat')
         );
       }
       if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
         sumAretsResultat = Math.abs(sumAretsResultatItem.current_amount);
+        console.log('📊 Found SumAretsResultat:', sumAretsResultat, 'from item:', sumAretsResultatItem);
+      } else {
+        console.log('❌ Could not find SumAretsResultat in RR or BR data');
+        console.log('RR data keys:', fileData.data.rr_data?.map((item: any) => ({ id: item.id, variable_name: item.variable_name, label: item.label })));
       }
       
       // Extract SkattAretsResultat for tax confirmation
@@ -474,12 +482,19 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     
     setShowFileUpload(false);
     
-    // Add the success message manually
+    // Add the success message manually (step 102)
     addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
+    
+    // Add the result overview message manually (step 103)
+    const resultText = sumAretsResultat 
+      ? `Årets resultat är: ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
+      : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
+    addMessage(resultText, true, '💰');
     
     // Navigate to next step after file upload
     setTimeout(() => {
-      loadChatStep(103); // Go directly to step 103 (result overview)
+      // Go directly to step 104 (tax question) since step 103 might not have no_option
+      loadChatStep(104); // Skip step 103 and go to tax question
     }, 1000);
   };
 
