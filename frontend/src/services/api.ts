@@ -85,6 +85,27 @@ class ApiService {
     return this.makeRequest(`${API_ENDPOINTS.companyInfo}/${orgNumber}`);
   }
 
+  async getChatFlowStep(stepNumber: number): Promise<{
+    success: boolean;
+    question: any;
+    options: any[];
+  }> {
+    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/${stepNumber}`, {
+      method: 'GET',
+    });
+  }
+
+  async getNextChatFlowStep(currentStep: number): Promise<{
+    success: boolean;
+    question?: any;
+    options?: any[];
+    next_step?: number;
+  }> {
+    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/next/${currentStep}`, {
+      method: 'GET',
+    });
+  }
+
   async recalculateInk2(data: {
     current_accounts: Record<string, number>;
     fiscal_year?: number;

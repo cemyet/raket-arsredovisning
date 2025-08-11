@@ -42,6 +42,12 @@ app.add_middleware(
 report_generator = ReportGenerator()
 supabase_service = SupabaseService()
 
+def get_supabase_client():
+    """Get Supabase client from the service"""
+    if not supabase_service.client:
+        raise HTTPException(status_code=500, detail="Supabase client not available")
+    return supabase_service.client
+
 @app.get("/")
 async def root():
     return {"message": "Raketrapport API är igång! 🚀"}
@@ -497,6 +503,80 @@ class RecalculateRequest(BaseModel):
     justering_sarskild_loneskatt: Optional[float] = 0.0
     ink4_14a_outnyttjat_underskott: Optional[float] = 0.0
     ink4_16_underskott_adjustment: Optional[float] = 0.0
+
+@app.get("/api/chat-flow/{step_number}")
+async def get_chat_flow_step(step_number: int):
+    """
+    Get a specific chat flow step with its options
+    """
+    try:
+        # For now, use mock service until Supabase tables are created
+        from mock_chat_flow_service import MockChatFlowService
+        service = MockChatFlowService()
+        
+        result = service.get_step(step_number)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Chat flow step {step_number} not found")
+        
+        return result
+        
+        # TODO: Replace with actual Supabase implementation once tables are created
+        # supabase = get_supabase_client()
+        # question_result = supabase.table('chat_flow').select('*').eq('step_number', step_number).execute()
+        # if not question_result.data:
+        #     raise HTTPException(status_code=404, detail=f"Chat flow step {step_number} not found")
+        # question = question_result.data[0]
+        # options_result = supabase.table('chat_flow_options').select('*').eq('step_number', step_number).order('option_order').execute()
+        # return {"success": True, "question": question, "options": options_result.data}
+        
+    except Exception as e:
+        print(f"Error getting chat flow step: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting chat flow step: {str(e)}")
+
+@app.get("/api/chat-flow/next/{current_step}")
+async def get_next_chat_flow_step(current_step: int):
+    """
+    Get the next chat flow step in sequence
+    """
+    try:
+        # For now, use mock service until Supabase tables are created
+        from mock_chat_flow_service import MockChatFlowService
+        service = MockChatFlowService()
+        
+        return service.get_next_step(current_step)
+        
+        # TODO: Replace with actual Supabase implementation once tables are created
+        # supabase = get_supabase_client()
+        # result = supabase.table('chat_flow').select('step_number').gt('step_number', current_step).order('step_number').limit(1).execute()
+        # if not result.data:
+        #     return {"success": True, "next_step": None}
+        # next_step = result.data[0]['step_number']
+        # return await get_chat_flow_step(next_step)
+        
+    except Exception as e:
+        print(f"Error getting next chat flow step: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting next chat flow step: {str(e)}")
+
+@app.post("/api/chat-flow/process-choice")
+async def process_chat_choice(request: dict):
+    """
+    Process user choice and return next action
+    """
+    try:
+        step_number = request.get("step_number")
+        option_value = request.get("option_value")
+        context = request.get("context", {})
+        
+        # For now, use mock service until Supabase tables are created
+        from mock_chat_flow_service import MockChatFlowService
+        service = MockChatFlowService()
+        
+        result = service.process_user_choice(step_number, option_value, context)
+        return {"success": True, "result": result}
+        
+    except Exception as e:
+        print(f"Error processing chat choice: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing chat choice: {str(e)}")
 
 @app.post("/api/recalculate-ink2")
 async def recalculate_ink2(request: RecalculateRequest):
