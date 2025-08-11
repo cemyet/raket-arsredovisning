@@ -222,6 +222,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       }
       
       if (option.option_value === 'review_adjustments') {
+        // Show tax module using the flag
+        onDataUpdate({ showTaxPreview: true });
         // Go directly to pension tax check
         setTimeout(() => loadChatStep(201), 1000);
         return;

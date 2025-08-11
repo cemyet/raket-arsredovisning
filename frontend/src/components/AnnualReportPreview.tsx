@@ -20,6 +20,7 @@ interface CompanyData {
   date: string;
   boardMembers: Array<{ name: string; personalNumber: string }>;
   ink2Data?: any[]; // INK2 tax calculation data
+  showTaxPreview?: boolean; // Show tax calculation module
   seFileData?: SEData & {
     current_accounts?: Record<string, number>;
     annualReport?: {
@@ -561,7 +562,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
         )}
 
         {/* Tax Calculation Section */}
-        {currentStep >= 0.3 && seFileData?.ink2_data && seFileData.ink2_data.length > 0 && (
+        {companyData.showTaxPreview && seFileData?.ink2_data && seFileData.ink2_data.length > 0 && (
           <div className="space-y-4 bg-gradient-to-r from-yellow-50 to-amber-50 p-4 rounded-lg border border-yellow-200" data-section="tax-calculation">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-foreground border-b pb-2">Skatteberäkning</h2>
