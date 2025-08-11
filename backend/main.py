@@ -567,18 +567,21 @@ async def process_chat_choice(request: dict):
         
         # Get the current step to find the selected option
         step_data = await get_chat_flow_step(step_number)
+        print(f"🔍 Step data for {step_number}: {step_data}")
         if not step_data["success"]:
             raise HTTPException(status_code=404, detail="Step not found")
         
         # Find the selected option
         selected_option = None
+        print(f"🔍 Available options: {[opt['option_value'] for opt in step_data['options']]}")
         for option in step_data["options"]:
             if option["option_value"] == option_value:
                 selected_option = option
                 break
         
+        print(f"🔍 Selected option: {selected_option}")
         if not selected_option:
-            raise HTTPException(status_code=400, detail="Invalid option")
+            raise HTTPException(status_code=400, detail=f"Invalid option '{option_value}'. Available: {[opt['option_value'] for opt in step_data['options']]}")
         
         # Process variable substitution in the result
         result = {
@@ -594,7 +597,9 @@ async def process_chat_choice(request: dict):
         return {"success": True, "result": result}
         
     except Exception as e:
+        import traceback
         print(f"Error processing chat choice: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error processing chat choice: {str(e)}")
 
 def substitute_variables(data, context):
