@@ -375,6 +375,21 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       try {
         const params = actionData.params || {};
         
+        // Substitute variables in params (e.g., {unusedTaxLossAmount} -> actual value)
+        const substitutedParams = { ...params };
+        for (const [key, value] of Object.entries(substitutedParams)) {
+          if (typeof value === 'string' && value.includes('{')) {
+            // Replace {unusedTaxLossAmount} with actual value
+            const substituted = value.replace(/{(\w+)}/g, (match, varName) => {
+              return companyData[varName as keyof typeof companyData] || match;
+            });
+            // Convert to number if it's a numeric string
+            substitutedParams[key] = isNaN(Number(substituted)) ? substituted : Number(substituted);
+          }
+        }
+        
+        console.log('🔥 API call with substituted params:', substitutedParams);
+        
         if (companyData.seFileData) {
           const result = await apiService.recalculateInk2({
             current_accounts: companyData.seFileData.current_accounts || {},
@@ -382,7 +397,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             rr_data: companyData.seFileData.rr_data || [],
             br_data: companyData.seFileData.br_data || [],
             manual_amounts: {},
-            ...params
+            ...substitutedParams
           });
           
           if (result.success) {
@@ -407,6 +422,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     const value = inputType === 'amount' 
       ? Math.abs(parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0)
       : inputValue.trim();
+    
+    console.log('🔴 handleInputSubmit called with:', { inputValue, value, inputType });
+    console.log('🔴 Current options:', currentOptions);
 
     // Add user message
     const displayValue = inputType === 'amount' 
@@ -416,16 +434,14 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
     // Find the submit option for this step
     const submitOption = currentOptions.find(opt => opt.option_value === 'submit');
+    console.log('🔴 Submit option found:', submitOption);
     if (submitOption) {
       // Store the input value based on action data
       if (submitOption.action_data?.variable) {
+        console.log('🔴 Processing variable:', submitOption.action_data.variable, 'with value:', value);
         onDataUpdate({ [submitOption.action_data.variable]: value });
 
-        // Special handling for unused tax loss (outnyttjat underskott)
-        if (submitOption.action_data.variable === 'unusedTaxLossAmount') {
-          await handleUnusedTaxLossSubmission(value as number);
-          return; // Exit early since handleUnusedTaxLossSubmission handles navigation
-        }
+        // Note: Unused tax loss recalculation happens in step 303 via api_call, not here
         
         // Special handling for custom pension tax amount
         if (submitOption.action_data.variable === 'sarskildLoneskattCustom') {
