@@ -510,24 +510,48 @@ async def get_chat_flow_step(step_number: int):
     Get a specific chat flow step with its options
     """
     try:
-        # For now, use mock service until Supabase tables are created
-        from mock_chat_flow_service import MockChatFlowService
-        service = MockChatFlowService()
+        supabase = get_supabase_client()
         
-        result = service.get_step(step_number)
-        if not result:
+        # Get the question from the new table structure
+        question_result = supabase.table('chat_flow').select('*').eq('step_number', step_number).execute()
+        
+        if not question_result.data:
             raise HTTPException(status_code=404, detail=f"Chat flow step {step_number} not found")
         
-        return result
+        question_data = question_result.data[0]
         
-        # TODO: Replace with actual Supabase implementation once tables are created
-        # supabase = get_supabase_client()
-        # question_result = supabase.table('chat_flow').select('*').eq('step_number', step_number).execute()
-        # if not question_result.data:
-        #     raise HTTPException(status_code=404, detail=f"Chat flow step {step_number} not found")
-        # question = question_result.data[0]
-        # options_result = supabase.table('chat_flow_options').select('*').eq('step_number', step_number).order('option_order').execute()
-        # return {"success": True, "question": question, "options": options_result.data}
+        # Convert the new format to the expected format
+        question = {
+            "step_number": question_data["step_number"],
+            "block_number": question_data["block_number"],
+            "subblock_number": question_data["subblock_number"],
+            "question_text": question_data["question_text"],
+            "question_icon": question_data["question_icon"],
+            "question_type": question_data["question_type"],
+            "input_type": question_data.get("input_type"),
+            "input_placeholder": question_data.get("input_placeholder"),
+            "show_conditions": question_data.get("show_conditions")
+        }
+        
+        # Convert option columns to options array
+        options = []
+        for i in range(1, 5):  # option1 through option4
+            option_text = question_data.get(f"option{i}_text")
+            if option_text:
+                options.append({
+                    "option_order": i,
+                    "option_text": option_text,
+                    "option_value": question_data.get(f"option{i}_value"),
+                    "next_step": question_data.get(f"option{i}_next_step"),
+                    "action_type": question_data.get(f"option{i}_action_type"),
+                    "action_data": question_data.get(f"option{i}_action_data")
+                })
+        
+        return {
+            "success": True,
+            "question": question,
+            "options": options
+        }
         
     except Exception as e:
         print(f"Error getting chat flow step: {str(e)}")
@@ -539,19 +563,16 @@ async def get_next_chat_flow_step(current_step: int):
     Get the next chat flow step in sequence
     """
     try:
-        # For now, use mock service until Supabase tables are created
-        from mock_chat_flow_service import MockChatFlowService
-        service = MockChatFlowService()
+        supabase = get_supabase_client()
         
-        return service.get_next_step(current_step)
+        # Find the next step number greater than current_step
+        result = supabase.table('chat_flow').select('step_number').gt('step_number', current_step).order('step_number').limit(1).execute()
         
-        # TODO: Replace with actual Supabase implementation once tables are created
-        # supabase = get_supabase_client()
-        # result = supabase.table('chat_flow').select('step_number').gt('step_number', current_step).order('step_number').limit(1).execute()
-        # if not result.data:
-        #     return {"success": True, "next_step": None}
-        # next_step = result.data[0]['step_number']
-        # return await get_chat_flow_step(next_step)
+        if not result.data:
+            return {"success": True, "next_step": None}  # End of flow
+        
+        next_step = result.data[0]['step_number']
+        return await get_chat_flow_step(next_step)
         
     except Exception as e:
         print(f"Error getting next chat flow step: {str(e)}")
@@ -567,16 +588,53 @@ async def process_chat_choice(request: dict):
         option_value = request.get("option_value")
         context = request.get("context", {})
         
-        # For now, use mock service until Supabase tables are created
-        from mock_chat_flow_service import MockChatFlowService
-        service = MockChatFlowService()
+        # Get the current step to find the selected option
+        step_data = await get_chat_flow_step(step_number)
+        if not step_data["success"]:
+            raise HTTPException(status_code=404, detail="Step not found")
         
-        result = service.process_user_choice(step_number, option_value, context)
+        # Find the selected option
+        selected_option = None
+        for option in step_data["options"]:
+            if option["option_value"] == option_value:
+                selected_option = option
+                break
+        
+        if not selected_option:
+            raise HTTPException(status_code=400, detail="Invalid option")
+        
+        # Process variable substitution in the result
+        result = {
+            "action_type": selected_option["action_type"],
+            "action_data": selected_option["action_data"],
+            "next_step": selected_option["next_step"]
+        }
+        
+        # Apply variable substitution if context is provided
+        if context:
+            result = substitute_variables(result, context)
+        
         return {"success": True, "result": result}
         
     except Exception as e:
         print(f"Error processing chat choice: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat choice: {str(e)}")
+
+def substitute_variables(data, context):
+    """Replace {variable} placeholders with actual values"""
+    import json
+    data_str = json.dumps(data) if data else "{}"
+    
+    for key, value in context.items():
+        placeholder = f"{{{key}}}"
+        if isinstance(value, (int, float)):
+            # Format numbers with Swedish locale
+            formatted_value = f"{value:,.0f}".replace(',', ' ')
+            data_str = data_str.replace(placeholder, formatted_value)
+        else:
+            data_str = data_str.replace(placeholder, str(value))
+    
+    return json.loads(data_str)
 
 @app.post("/api/recalculate-ink2")
 async def recalculate_ink2(request: RecalculateRequest):
