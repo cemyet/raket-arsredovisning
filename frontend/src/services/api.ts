@@ -106,6 +106,24 @@ class ApiService {
     });
   }
 
+  async processChatChoice(data: {
+    step_number: number;
+    option_value: string;
+    context?: Record<string, any>;
+  }): Promise<{
+    success: boolean;
+    result: {
+      action_type: string;
+      action_data?: any;
+      next_step?: number;
+    };
+  }> {
+    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/process-choice`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async recalculateInk2(data: {
     current_accounts: Record<string, number>;
     fiscal_year?: number;

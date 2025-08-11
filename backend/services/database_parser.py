@@ -734,6 +734,11 @@ class DatabaseParser:
             ink_values['justering_sarskild_loneskatt'] = manual_amounts['justering_sarskild_loneskatt']
             print(f"Injected justering_sarskild_loneskatt: {manual_amounts['justering_sarskild_loneskatt']}")
         
+        # Inject INK4.14a (outnyttjat underskott) into ink_values if provided
+        if 'INK4.14a' in manual_amounts:
+            ink_values['INK4.14a'] = manual_amounts['INK4.14a']
+            print(f"Injected INK4.14a: {manual_amounts['INK4.14a']}")
+        
         # Inject underskott adjustment for INK4.16 if provided
         if 'ink4_16_underskott_adjustment' in manual_amounts:
             ink_values['ink4_16_underskott_adjustment'] = manual_amounts['ink4_16_underskott_adjustment']

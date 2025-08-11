@@ -13,6 +13,7 @@ import { TaxCalculation } from "./TaxCalculation";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, TestTube } from "lucide-react";
 import { apiService } from "@/services/api";
+import DatabaseDrivenChat from "./DatabaseDrivenChat";
 
 interface CompanyData {
   result: number | null;
@@ -52,6 +53,7 @@ const TOTAL_STEPS = 5;
 
 export function AnnualReportChat() {
   const { toast } = useToast();
+  const [useDatabaseDrivenChat, setUseDatabaseDrivenChat] = useState(true); // Toggle for new system
   const [currentStep, setCurrentStep] = useState(-1); // Start at -1 for SE file upload
   const [showInput, setShowInput] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -830,31 +832,47 @@ export function AnnualReportChat() {
                     className="h-12 w-auto"
                   />
                 </div>
-                {currentStep > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {currentStep}/{TOTAL_STEPS}
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setUseDatabaseDrivenChat(!useDatabaseDrivenChat)}
+                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                  >
+                    {useDatabaseDrivenChat ? '🔄 Gammal Chat' : '🚀 Ny Chat'}
+                  </button>
+                  {currentStep > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {currentStep}/{TOTAL_STEPS}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Chat Messages */}
-            <div ref={chatContainerRef} className="flex-1 overflow-auto">
-              <div className="px-6 py-6 space-y-1">
-                {messages.map((message, index) => (
-                  <ChatMessage
-                    key={index}
-                    message={message.text}
-                    isBot={message.isBot}
-                    emoji={message.emoji}
-                  />
-                ))}
-                {/* Invisible div to mark the end of messages for scrolling */}
-                <div ref={messagesEndRef} />
+            {/* Chat Messages - Toggle between old and new system */}
+            {useDatabaseDrivenChat ? (
+              <DatabaseDrivenChat 
+                companyData={companyData}
+                onDataUpdate={(updates) => setCompanyData(prev => ({ ...prev, ...updates }))}
+              />
+            ) : (
+              <div ref={chatContainerRef} className="flex-1 overflow-auto">
+                <div className="px-6 py-6 space-y-1">
+                  {messages.map((message, index) => (
+                    <ChatMessage
+                      key={index}
+                      message={message.text}
+                      isBot={message.isBot}
+                      emoji={message.emoji}
+                    />
+                  ))}
+                  {/* Invisible div to mark the end of messages for scrolling */}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Clean Input Area */}
+            {/* Clean Input Area - Only show for old system */}
+            {!useDatabaseDrivenChat && (
             <div className="px-6 py-4">
               {/* Text input area with arrow button */}
               {(showInput && (currentStep < 1 || currentStep === 1 || currentStep === 0.5 || currentStep === 0.33 || currentStep === 0.36)) && (
@@ -1093,6 +1111,7 @@ export function AnnualReportChat() {
                 </div>
               )}
             </div>
+            )}
           </div>
         </ResizablePanel>
 
