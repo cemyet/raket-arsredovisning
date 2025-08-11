@@ -224,8 +224,39 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       if (option.option_value === 'review_adjustments') {
         // Show tax module using the flag
         onDataUpdate({ showTaxPreview: true });
+        // Auto-scroll to tax module after a short delay
+        setTimeout(() => {
+          const taxModule = document.querySelector('[data-section="tax-calculation"]');
+          if (taxModule) {
+            taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 500);
         // Go directly to pension tax check
         setTimeout(() => loadChatStep(201), 1000);
+        return;
+      }
+      
+      // Handle pension tax adjustments
+      if (option.option_value === 'adjust_calculated') {
+        // Set pension tax adjustment to calculated value
+        onDataUpdate({ justeringSarskildLoneskatt: 'calculated' });
+        addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+        setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
+        return;
+      }
+      
+      if (option.option_value === 'keep_current') {
+        // Keep current pension tax
+        onDataUpdate({ justeringSarskildLoneskatt: 'current' });
+        setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
+        return;
+      }
+      
+      if (option.option_value === 'enter_custom') {
+        // Show input for custom pension tax amount
+        setShowInput(true);
+        setInputType('amount');
+        setInputPlaceholder('Ange belopp...');
         return;
       }
 
@@ -379,10 +410,25 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         if (submitOption.action_data.variable === 'unusedTaxLossAmount') {
           await handleUnusedTaxLossSubmission(value as number);
         }
+        
+        // Special handling for custom pension tax amount
+        if (submitOption.action_data.variable === 'sarskildLoneskattCustom') {
+          onDataUpdate({ 
+            justeringSarskildLoneskatt: 'custom',
+            sarskildLoneskattPensionSubmitted: value 
+          });
+          addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+          setShowInput(false);
+          setInputValue('');
+          setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
+          return;
+        }
       }
 
       // Navigate to next step (unless we're handling special cases)
-      if (submitOption.next_step && submitOption.action_data?.variable !== 'unusedTaxLossAmount') {
+      if (submitOption.next_step && 
+          submitOption.action_data?.variable !== 'unusedTaxLossAmount' && 
+          submitOption.action_data?.variable !== 'sarskildLoneskattCustom') {
         setShowInput(false);
         setInputValue('');
         setTimeout(() => loadChatStep(submitOption.next_step!), 500);
@@ -427,7 +473,17 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         console.log('📊 Found SumAretsResultat:', sumAretsResultat, 'from item:', sumAretsResultatItem);
       } else {
         console.log('❌ Could not find SumAretsResultat in RR or BR data');
-        console.log('RR data keys:', fileData.data.rr_data?.map((item: any) => ({ id: item.id, variable_name: item.variable_name, label: item.label })));
+        console.log('RR data keys:', fileData.data.rr_data?.map((item: any) => ({ id: item.id, variable_name: item.variable_name, label: item.label, current_amount: item.current_amount })));
+        
+        // Try to find any result item as fallback
+        const fallbackItem = fileData.data.rr_data?.find((item: any) => 
+          item.current_amount !== null && item.current_amount !== 0 && 
+          (item.label?.toLowerCase().includes('resultat') || item.id?.includes('RES'))
+        );
+        if (fallbackItem) {
+          sumAretsResultat = Math.abs(Math.round(fallbackItem.current_amount));
+          console.log('📊 Using fallback SumAretsResultat:', sumAretsResultat, 'from item:', fallbackItem);
+        }
       }
       
       // Extract SkattAretsResultat for tax confirmation
