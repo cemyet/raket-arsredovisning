@@ -658,13 +658,33 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   // Special handler for unused tax loss submission
   const handleUnusedTaxLossSubmission = async (amount: number) => {
     try {
-      console.log('🔥 Handling unused tax loss submission:', amount);
+              console.log('🔥 Handling unused tax loss submission:', amount);
+      console.log('💰 Current companyData:', { 
+        justeringSarskildLoneskatt: companyData.justeringSarskildLoneskatt,
+        sarskildLoneskattPensionCalculated: companyData.sarskildLoneskattPensionCalculated,
+        sarskildLoneskattPensionSubmitted: companyData.sarskildLoneskattPensionSubmitted
+      });
       
       // Update company data with the amount
       onDataUpdate({ unusedTaxLossAmount: amount });
 
       // Trigger API recalculation to update INK4.14a and all dependent tax calculations
       if (companyData.seFileData) {
+        // Calculate the correct pension tax adjustment value
+        let pensionTaxAdjustment = 0;
+        if (companyData.justeringSarskildLoneskatt === 'calculated') {
+          pensionTaxAdjustment = companyData.sarskildLoneskattPensionCalculated || 0;
+        } else if (companyData.justeringSarskildLoneskatt === 'custom') {
+          pensionTaxAdjustment = companyData.sarskildLoneskattPensionSubmitted || 0;
+        } else if (typeof companyData.justeringSarskildLoneskatt === 'number') {
+          pensionTaxAdjustment = companyData.justeringSarskildLoneskatt;
+        }
+        
+        console.log('📊 Recalculating with:', {
+          ink4_14a_outnyttjat_underskott: amount,
+          justering_sarskild_loneskatt: pensionTaxAdjustment
+        });
+        
         const result = await apiService.recalculateInk2({
           current_accounts: companyData.seFileData.current_accounts || {},
           fiscal_year: companyData.fiscalYear,
@@ -672,11 +692,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           br_data: companyData.seFileData.br_data || [],
           manual_amounts: {}, // Keep manual_amounts separate
           ink4_14a_outnyttjat_underskott: amount, // Use the correct parameter
-          justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt || 0
+          justering_sarskild_loneskatt: pensionTaxAdjustment
         });
         
         if (result.success) {
           console.log('✅ Tax recalculation successful');
+          console.log('📋 New INK2 data:', result.ink2_data);
           
           // Update the tax data in company state
           onDataUpdate({
