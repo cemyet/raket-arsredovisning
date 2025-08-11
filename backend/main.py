@@ -355,42 +355,7 @@ async def list_companies_with_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing companies: {str(e)}")
 
-@app.post("/api/recalculate-ink2")
-async def recalculate_ink2(data: dict):
-    """
-    Recalculate INK2 values with manual amount overrides
-    """
-    try:
-        current_accounts = data.get('current_accounts', {})
-        fiscal_year = data.get('fiscal_year')
-        rr_data = data.get('rr_data', [])
-        br_data = data.get('br_data', [])
-        manual_amounts = data.get('manual_amounts', {})
-        justering_sarskild_loneskatt = data.get('justering_sarskild_loneskatt', 0)
-        
-        # Initialize parser
-        parser = DatabaseParser()
-        
-        # Add pension tax adjustment to manual amounts if provided
-        if justering_sarskild_loneskatt != 0:
-            manual_amounts['justering_sarskild_loneskatt'] = justering_sarskild_loneskatt
-        
-        # Recalculate INK2 with manual overrides
-        ink2_data = parser.parse_ink2_data_with_overrides(
-            current_accounts, 
-            fiscal_year, 
-            rr_data, 
-            br_data, 
-            manual_amounts
-        )
-        
-        return {
-            "success": True,
-            "ink2_data": ink2_data
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fel vid omberäkning: {str(e)}")
+
 
 @app.get("/api/database/tables/{table_name}")
 async def read_database_table(table_name: str, columns: str = "*", order_by: str = None):
@@ -661,8 +626,10 @@ async def recalculate_ink2(request: RecalculateRequest):
         manual_amounts = dict(request.manual_amounts)
         if request.ink4_14a_outnyttjat_underskott and request.ink4_14a_outnyttjat_underskott > 0:
             manual_amounts['INK4.14a'] = request.ink4_14a_outnyttjat_underskott
+            print(f"🔥 Injecting INK4.14a unused tax loss: {request.ink4_14a_outnyttjat_underskott}")
         if request.ink4_16_underskott_adjustment and request.ink4_16_underskott_adjustment != 0:
             manual_amounts['ink4_16_underskott_adjustment'] = request.ink4_16_underskott_adjustment
+            print(f"📊 Injecting ink4_16_underskott_adjustment: {request.ink4_16_underskott_adjustment}")
         
         # Parse INK2 data with manual overrides
         ink2_data = parser.parse_ink2_data_with_overrides(
