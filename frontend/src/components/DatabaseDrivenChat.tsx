@@ -424,6 +424,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         // Special handling for unused tax loss (outnyttjat underskott)
         if (submitOption.action_data.variable === 'unusedTaxLossAmount') {
           await handleUnusedTaxLossSubmission(value as number);
+          return; // Exit early since handleUnusedTaxLossSubmission handles navigation
         }
         
         // Special handling for custom pension tax amount
@@ -692,6 +693,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         if (result.success) {
           console.log('✅ Tax recalculation successful');
           console.log('📋 New INK2 data:', result.ink2_data);
+          
+          // Check if INK4.14a was updated
+          const ink4_14a = result.ink2_data.find((item: any) => 
+            item.variable_name === 'INK4.14a'
+          );
+          console.log('🔍 INK4.14a after recalculation:', ink4_14a);
           
           // Update the tax data in company state
           onDataUpdate({
