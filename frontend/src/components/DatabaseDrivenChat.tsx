@@ -260,6 +260,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             
           case 'navigate':
             // Simple navigation to next step
+            // Show tax module for tax-related steps
+            if (next_step === 201 || next_step === 202 || next_step === 203 || 
+                next_step === 301 || next_step === 302 || next_step === 303 || 
+                next_step === 401 || next_step === 402 || next_step === 405) {
+              onDataUpdate({ showTaxPreview: true });
+            }
             break;
             
           case 'process_input':
@@ -402,7 +408,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         );
       }
       if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
-        sumAretsResultat = Math.abs(sumAretsResultatItem.current_amount);
+        sumAretsResultat = Math.round(sumAretsResultatItem.current_amount);
         console.log('📊 Found SumAretsResultat:', sumAretsResultat, 'from item:', sumAretsResultatItem);
       } else {
         console.log('❌ Could not find SumAretsResultat in RR or BR data');
@@ -411,10 +417,15 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       
       // Extract SkattAretsResultat for tax confirmation
       const skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
-        item.variable_name === 'SkattAretsResultat'
+        item.variable_name === 'SkattAretsResultat' ||
+        item.id === 'SKATT' ||
+        item.label?.toLowerCase().includes('skatt')
       );
       if (skattAretsResultatItem && skattAretsResultatItem.current_amount !== null) {
-        skattAretsResultat = Math.abs(skattAretsResultatItem.current_amount);
+        skattAretsResultat = Math.round(skattAretsResultatItem.current_amount);
+        console.log('💰 Found SkattAretsResultat:', skattAretsResultat, 'from item:', skattAretsResultatItem);
+      } else {
+        console.log('❌ Could not find SkattAretsResultat in RR data');
       }
     }
     
@@ -485,16 +496,49 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     // Add the success message manually (step 102)
     addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
     
-    // Add the result overview message manually (step 103)
-    const resultText = sumAretsResultat 
-      ? `Årets resultat är: ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
-      : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
-    addMessage(resultText, true, '💰');
+            // Add the result overview message manually (step 103)
+        const resultText = sumAretsResultat 
+          ? `Årets resultat är: ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
+          : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
+        addMessage(resultText, true, '💰');
+        
+        // Add debugging for tax amount
+        console.log('🏛️ Tax amount for step 104:', skattAretsResultat);
+        console.log('📊 Annual result for step 103:', sumAretsResultat);
     
     // Navigate to next step after file upload
     setTimeout(() => {
-      // Go directly to step 104 (tax question) since step 103 might not have no_option
-      loadChatStep(104); // Skip step 103 and go to tax question
+      // Show tax question if we have tax data (including 0)
+      if (skattAretsResultat !== null) {
+        const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
+        addMessage(`Den bokförda skatten är ${taxAmount} kr. Vill du godkänna den eller vill du se över de skattemässiga justeringarna?`, true, '🏛️');
+        
+        // Set up options for tax question
+        setCurrentOptions([
+          {
+            option_order: 1,
+            option_text: 'Ja, godkänn den bokförda skatten.',
+            option_value: 'continue',
+            next_step: 501,
+            action_type: 'navigate',
+            action_data: null
+          },
+          {
+            option_order: 2,
+            option_text: 'Låt mig se över justeringarna!',
+            option_value: 'continue',
+            next_step: 201,
+            action_type: 'navigate',
+            action_data: null
+          }
+        ]);
+        
+        // Show the tax module (yellow section) when user wants to review adjustments
+        onDataUpdate({ showTaxPreview: true });
+      } else {
+        // No tax data found, go directly to dividends
+        loadChatStep(501);
+      }
     }, 1000);
   };
 
