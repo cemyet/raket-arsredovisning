@@ -323,11 +323,106 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   // Handle file upload
   const handleFileProcessed = (fileData: any) => {
     console.log('📁 File processed:', fileData);
+    
+    // Extract data from the uploaded file (same logic as old system)
+    let extractedResults = null;
+    let sumAretsResultat = null;
+    let sumFrittEgetKapital = null;
+    let skattAretsResultat = null;
+    
+    // Try to extract net result from RR data
+    if (fileData.data?.rr_data) {
+      const netResultItem = fileData.data.rr_data.find((item: any) => 
+        item.id === 'ÅR' || item.label?.toLowerCase().includes('årets resultat')
+      );
+      if (netResultItem && netResultItem.current_amount !== null) {
+        extractedResults = Math.abs(netResultItem.current_amount).toString();
+      }
+      
+      // Extract SumAretsResultat for chat options (check RR first, then BR)
+      let sumAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+        item.variable_name === 'SumAretsResultat'
+      );
+      if (!sumAretsResultatItem && fileData.data?.br_data) {
+        sumAretsResultatItem = fileData.data.br_data.find((item: any) => 
+          item.variable_name === 'SumAretsResultat'
+        );
+      }
+      if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
+        sumAretsResultat = Math.abs(sumAretsResultatItem.current_amount);
+      }
+      
+      // Extract SkattAretsResultat for tax confirmation
+      const skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+        item.variable_name === 'SkattAretsResultat'
+      );
+      if (skattAretsResultatItem && skattAretsResultatItem.current_amount !== null) {
+        skattAretsResultat = Math.abs(skattAretsResultatItem.current_amount);
+      }
+    }
+    
+    // Extract SumFrittEgetKapital from BR data  
+    if (fileData.data?.br_data) {
+      const sumFrittEgetKapitalItem = fileData.data.br_data.find((item: any) => 
+        item.variable_name === 'SumFrittEgetKapital'
+      );
+      if (sumFrittEgetKapitalItem && sumFrittEgetKapitalItem.current_amount !== null) {
+        sumFrittEgetKapital = Math.abs(sumFrittEgetKapitalItem.current_amount);
+      }
+    }
+    
+    // Extract calculated tax amounts from INK2 data
+    let inkBeraknadSkatt = null;
+    let inkBokfordSkatt = null;
+    if (fileData.data?.ink2_data) {
+      const beraknadItem = fileData.data.ink2_data.find((item: any) => 
+        item.variable_name === 'INK_beraknad_skatt'
+      );
+      if (beraknadItem && beraknadItem.amount !== null) {
+        inkBeraknadSkatt = Math.abs(beraknadItem.amount);
+      }
+      
+      const bokfordItem = fileData.data.ink2_data.find((item: any) => 
+        item.variable_name === 'INK_bokford_skatt'
+      );
+      if (bokfordItem && bokfordItem.amount !== null) {
+        inkBokfordSkatt = Math.abs(bokfordItem.amount);
+      }
+    }
+    
+    // Extract pension tax variables from response
+    let pensionPremier = fileData.data?.pension_premier || null;
+    let sarskildLoneskattPension = fileData.data?.sarskild_loneskatt_pension || null;
+    let sarskildLoneskattPensionCalculated = fileData.data?.sarskild_loneskatt_pension_calculated || null;
+    
+    // Fallback to legacy extraction if needed
+    if (!extractedResults && fileData.data?.accountBalances) {
+      const resultAccounts = ['8999', '8910'];
+      for (const account of resultAccounts) {
+        if (fileData.data.accountBalances[account]) {
+          extractedResults = Math.abs(fileData.data.accountBalances[account]).toString();
+          break;
+        }
+      }
+    }
+    
+    // Update company data with all extracted information
     onDataUpdate({ 
-      seFileData: fileData,
-      fiscalYear: fileData.fiscal_year || new Date().getFullYear(),
+      seFileData: fileData.data,
+      results: extractedResults,
+      sumAretsResultat: sumAretsResultat,
+      sumFrittEgetKapital: sumFrittEgetKapital,
+      skattAretsResultat: skattAretsResultat,
+      ink2Data: fileData.data?.ink2_data || [],
+      inkBeraknadSkatt: inkBeraknadSkatt,
+      inkBokfordSkatt: inkBokfordSkatt,
+      pensionPremier: pensionPremier,
+      sarskildLoneskattPension: sarskildLoneskattPension,
+      sarskildLoneskattPensionCalculated: sarskildLoneskattPensionCalculated,
+      fiscalYear: fileData.data?.company_info?.fiscal_year || new Date().getFullYear(),
       showRRBR: true // Show RR and BR data in preview
     });
+    
     setShowFileUpload(false);
     
     // Navigate to next step after file upload
