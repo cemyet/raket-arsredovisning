@@ -325,13 +325,14 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     console.log('📁 File processed:', fileData);
     onDataUpdate({ 
       seFileData: fileData,
-      fiscalYear: fileData.fiscal_year || new Date().getFullYear()
+      fiscalYear: fileData.fiscal_year || new Date().getFullYear(),
+      showRRBR: true // Show RR and BR data in preview
     });
     setShowFileUpload(false);
     
     // Navigate to next step after file upload
     setTimeout(() => {
-      loadChatStep(103); // Go to next step after file upload
+      loadChatStep(102); // Go to data overview step
     }, 1000);
   };
 
@@ -413,7 +414,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     
     // Only start if we have basic setup
     try {
-      loadChatStep(101); // Start with introduction
+      loadChatStep(101); // Start with welcome message that shows file upload
     } catch (error) {
       console.error('❌ Error initializing chat:', error);
       addMessage('Något gick fel vid start av chatten. Växla till gammal chat.', true, '❌');

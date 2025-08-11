@@ -17,19 +17,16 @@ ALTER SEQUENCE public.chat_flow_id_seq RESTART WITH 1;
 
 -- BLOCK 10: Introduction and SE File Upload
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(101, 10, 'Välkommen till Raketrapport! Jag kommer att guida dig genom att skapa din årsredovisning steg för steg.', '👋', 'message', 'Fortsätt', 'continue', 102, 'navigate');
-
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
-(102, 10, 'Har du en SE-fil från ditt redovisningsprogram?', '📁', 'options', 'Ja, jag har en SE-fil', 'use_se_file', 103, 'show_file_upload', NULL, 'Nej, jag vill ange information manuellt', 'manual_input', 104, 'navigate', NULL);
-
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(103, 10, 'Bra! Ladda upp din .SE fil så analyserar jag den åt dig. 📁', '📤', 'file_upload', 'file', NULL, 'Ladda upp SE-fil', 'upload', 105, 'process_se_file');
+(101, 10, 'Välkommen till Raketrapport! Ladda upp din SE-fil så börjar vi analysera din årsredovisning.', '👋', 'message', 'Ladda upp SE-fil', 'upload_se_file', 102, 'show_file_upload');
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(104, 10, 'Låt oss börja! Första frågan: Vad blev årets resultat?', '💰', 'message', 'Fortsätt', 'continue', 105, 'navigate');
+(102, 10, 'Bra! Jag har analyserat din SE-fil. Här är en översikt över dina data:', '📊', 'message', 'Fortsätt', 'continue', 103, 'navigate');
 
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
-(105, 10, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
+(103, 10, 'Vad blev årets resultat?', '💰', 'message', 'Fortsätt', 'continue', 201, 'navigate');
+
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
+(104, 10, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
 
 -- BLOCK 20: Tax Calculations
 -- Subblock 30: Pension Tax Check (FIRST)
