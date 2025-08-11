@@ -19,8 +19,8 @@ ALTER SEQUENCE public.chat_flow_id_seq RESTART WITH 1;
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
 (101, 10, 'Välkommen till Raketrapport! Jag kommer att guida dig genom att skapa din årsredovisning steg för steg.', '👋', 'message', 'Fortsätt', 'continue', 102, 'navigate');
 
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type) VALUES
-(102, 10, 'Har du en SE-fil från ditt redovisningsprogram?', '📁', 'options', 'Ja, jag har en SE-fil', 'use_se_file', 103, 'show_file_upload', 'Nej, jag vill ange information manuellt', 'manual_input', 104, 'navigate');
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
+(102, 10, 'Har du en SE-fil från ditt redovisningsprogram?', '📁', 'options', 'Ja, jag har en SE-fil', 'use_se_file', 103, 'show_file_upload', NULL, 'Nej, jag vill ange information manuellt', 'manual_input', 104, 'navigate', NULL);
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
 (103, 10, 'Bra! Ladda upp din .SE fil så analyserar jag den åt dig. 📁', '📤', 'file_upload', 'file', NULL, 'Ladda upp SE-fil', 'upload', 105, 'process_se_file');
@@ -43,8 +43,8 @@ INSERT INTO public.chat_flow (step_number, block_number, subblock_number, questi
 (203, 20, 30, 'Ange belopp för särskild löneskatt:', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 202, 'process_input', '{"variable": "sarskildLoneskattCustom"}');
 
 -- Subblock 40: Outnyttjat underskott (SECOND)
-INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
-(301, 20, 40, 'Outnyttjat underskott från föregående år är det samlade beloppet av tidigare års skattemässiga förluster som ännu inte har kunnat kvittas mot vinster. Om företaget går med vinst ett senare år kan hela eller delar av det outnyttjade underskottet användas för att minska den beskattningsbara inkomsten och därmed skatten. Denna uppgift går inte att hämta från tidigare årsredovisningar utan behöver tas från årets förtryckta deklaration eller från förra årets inlämnade skattedeklaration. Vill du...', '📊', 'options', 'Finns inget outnyttjat underskott kvar', 'none', 401, 'navigate', 'Ange belopp outnyttjat underskott', 'enter_amount', 302, 'show_input', '{"input_type": "amount", "placeholder": "Ange belopp..."}');
+INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
+(301, 20, 40, 'Outnyttjat underskott från föregående år är det samlade beloppet av tidigare års skattemässiga förluster som ännu inte har kunnat kvittas mot vinster. Om företaget går med vinst ett senare år kan hela eller delar av det outnyttjade underskottet användas för att minska den beskattningsbara inkomsten och därmed skatten. Denna uppgift går inte att hämta från tidigare årsredovisningar utan behöver tas från årets förtryckta deklaration eller från förra årets inlämnade skattedeklaration. Vill du...', '📊', 'options', 'Finns inget outnyttjat underskott kvar', 'none', 401, 'navigate', NULL, 'Ange belopp outnyttjat underskott', 'enter_amount', 302, 'show_input', '{"input_type": "amount", "placeholder": "Ange belopp..."}');
 
 INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
 (302, 20, 40, 'Ange belopp outnyttjat underskott:', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 303, 'process_input', '{"variable": "unusedTaxLossAmount"}');
@@ -56,8 +56,8 @@ INSERT INTO public.chat_flow (step_number, block_number, subblock_number, questi
 INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data, option3_text, option3_value, option3_next_step, option3_action_type, option3_action_data) VALUES
 (401, 20, 50, 'Beräknad skatt efter skattemässiga justeringar är {inkBeraknadSkatt} kr. Vill du godkänna denna skatt eller vill du göra manuella ändringar? Eller vill du hellre att vi godkänner och använder den bokförda skatten?', '🧮', 'options', 'Godkänn och använd beräknad skatt {inkBeraknadSkatt}', 'approve_calculated', 501, 'set_variable', '{"variable": "finalTaxChoice", "value": "calculated"}', 'Gör manuella ändringar i skattejusteringarna', 'manual_changes', 402, 'enable_editing', NULL, 'Godkänn och använd bokförd skatt {inkBokfordSkatt}', 'approve_booked', 501, 'set_variable', '{"variable": "finalTaxChoice", "value": "booked"}');
 
-INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type) VALUES
-(402, 20, 50, 'Du kan nu redigera skattemässiga justeringar. Klicka på "Godkänn och uppdatera skatt" när du är klar.', '✏️', 'message', 'Godkänn och uppdatera skatt', 'update_tax', 501, 'save_manual_tax', 'Ångra ändringar', 'undo_changes', 401, 'reset_tax_edits');
+INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
+(402, 20, 50, 'Du kan nu redigera skattemässiga justeringar. Klicka på "Godkänn och uppdatera skatt" när du är klar.', '✏️', 'message', 'Godkänn och uppdatera skatt', 'update_tax', 501, 'save_manual_tax', NULL, 'Ångra ändringar', 'undo_changes', 401, 'reset_tax_edits', NULL);
 
 -- BLOCK 30: Dividends
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data, option3_text, option3_value, option3_next_step, option3_action_type, option3_action_data, option4_text, option4_value, option4_next_step, option4_action_type, option4_action_data) VALUES
@@ -67,29 +67,29 @@ INSERT INTO public.chat_flow (step_number, block_number, question_text, question
 (502, 30, 'Ange belopp för utdelning:', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 601, 'process_input', '{"variable": "customDividend"}');
 
 -- BLOCK 40: Significant Events
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type) VALUES
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
 (601, 40, 'Har något särskilt hänt i verksamheten under året?', '📋', 'options', 'Nej, inget särskilt', 'no_events', 701, 'set_variable', '{"variable": "hasEvents", "value": false}', 'Ja, det har hänt saker', 'has_events', 602, 'show_input', '{"input_type": "text", "placeholder": "Beskriv vad som hänt..."}');
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
 (602, 40, 'Beskriv vad som hänt under året:', '✍️', 'input', 'text', 'Beskriv händelser...', 'Skicka', 'submit', 701, 'process_input', '{"variable": "significantEvents"}');
 
 -- BLOCK 50: Depreciation
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type) VALUES
-(701, 50, 'Vill du behålla avskrivningarna som de är eller vill du justera dem?', '📉', 'options', 'Behåll som de är', 'keep_depreciation', 801, 'navigate', 'Justera avskrivningar', 'adjust_depreciation', 702, 'show_input', '{"input_type": "text", "placeholder": "Beskriv justeringar..."}');
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
+(701, 50, 'Vill du behålla avskrivningarna som de är eller vill du justera dem?', '📉', 'options', 'Behåll som de är', 'keep_depreciation', 801, 'navigate', NULL, 'Justera avskrivningar', 'adjust_depreciation', 702, 'show_input', '{"input_type": "text", "placeholder": "Beskriv justeringar..."}');
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
 (702, 50, 'Beskriv vilka justeringar du vill göra:', '✍️', 'input', 'text', 'Beskriv justeringar...', 'Skicka', 'submit', 801, 'process_input', '{"variable": "depreciation"}');
 
 -- BLOCK 60: Employees
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option2_text, option2_value, option2_next_step, option2_action_type, option3_text, option3_value, option3_next_step, option3_action_type) VALUES
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data, option3_text, option3_value, option3_next_step, option3_action_type, option3_action_data) VALUES
 (801, 60, 'Hur många anställda har företaget?', '👥', 'options', '0 anställda', '0', 901, 'set_variable', '{"variable": "employees", "value": 0}', '1-10 anställda', '1-10', 901, 'set_variable', '{"variable": "employees", "value": "1-10"}', 'Fler än 10 anställda', '10+', 901, 'set_variable', '{"variable": "employees", "value": "10+"}');
 
 -- BLOCK 70: Final Details
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
 (901, 70, 'Perfekt! Nu går vi vidare. Har något särskilt hänt i verksamheten under året?', '📋', 'message', 'Fortsätt', 'continue', 1001, 'navigate');
 
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(1001, 70, 'Årsredovisningen är nu klar! Vill du ladda ner den som PDF?', '📄', 'options', 'Ja, ladda ner PDF', 'download_pdf', 1002, 'generate_pdf', 'Nej, avsluta', 'finish', 1003, 'complete_session');
+INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data) VALUES
+(1001, 70, 'Årsredovisningen är nu klar! Vill du ladda ner den som PDF?', '📄', 'options', 'Ja, ladda ner PDF', 'download_pdf', 1002, 'generate_pdf', NULL, 'Nej, avsluta', 'finish', 1003, 'complete_session', NULL);
 
 INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
 (1002, 70, 'PDF har skapats och laddats ner. Tack för att du använde Raketrapport! 🚀', '🎉', 'message', 'Avsluta', 'finish', 1003, 'complete_session');
