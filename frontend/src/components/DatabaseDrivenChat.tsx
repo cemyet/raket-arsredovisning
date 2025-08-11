@@ -137,6 +137,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         const noOption = response.options.find(opt => opt.option_order === 0);
         if (noOption) {
           console.log('🚀 Auto-executing no_option:', noOption);
+          console.log('No option details:', {
+            option_value: noOption.option_value,
+            next_step: noOption.next_step,
+            action_type: noOption.action_type,
+            action_data: noOption.action_data
+          });
           await handleOptionSelect(noOption);
           return; // Don't show the message since no_option handles it
         }
@@ -468,9 +474,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     
     setShowFileUpload(false);
     
+    // Add the success message manually
+    addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
+    
     // Navigate to next step after file upload
     setTimeout(() => {
-      loadChatStep(102); // Go to data overview step
+      loadChatStep(103); // Go directly to step 103 (result overview)
     }, 1000);
   };
 
