@@ -481,11 +481,21 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       }
 
       // Navigate to next step (unless we're handling special cases)
+      console.log('🔍 Navigation check:', {
+        hasNextStep: !!submitOption.next_step,
+        nextStep: submitOption.next_step,
+        variable: submitOption.action_data?.variable,
+        willNavigate: submitOption.next_step && submitOption.action_data?.variable !== 'sarskildLoneskattCustom'
+      });
+      
       if (submitOption.next_step && 
           submitOption.action_data?.variable !== 'sarskildLoneskattCustom') {
+        console.log('🚀 Navigating to step:', submitOption.next_step);
         setShowInput(false);
         setInputValue('');
         setTimeout(() => loadChatStep(submitOption.next_step!), 500);
+      } else {
+        console.log('❌ Navigation blocked or no next step');
       }
     }
   };
