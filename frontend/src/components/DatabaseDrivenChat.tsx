@@ -240,6 +240,27 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       if (option.option_value === 'adjust_calculated') {
         // Set pension tax adjustment to calculated value
         onDataUpdate({ justeringSarskildLoneskatt: 'calculated' });
+        
+        // Trigger recalculation to update tax preview
+        if (companyData.seFileData && companyData.sarskildLoneskattPensionCalculated) {
+          try {
+            const result = await apiService.recalculateInk2({
+              current_accounts: companyData.seFileData.current_accounts || {},
+              fiscal_year: companyData.fiscalYear,
+              rr_data: companyData.seFileData.rr_data || [],
+              br_data: companyData.seFileData.br_data || [],
+              manual_amounts: {},
+              justering_sarskild_loneskatt: companyData.sarskildLoneskattPensionCalculated
+            });
+            
+            if (result.success) {
+              onDataUpdate({ ink2Data: result.ink2_data });
+            }
+          } catch (error) {
+            console.error('Error recalculating tax:', error);
+          }
+        }
+        
         addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
         setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
         return;
@@ -417,6 +438,27 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             justeringSarskildLoneskatt: 'custom',
             sarskildLoneskattPensionSubmitted: value 
           });
+          
+          // Trigger recalculation to update tax preview
+          if (companyData.seFileData) {
+            try {
+              const result = await apiService.recalculateInk2({
+                current_accounts: companyData.seFileData.current_accounts || {},
+                fiscal_year: companyData.fiscalYear,
+                rr_data: companyData.seFileData.rr_data || [],
+                br_data: companyData.seFileData.br_data || [],
+                manual_amounts: {},
+                justering_sarskild_loneskatt: value as number
+              });
+              
+              if (result.success) {
+                onDataUpdate({ ink2Data: result.ink2_data });
+              }
+            } catch (error) {
+              console.error('Error recalculating tax:', error);
+            }
+          }
+          
           addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
           setShowInput(false);
           setInputValue('');
