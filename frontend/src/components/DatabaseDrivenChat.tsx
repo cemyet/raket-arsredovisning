@@ -143,7 +143,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             action_type: noOption.action_type,
             action_data: noOption.action_data
           });
-          await handleOptionSelect(noOption);
+          
+          // Execute no_option with the correct step number
+          await handleOptionSelect(noOption, stepNumber);
           return; // Don't show the message since no_option handles it
         }
         
@@ -201,7 +203,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   };
 
   // Handle option selection
-  const handleOptionSelect = async (option: ChatOption) => {
+  const handleOptionSelect = async (option: ChatOption, explicitStepNumber?: number) => {
     try {
       // Add user message
       const optionText = substituteVariables(option.option_text || '');
@@ -284,7 +286,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       };
 
       const response = await apiService.processChatChoice({
-        step_number: currentStep,
+        step_number: explicitStepNumber || currentStep,
         option_value: option.option_value,
         context
       });
