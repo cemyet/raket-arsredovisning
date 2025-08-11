@@ -90,7 +90,7 @@ class ApiService {
     question: any;
     options: any[];
   }> {
-    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/${stepNumber}`, {
+    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/${stepNumber}`, {
       method: 'GET',
     });
   }
@@ -101,7 +101,7 @@ class ApiService {
     options?: any[];
     next_step?: number;
   }> {
-    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/next/${currentStep}`, {
+    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/next/${currentStep}`, {
       method: 'GET',
     });
   }
@@ -118,7 +118,7 @@ class ApiService {
       next_step?: number;
     };
   }> {
-    return this.makeRequest(`${API_ENDPOINTS.base}/chat-flow/process-choice`, {
+    return this.makeRequest(`${API_ENDPOINTS.chatFlow}/process-choice`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

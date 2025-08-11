@@ -2,6 +2,7 @@
 export const API_BASE_URL = 'https://raketrapport.se';  // Custom domain set up in Railway
 
 export const API_ENDPOINTS = {
+  base: API_BASE_URL,
   uploadSeFile: `${API_BASE_URL}/upload-se-file`,
   generateReport: `${API_BASE_URL}/generate-report`,
   testParser: `${API_BASE_URL}/test-parser`,
@@ -10,4 +11,5 @@ export const API_ENDPOINTS = {
   userReports: `${API_BASE_URL}/user-reports`,
   downloadReport: `${API_BASE_URL}/download-report`,
   recalculateInk2: `${API_BASE_URL}/api/recalculate-ink2`,
+  chatFlow: `${API_BASE_URL}/api/chat-flow`,
 } as const; 

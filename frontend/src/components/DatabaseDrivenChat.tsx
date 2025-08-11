@@ -115,6 +115,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       console.log(`🔄 Loading step ${stepNumber}...`);
       
       const response = await apiService.getChatFlowStep(stepNumber);
+      console.log('📦 API Response:', response);
       
       if (response.success) {
         setCurrentQuestion(response.question);
@@ -386,7 +387,16 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
   // Initialize chat on mount
   useEffect(() => {
-    loadChatStep(101); // Start with introduction
+    console.log('🚀 DatabaseDrivenChat initializing...');
+    console.log('CompanyData:', companyData);
+    
+    // Only start if we have basic setup
+    try {
+      loadChatStep(101); // Start with introduction
+    } catch (error) {
+      console.error('❌ Error initializing chat:', error);
+      addMessage('Något gick fel vid start av chatten. Växla till gammal chat.', true, '❌');
+    }
   }, []);
 
   // Auto-scroll when new messages arrive
