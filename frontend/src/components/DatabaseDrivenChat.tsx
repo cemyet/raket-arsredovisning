@@ -251,6 +251,38 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           case 'show_file_upload':
             setShowFileUpload(true);
             return; // Don't navigate to next step yet
+            
+          case 'navigate':
+            // Simple navigation to next step
+            break;
+            
+          case 'process_input':
+            // Handle input processing
+            if (action_data?.variable) {
+              // The input value should already be stored in companyData
+              // This action type is mainly for navigation
+            }
+            break;
+            
+          case 'save_manual_tax':
+            // Save manual tax changes
+            onDataUpdate({ taxEditingEnabled: false });
+            break;
+            
+          case 'reset_tax_edits':
+            // Reset tax editing mode
+            onDataUpdate({ taxEditingEnabled: false });
+            break;
+            
+          case 'generate_pdf':
+            // Handle PDF generation
+            console.log('PDF generation requested');
+            break;
+            
+          case 'complete_session':
+            // Handle session completion
+            console.log('Session completion requested');
+            break;
         }
 
         // Navigate to next step
