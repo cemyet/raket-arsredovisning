@@ -482,7 +482,6 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
       // Navigate to next step (unless we're handling special cases)
       if (submitOption.next_step && 
-          submitOption.action_data?.variable !== 'unusedTaxLossAmount' && 
           submitOption.action_data?.variable !== 'sarskildLoneskattCustom') {
         setShowInput(false);
         setInputValue('');
