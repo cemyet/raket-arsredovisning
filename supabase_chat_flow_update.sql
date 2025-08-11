@@ -25,9 +25,6 @@ INSERT INTO public.chat_flow (step_number, block_number, question_text, question
 INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data) VALUES
 (104, 10, NULL, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
 
-INSERT INTO public.chat_flow (step_number, block_number, question_text, question_icon, question_type, input_type, input_placeholder, option1_text, option1_value, option1_next_step, option1_action_type) VALUES
-(104, 10, 'Vad blev årets resultat?', '💰', 'input', 'amount', 'Ange belopp...', 'Skicka', 'submit', 201, 'process_input', '{"variable": "result"}');
-
 -- BLOCK 20: Tax Calculations
 -- Subblock 30: Pension Tax Check (FIRST)
 INSERT INTO public.chat_flow (step_number, block_number, subblock_number, question_text, question_icon, question_type, option1_text, option1_value, option1_next_step, option1_action_type, option1_action_data, option2_text, option2_value, option2_next_step, option2_action_type, option2_action_data, option3_text, option3_value, option3_next_step, option3_action_type, option3_action_data, show_conditions) VALUES
