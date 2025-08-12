@@ -701,6 +701,8 @@ interface ChatFlowResponse {
       }
       if (skattAretsResultatItem && skattAretsResultatItem.current_amount !== null) {
         skattAretsResultat = Math.round(skattAretsResultatItem.current_amount);
+        // Fix negative zero issue
+        if (skattAretsResultat === -0) skattAretsResultat = 0;
         console.log('💰 Found SkattAretsResultat:', skattAretsResultat, 'from item:', skattAretsResultatItem);
       } else {
         console.log('❌ Could not find SkattAretsResultat in RR data');
@@ -774,10 +776,13 @@ interface ChatFlowResponse {
     // Add the success message manually (step 102)
     addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
     
-                // Add the result overview message manually (step 103)
-    const resultText = sumAretsResultat 
-      ? `Årets resultat har beräknats och är ${new Intl.NumberFormat('sv-SE').format(sumAretsResultat)}. Se fullständig resultat- och balans rapport i preview fönstret till höger.`
-      : 'Årets resultat har beräknats. Se fullständig resultat- och balans rapport i preview fönstret till höger.';
+                // Add the result overview message manually (step 103) - use database template
+    const resultText = substituteVariables(
+      'Årets resultat är: {SumAretsResultat} kr. Se fullständig resultat- och balans rapport i preview fönstret till höger.',
+      {
+        SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
+      }
+    );
     addMessage(resultText, true, '💰');
         
         // Add debugging for tax amount
