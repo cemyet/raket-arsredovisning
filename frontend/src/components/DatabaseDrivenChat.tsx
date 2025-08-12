@@ -384,6 +384,15 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           if (typeof value === 'string' && value.includes('{')) {
             // Replace {unusedTaxLossAmount} with actual value
             const substituted = value.replace(/{(\w+)}/g, (match, varName) => {
+              // Special handling for unusedTaxLossAmount to ensure we get the latest value
+              if (varName === 'unusedTaxLossAmount') {
+                // Check if we have a pending unusedTaxLossAmount value from recent input
+                const pendingValue = companyData.unusedTaxLossAmount;
+                if (pendingValue && pendingValue > 0) {
+                  console.log('🔥 Using pending unusedTaxLossAmount value:', pendingValue);
+                  return pendingValue;
+                }
+              }
               return companyData[varName as keyof typeof companyData] || match;
             });
             // Convert to number if it's a numeric string
@@ -398,6 +407,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           console.log('🚫 Skipping API call - unusedTaxLossAmount already set to', companyData.unusedTaxLossAmount);
           return;
         }
+        
+
         
         if (companyData.seFileData) {
           const result = await apiService.recalculateInk2({
