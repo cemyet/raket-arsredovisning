@@ -134,7 +134,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   const loadChatStep = async (stepNumber: number) => {
     try {
       console.log(`🔄 Loading step ${stepNumber}...`);
-      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber);
+      
+      // Always pass the most recent ink2Data to ensure we get the latest values
+      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, companyData.ink2Data);
       
       if (response.success) {
         setCurrentStep(stepNumber);
@@ -815,20 +817,33 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             showTaxPreview: true
           });
           
+          // Hide input and clear value
+          setShowInput(false);
+          setInputValue('');
+
+          // Navigate to step 303 after ensuring state is updated
+          // Use a longer delay to ensure state updates propagate
+          setTimeout(() => {
+            // Double-check that we have the updated inkBeraknadSkatt
+            const finalInkBeraknadSkatt = result.ink2_data.find((item: any) => 
+              item.variable_name === 'INK_beraknad_skatt'
+            )?.amount || updatedInkBeraknadSkatt;
+            
+            console.log('🔄 Navigating to step 303 with final inkBeraknadSkatt:', finalInkBeraknadSkatt);
+            
+            // Force update the state one more time to ensure it's current
+            onDataUpdate({ inkBeraknadSkatt: finalInkBeraknadSkatt });
+            
+            // Then load the step
+            setTimeout(() => loadChatStep(303), 500);
+          }, 2000);
 
         }
       }
 
-      // Hide input and clear value
+      // Hide input and clear value (fallback)
       setShowInput(false);
       setInputValue('');
-
-      // Navigate to step 303 after a longer delay to ensure state updates propagate
-      // Note: We skip the API call in step 303 since we already did the recalculation
-      setTimeout(() => {
-        console.log('🔄 Navigating to step 303 with inkBeraknadSkatt:', companyData.inkBeraknadSkatt);
-        loadChatStep(303);
-      }, 3000);
 
     } catch (error) {
       console.error('❌ Error handling unused tax loss:', error);
