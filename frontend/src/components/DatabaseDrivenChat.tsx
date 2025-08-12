@@ -152,9 +152,39 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             action_data: noOption.action_data
           });
           
+          // For message-type steps with no_option, show the message first, then execute the no_option
+          if (response.question_type === 'message') {
+            // Get the most recent inkBeraknadSkatt value from INK2 data if available
+            let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
+            if (companyData.ink2Data && companyData.ink2Data.length > 0) {
+              const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+                item.variable_name === 'INK_beraknad_skatt'
+              );
+              if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
+                mostRecentInkBeraknadSkatt = inkBeraknadSkattItem.amount;
+                console.log('💰 Using most recent inkBeraknadSkatt from INK2 data for message step:', mostRecentInkBeraknadSkatt);
+              }
+            }
+            
+            // Substitute variables in question text
+            const questionText = substituteVariables(response.question_text, {
+              SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
+              SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
+              pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE').format(companyData.pensionPremier) : '0',
+              sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPensionCalculated) : '0',
+              sarskild_loneskatt_pension: companyData.sarskildLoneskattPension ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPension) : '0',
+              inkBeraknadSkatt: mostRecentInkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(mostRecentInkBeraknadSkatt) : '0',
+              inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
+              unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
+            });
+            
+            // Add the message first
+            addMessage(questionText, true, response.question_icon);
+          }
+          
           // Execute no_option with the correct step number
           await handleOptionSelect(noOption, stepNumber);
-          return; // Don't show the message since no_option handles it
+          return; // Don't continue with normal flow since no_option handles navigation
         }
         
         // Get the most recent inkBeraknadSkatt value from INK2 data if available
@@ -821,22 +851,9 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           setShowInput(false);
           setInputValue('');
 
-          // Navigate to step 303 after ensuring state is updated
-          // Use a longer delay to ensure state updates propagate
-          setTimeout(() => {
-            // Double-check that we have the updated inkBeraknadSkatt
-            const finalInkBeraknadSkatt = result.ink2_data.find((item: any) => 
-              item.variable_name === 'INK_beraknad_skatt'
-            )?.amount || updatedInkBeraknadSkatt;
-            
-            console.log('🔄 Navigating to step 303 with final inkBeraknadSkatt:', finalInkBeraknadSkatt);
-            
-            // Force update the state one more time to ensure it's current
-            onDataUpdate({ inkBeraknadSkatt: finalInkBeraknadSkatt });
-            
-            // Then load the step
-            setTimeout(() => loadChatStep(303), 500);
-          }, 2000);
+          // Navigate to step 303 immediately after state update
+          console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+          loadChatStep(303);
 
         }
       }
