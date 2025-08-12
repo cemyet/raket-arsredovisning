@@ -150,6 +150,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         }
         
         // Substitute variables in question text
+        console.log('🔍 Loading step', stepNumber, 'with companyData.inkBeraknadSkatt:', companyData.inkBeraknadSkatt);
         const questionText = substituteVariables(response.question_text, {
           SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
           SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
@@ -160,6 +161,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
           unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
         });
+        console.log('🔍 Substituted question text:', questionText);
         
         // Add the question message
         addMessage(questionText, true, response.question_icon);
@@ -764,12 +766,17 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           );
           console.log('🔍 INK4.14a after recalculation:', ink4_14a);
           
+          // Get the updated inkBeraknadSkatt value
+          const updatedInkBeraknadSkatt = result.ink2_data.find((item: any) => 
+            item.variable_name === 'INK_beraknad_skatt'
+          )?.amount || companyData.inkBeraknadSkatt;
+          
+          console.log('💰 Updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+          
           // Update the tax data in company state
           onDataUpdate({
             ink2Data: result.ink2_data,
-            inkBeraknadSkatt: result.ink2_data.find((item: any) => 
-              item.variable_name === 'INK_beraknad_skatt'
-            )?.amount || companyData.inkBeraknadSkatt
+            inkBeraknadSkatt: updatedInkBeraknadSkatt
           });
 
           // Show the tax preview by updating a flag
@@ -781,11 +788,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       setShowInput(false);
       setInputValue('');
 
-      // Navigate to step 303 after a short delay
+      // Navigate to step 303 after a longer delay to ensure state updates propagate
       // Note: We skip the API call in step 303 since we already did the recalculation
       setTimeout(() => {
+        console.log('🔄 Navigating to step 303 with inkBeraknadSkatt:', companyData.inkBeraknadSkatt);
         loadChatStep(303);
-      }, 1000);
+      }, 2000);
 
     } catch (error) {
       console.error('❌ Error handling unused tax loss:', error);
