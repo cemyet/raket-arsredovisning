@@ -112,6 +112,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
   // Add message to chat
   const addMessage = (text: string, isBot: boolean = true, icon?: string) => {
+    // Prevent adding empty messages
+    if (!text || text.trim() === '') {
+      console.log('🚫 Skipping empty message');
+      return;
+    }
+    
     const message: ChatMessage = {
       id: Date.now().toString(),
       text: substituteVariables(text),
@@ -149,15 +155,27 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           return; // Don't show the message since no_option handles it
         }
         
+        // Get the most recent inkBeraknadSkatt value from INK2 data if available
+        let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
+        if (companyData.ink2Data && companyData.ink2Data.length > 0) {
+          const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+            item.variable_name === 'INK_beraknad_skatt'
+          );
+          if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
+            mostRecentInkBeraknadSkatt = inkBeraknadSkattItem.amount;
+            console.log('💰 Using most recent inkBeraknadSkatt from INK2 data:', mostRecentInkBeraknadSkatt);
+          }
+        }
+        
         // Substitute variables in question text
-        console.log('🔍 Loading step', stepNumber, 'with companyData.inkBeraknadSkatt:', companyData.inkBeraknadSkatt);
+        console.log('🔍 Loading step', stepNumber, 'with inkBeraknadSkatt:', mostRecentInkBeraknadSkatt);
         const questionText = substituteVariables(response.question_text, {
           SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
           SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
           pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE').format(companyData.pensionPremier) : '0',
           sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPensionCalculated) : '0',
           sarskild_loneskatt_pension: companyData.sarskildLoneskattPension ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPension) : '0',
-          inkBeraknadSkatt: companyData.inkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBeraknadSkatt) : '0',
+          inkBeraknadSkatt: mostRecentInkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(mostRecentInkBeraknadSkatt) : '0',
           inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
           unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
         });
@@ -207,9 +225,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   // Handle option selection
   const handleOptionSelect = async (option: ChatOption, explicitStepNumber?: number) => {
     try {
-      // Add user message
+      // Add user message only if there's actual text
       const optionText = substituteVariables(option.option_text || '');
-      addMessage(optionText, false);
+      if (optionText && optionText.trim() !== '') {
+        addMessage(optionText, false);
+      }
 
       // Handle special cases first
       // Handle custom tax options to bypass API call
@@ -279,13 +299,28 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         return;
       }
 
+      // Get the most recent inkBeraknadSkatt value from INK2 data if available
+      let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
+      if (companyData.ink2Data && companyData.ink2Data.length > 0) {
+        const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+          item.variable_name === 'INK_beraknad_skatt'
+        );
+        if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
+          mostRecentInkBeraknadSkatt = inkBeraknadSkattItem.amount;
+          console.log('💰 Using most recent inkBeraknadSkatt from INK2 data for context:', mostRecentInkBeraknadSkatt);
+        }
+      }
+      
       // Process the choice through the API
+      // Use the most recent inkBeraknadSkatt value if available
       const context = {
         unusedTaxLossAmount: companyData.unusedTaxLossAmount || 0,
-        inkBeraknadSkatt: companyData.inkBeraknadSkatt || 0,
+        inkBeraknadSkatt: mostRecentInkBeraknadSkatt || 0,
         inkBokfordSkatt: companyData.inkBokfordSkatt || 0,
         SkattAretsResultat: companyData.skattAretsResultat || 0
       };
+      
+      console.log('🔍 Processing choice with context:', context);
 
       const response = await apiService.processChatChoice({
         step_number: explicitStepNumber || currentStep,
@@ -773,14 +808,14 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           
           console.log('💰 Updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
           
-          // Update the tax data in company state
+          // Update the tax data in company state in a single call to prevent multiple updates
           onDataUpdate({
             ink2Data: result.ink2_data,
-            inkBeraknadSkatt: updatedInkBeraknadSkatt
+            inkBeraknadSkatt: updatedInkBeraknadSkatt,
+            showTaxPreview: true
           });
+          
 
-          // Show the tax preview by updating a flag
-          onDataUpdate({ showTaxPreview: true });
         }
       }
 
@@ -793,7 +828,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       setTimeout(() => {
         console.log('🔄 Navigating to step 303 with inkBeraknadSkatt:', companyData.inkBeraknadSkatt);
         loadChatStep(303);
-      }, 2000);
+      }, 3000);
 
     } catch (error) {
       console.error('❌ Error handling unused tax loss:', error);
