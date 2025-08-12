@@ -50,7 +50,11 @@ interface ChatFlowResponse {
   options: ChatOption[];
 }
 
-const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate }) => {
+  // Global variables to store the most recent calculated values
+  let globalInk2Data: any[] = [];
+  let globalInkBeraknadSkatt: number = 0;
+
+  const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate }) => {
   const [currentStep, setCurrentStep] = useState<number>(101); // Start with introduction
   const [currentQuestion, setCurrentQuestion] = useState<ChatStep | null>(null);
   const [currentOptions, setCurrentOptions] = useState<ChatOption[]>([]);
@@ -135,8 +139,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     try {
       console.log(`🔄 Loading step ${stepNumber}...`);
       
-      // Use updated ink2Data if provided, otherwise use companyData.ink2Data
-      const ink2DataToUse = updatedInk2Data || companyData.ink2Data;
+      // Use updated ink2Data if provided, otherwise use global data, otherwise use companyData.ink2Data
+      const ink2DataToUse = updatedInk2Data || globalInk2Data || companyData.ink2Data;
       const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, ink2DataToUse);
       
       if (response.success) {
@@ -155,8 +159,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           
           // For message-type steps with no_option, show the message first, then execute the no_option
           if (response.question_type === 'message') {
-            // Get the most recent inkBeraknadSkatt value from INK2 data if available
-            let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
+            // Get the most recent inkBeraknadSkatt value from global data first, then INK2 data
+            let mostRecentInkBeraknadSkatt = globalInkBeraknadSkatt || companyData.inkBeraknadSkatt;
             if (ink2DataToUse && ink2DataToUse.length > 0) {
               const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
                 item.variable_name === 'INK_beraknad_skatt'
@@ -183,13 +187,13 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             addMessage(questionText, true, response.question_icon);
           }
           
-          // Execute no_option with the correct step number
-          await handleOptionSelect(noOption, stepNumber);
+          // Execute no_option with the correct step number and updated data
+          await handleOptionSelect(noOption, stepNumber, updatedInk2Data);
           return; // Don't continue with normal flow since no_option handles navigation
         }
         
-        // Get the most recent inkBeraknadSkatt value from INK2 data if available
-        let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
+        // Get the most recent inkBeraknadSkatt value from global data first, then INK2 data
+        let mostRecentInkBeraknadSkatt = globalInkBeraknadSkatt || companyData.inkBeraknadSkatt;
         if (ink2DataToUse && ink2DataToUse.length > 0) {
           const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
             item.variable_name === 'INK_beraknad_skatt'
@@ -256,7 +260,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   };
 
   // Handle option selection
-  const handleOptionSelect = async (option: ChatOption, explicitStepNumber?: number) => {
+  const handleOptionSelect = async (option: ChatOption, explicitStepNumber?: number, updatedInk2Data?: any[]) => {
     try {
       // Add user message only if there's actual text
       const optionText = substituteVariables(option.option_text || '');
@@ -332,10 +336,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         return;
       }
 
-      // Get the most recent inkBeraknadSkatt value from INK2 data if available
-      let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
-      if (companyData.ink2Data && companyData.ink2Data.length > 0) {
-        const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+      // Get the most recent inkBeraknadSkatt value from global data first, then INK2 data
+      let mostRecentInkBeraknadSkatt = globalInkBeraknadSkatt || companyData.inkBeraknadSkatt;
+      const ink2DataToUse = updatedInk2Data || globalInk2Data || companyData.ink2Data;
+      if (ink2DataToUse && ink2DataToUse.length > 0) {
+        const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
           item.variable_name === 'INK_beraknad_skatt'
         );
         if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
@@ -433,7 +438,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
         // Navigate to next step
         if (next_step) {
-          setTimeout(() => loadChatStep(next_step), 1000);
+          setTimeout(() => loadChatStep(next_step, updatedInk2Data), 1000);
         }
       }
     } catch (error) {
@@ -846,6 +851,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
             item.variable_name === 'INK4.14a'
           ));
           
+          // Store values globally to ensure they're always available
+          globalInk2Data = result.ink2_data;
+          globalInkBeraknadSkatt = updatedInkBeraknadSkatt;
+          console.log('🌍 Stored globally - globalInkBeraknadSkatt:', globalInkBeraknadSkatt);
+          
           // Update the tax data in company state in a single call to prevent multiple updates
           onDataUpdate({
             ink2Data: result.ink2_data,
@@ -857,15 +867,6 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           setShowInput(false);
           setInputValue('');
 
-          // Navigate to step 303 with the updated ink2Data
-          console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
-          
-          // Update the state first
-          onDataUpdate({ 
-            ink2Data: result.ink2_data,
-            inkBeraknadSkatt: updatedInkBeraknadSkatt 
-          });
-          
           // Navigate to step 303 with the updated ink2Data
           console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
           loadChatStep(303, result.ink2_data);
