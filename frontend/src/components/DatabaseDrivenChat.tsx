@@ -442,6 +442,20 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
     if (submitOption) {
       // Store the input value based on action data
       if (submitOption.action_data?.variable) {
+        
+        console.log('💾 Storing input value:', {
+          variable: submitOption.action_data.variable,
+          value: value,
+          inputValue: inputValue,
+          parsedValue: inputType === 'amount' ? Math.abs(parseFloat(inputValue.replace(/\s/g, '').replace(/,/g, '.')) || 0) : inputValue.trim()
+        });
+
+        // Special handling for unused tax loss amount
+        if (submitOption.action_data.variable === 'unusedTaxLossAmount') {
+          console.log('🔥 Calling specialized unused tax loss handler');
+          await handleUnusedTaxLossSubmission(value as number);
+          return; // Don't continue with normal flow
+        }
 
         onDataUpdate({ [submitOption.action_data.variable]: value });
 
