@@ -839,6 +839,11 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           )?.amount || companyData.inkBeraknadSkatt;
           
           console.log('💰 Updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+          console.log('🔍 Full INK2 data for debugging:', result.ink2_data.filter((item: any) => 
+            item.variable_name === 'INK_beraknad_skatt' || 
+            item.variable_name === 'INK_skattemassigt_resultat' ||
+            item.variable_name === 'INK4.14a'
+          ));
           
           // Update the tax data in company state in a single call to prevent multiple updates
           onDataUpdate({
@@ -851,9 +856,17 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           setShowInput(false);
           setInputValue('');
 
-          // Navigate to step 303 immediately after state update
+          // Navigate to step 303 with the updated ink2Data
           console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
-          loadChatStep(303);
+          // Pass the updated ink2Data directly to ensure we use the latest values
+          setTimeout(() => {
+            // Force update the state one more time to ensure it's current
+            onDataUpdate({ 
+              ink2Data: result.ink2_data,
+              inkBeraknadSkatt: updatedInkBeraknadSkatt 
+            });
+            loadChatStep(303);
+          }, 50);
 
         }
       }
