@@ -301,6 +301,11 @@ export function AnnualReportChat() {
     setCompanyData(prev => ({ ...prev, unusedTaxLossAmount: positiveAmount }));
     addMessage(`${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr`, false);
     
+    // Trigger recalculation immediately to update tax preview
+    if (positiveAmount > 0 && companyData.seFileData) {
+      await triggerUnusedTaxLossRecalculation(positiveAmount);
+    }
+    
     // Show confirmation and keep tax module visible
     setTimeout(() => {
       addMessage(`Outnyttjat underskott från föregående år har blivit uppdaterat med ${new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(positiveAmount)} kr. Vill du gå vidare?`, true, "✅");
@@ -322,7 +327,7 @@ export function AnnualReportChat() {
         rr_data: companyData.seFileData.rr_data || [],
         br_data: companyData.seFileData.br_data || [],
         manual_amounts: {},
-        ink4_16_underskott_adjustment: amount,
+        ink4_14a_outnyttjat_underskott: amount,
         justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt || 0
       });
     }
@@ -353,6 +358,14 @@ export function AnnualReportChat() {
       if (result.success) {
         console.log('DEBUG: Unused tax loss recalculation successful');
         console.log('DEBUG: New ink2_data length:', result.ink2_data.length);
+        
+        // Check if INK4.14a was updated
+        const ink4_14a = result.ink2_data.find((item: any) => item.variable_name === 'INK4.14a');
+        if (ink4_14a) {
+          console.log('DEBUG: INK4.14a after recalculation:', ink4_14a);
+        } else {
+          console.log('DEBUG: INK4.14a NOT found in response');
+        }
         
         // Update company data with new INK2 data including the unused tax loss adjustment
         setCompanyData(prev => ({

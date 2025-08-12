@@ -449,9 +449,13 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         
         // Special handling for custom pension tax amount
         if (submitOption.action_data.variable === 'sarskildLoneskattCustom') {
+          const amount = value as number;
+          const sarskildLoneskattPension = companyData.sarskildLoneskattPension || 0;
+          const adjustment = amount - sarskildLoneskattPension;
+          
           onDataUpdate({ 
             justeringSarskildLoneskatt: 'custom',
-            sarskildLoneskattPensionSubmitted: value 
+            sarskildLoneskattPensionSubmitted: amount 
           });
           
           // Trigger recalculation to update tax preview
@@ -463,7 +467,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
                 rr_data: companyData.seFileData.rr_data || [],
                 br_data: companyData.seFileData.br_data || [],
                 manual_amounts: {},
-                justering_sarskild_loneskatt: value as number
+                justering_sarskild_loneskatt: adjustment
               });
               
               if (result.success) {
