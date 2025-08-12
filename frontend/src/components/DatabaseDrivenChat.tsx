@@ -213,14 +213,14 @@ interface ChatFlowResponse {
         // Substitute variables in question text
         console.log('🔍 Loading step', stepNumber, 'with inkBeraknadSkatt:', mostRecentInkBeraknadSkatt);
         const substitutionVars = {
-          SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
-          SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
-          pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE').format(companyData.pensionPremier) : '0',
-          sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPensionCalculated) : '0',
-          sarskild_loneskatt_pension: companyData.sarskildLoneskattPension ? new Intl.NumberFormat('sv-SE').format(companyData.sarskildLoneskattPension) : '0',
-          inkBeraknadSkatt: mostRecentInkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(mostRecentInkBeraknadSkatt) : '0',
-          inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
-          unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
+          SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.sumAretsResultat) : '0',
+          SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.skattAretsResultat) : '0',
+          pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.pensionPremier) : '0',
+          sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.sarskildLoneskattPensionCalculated) : '0',
+          sarskild_loneskatt_pension: companyData.sarskildLoneskattPension ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.sarskildLoneskattPension) : '0',
+          inkBeraknadSkatt: mostRecentInkBeraknadSkatt ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(mostRecentInkBeraknadSkatt) : '0',
+          inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.inkBokfordSkatt) : '0',
+          unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(companyData.unusedTaxLossAmount) : '0'
         };
         console.log('🔍 Substitution variables:', substitutionVars);
         const questionText = substituteVariables(response.question_text, substitutionVars);
@@ -639,17 +639,46 @@ interface ChatFlowResponse {
         extractedResults = Math.abs(netResultItem.current_amount).toString();
       }
       
-      // Extract SumAretsResultat for chat options (check RR first, then BR)
+            // Extract SumAretsResultat for chat options (check RR first, then BR)
+      // First try to find exact variable name match in RR data
       let sumAretsResultatItem = fileData.data.rr_data.find((item: any) => 
-        item.variable_name === 'SumAretsResultat' || 
-        item.id === 'ÅR' || 
-        item.label?.toLowerCase().includes('årets resultat')
+        item.variable_name === 'SumAretsResultat'
       );
+      
+      // If not found in RR, try ID match in RR
+      if (!sumAretsResultatItem) {
+        sumAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+          item.id === 'ÅR'
+        );
+      }
+      
+      // If still not found in RR, try label match but exclude SkattAretsResultat
+      if (!sumAretsResultatItem) {
+        sumAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+          item.label?.toLowerCase().includes('årets resultat') &&
+          item.variable_name !== 'SkattAretsResultat'
+        );
+      }
+      
+      // If not found in RR, try BR data
       if (!sumAretsResultatItem && fileData.data?.br_data) {
         sumAretsResultatItem = fileData.data.br_data.find((item: any) => 
-          item.variable_name === 'SumAretsResultat' ||
-          item.id === 'ÅR' ||
-          item.label?.toLowerCase().includes('årets resultat')
+          item.variable_name === 'SumAretsResultat'
+        );
+      }
+      
+      // If still not found in BR, try ID match in BR
+      if (!sumAretsResultatItem && fileData.data?.br_data) {
+        sumAretsResultatItem = fileData.data.br_data.find((item: any) => 
+          item.id === 'ÅR'
+        );
+      }
+      
+      // If still not found in BR, try label match but exclude SkattAretsResultat
+      if (!sumAretsResultatItem && fileData.data?.br_data) {
+        sumAretsResultatItem = fileData.data.br_data.find((item: any) => 
+          item.label?.toLowerCase().includes('årets resultat') &&
+          item.variable_name !== 'SkattAretsResultat'
         );
       }
       if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
