@@ -131,12 +131,13 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
   };
 
   // Load a chat step
-  const loadChatStep = async (stepNumber: number) => {
+  const loadChatStep = async (stepNumber: number, updatedInk2Data?: any[]) => {
     try {
       console.log(`🔄 Loading step ${stepNumber}...`);
       
-      // Always pass the most recent ink2Data to ensure we get the latest values
-      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, companyData.ink2Data);
+      // Use updated ink2Data if provided, otherwise use companyData.ink2Data
+      const ink2DataToUse = updatedInk2Data || companyData.ink2Data;
+      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, ink2DataToUse);
       
       if (response.success) {
         setCurrentStep(stepNumber);
@@ -156,8 +157,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
           if (response.question_type === 'message') {
             // Get the most recent inkBeraknadSkatt value from INK2 data if available
             let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
-            if (companyData.ink2Data && companyData.ink2Data.length > 0) {
-              const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+            if (ink2DataToUse && ink2DataToUse.length > 0) {
+              const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
                 item.variable_name === 'INK_beraknad_skatt'
               );
               if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
@@ -189,8 +190,8 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         
         // Get the most recent inkBeraknadSkatt value from INK2 data if available
         let mostRecentInkBeraknadSkatt = companyData.inkBeraknadSkatt;
-        if (companyData.ink2Data && companyData.ink2Data.length > 0) {
-          const inkBeraknadSkattItem = companyData.ink2Data.find((item: any) => 
+        if (ink2DataToUse && ink2DataToUse.length > 0) {
+          const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
             item.variable_name === 'INK_beraknad_skatt'
           );
           if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
@@ -858,15 +859,16 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
 
           // Navigate to step 303 with the updated ink2Data
           console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
-          // Pass the updated ink2Data directly to ensure we use the latest values
-          setTimeout(() => {
-            // Force update the state one more time to ensure it's current
-            onDataUpdate({ 
-              ink2Data: result.ink2_data,
-              inkBeraknadSkatt: updatedInkBeraknadSkatt 
-            });
-            loadChatStep(303);
-          }, 50);
+          
+          // Update the state first
+          onDataUpdate({ 
+            ink2Data: result.ink2_data,
+            inkBeraknadSkatt: updatedInkBeraknadSkatt 
+          });
+          
+          // Navigate to step 303 with the updated ink2Data
+          console.log('🔄 Navigating to step 303 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+          loadChatStep(303, result.ink2_data);
 
         }
       }
