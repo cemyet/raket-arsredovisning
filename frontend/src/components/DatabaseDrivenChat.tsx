@@ -679,11 +679,26 @@ interface ChatFlowResponse {
         current_amount: item.current_amount
       })));
       
-      const skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
-        item.variable_name === 'SkattAretsResultat' ||
-        item.id === 'SKATT' ||
-        item.label?.toLowerCase().includes('skatt')
+      // First try to find exact variable name match
+      let skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+        item.variable_name === 'SkattAretsResultat'
       );
+      
+      // If not found, try ID match
+      if (!skattAretsResultatItem) {
+        skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+          item.id === 'SKATT'
+        );
+      }
+      
+      // If still not found, try label match but exclude SumResultatForeSkatt
+      if (!skattAretsResultatItem) {
+        skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
+          item.label?.toLowerCase().includes('skatt') && 
+          item.variable_name !== 'SumResultatForeSkatt' &&
+          item.variable_name !== 'SumResultatEfterFinansiellaPoster'
+        );
+      }
       if (skattAretsResultatItem && skattAretsResultatItem.current_amount !== null) {
         skattAretsResultat = Math.round(skattAretsResultatItem.current_amount);
         console.log('💰 Found SkattAretsResultat:', skattAretsResultat, 'from item:', skattAretsResultatItem);
