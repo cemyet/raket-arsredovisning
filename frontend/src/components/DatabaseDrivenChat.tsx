@@ -671,6 +671,14 @@ interface ChatFlowResponse {
       }
       
       // Extract SkattAretsResultat for tax confirmation
+      console.log('🔍 Searching for SkattAretsResultat in RR data...');
+      console.log('🔍 Available RR items:', fileData.data.rr_data.map((item: any) => ({
+        variable_name: item.variable_name,
+        id: item.id,
+        label: item.label,
+        current_amount: item.current_amount
+      })));
+      
       const skattAretsResultatItem = fileData.data.rr_data.find((item: any) => 
         item.variable_name === 'SkattAretsResultat' ||
         item.id === 'SKATT' ||
