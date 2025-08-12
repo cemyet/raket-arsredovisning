@@ -50,11 +50,10 @@ interface ChatFlowResponse {
   options: ChatOption[];
 }
 
-  // Global variables to store the most recent calculated values
-  let globalInk2Data: any[] = [];
-  let globalInkBeraknadSkatt: number = 0;
-
   const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate }) => {
+    // State to store the most recent calculated values
+    const [globalInk2Data, setGlobalInk2Data] = useState<any[]>([]);
+    const [globalInkBeraknadSkatt, setGlobalInkBeraknadSkatt] = useState<number>(0);
   const [currentStep, setCurrentStep] = useState<number>(101); // Start with introduction
   const [currentQuestion, setCurrentQuestion] = useState<ChatStep | null>(null);
   const [currentOptions, setCurrentOptions] = useState<ChatOption[]>([]);
@@ -141,6 +140,13 @@ interface ChatFlowResponse {
       
       // Use updated ink2Data if provided, otherwise use global data, otherwise use companyData.ink2Data
       const ink2DataToUse = updatedInk2Data || globalInk2Data || companyData.ink2Data;
+      console.log('🔍 API call - ink2DataToUse:', ink2DataToUse?.length, 'items');
+      if (ink2DataToUse && ink2DataToUse.length > 0) {
+        const inkBeraknadSkattItem = ink2DataToUse.find((item: any) => 
+          item.variable_name === 'INK_beraknad_skatt'
+        );
+        console.log('🔍 API call - inkBeraknadSkattItem:', inkBeraknadSkattItem);
+      }
       const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, ink2DataToUse);
       
       if (response.success) {
@@ -851,10 +857,10 @@ interface ChatFlowResponse {
             item.variable_name === 'INK4.14a'
           ));
           
-          // Store values globally to ensure they're always available
-          globalInk2Data = result.ink2_data;
-          globalInkBeraknadSkatt = updatedInkBeraknadSkatt;
-          console.log('🌍 Stored globally - globalInkBeraknadSkatt:', globalInkBeraknadSkatt);
+          // Store values in state to ensure they're always available
+          setGlobalInk2Data(result.ink2_data);
+          setGlobalInkBeraknadSkatt(updatedInkBeraknadSkatt);
+          console.log('🌍 Stored in state - globalInkBeraknadSkatt:', updatedInkBeraknadSkatt);
           
           // Update the tax data in company state in a single call to prevent multiple updates
           onDataUpdate({
