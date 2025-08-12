@@ -393,6 +393,12 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
         
         console.log('🔥 API call with substituted params:', substitutedParams);
         
+        // Skip the API call if we're trying to set unusedTaxLossAmount to 0 but we already have a value
+        if (substitutedParams.ink4_14a_outnyttjat_underskott === 0 && companyData.unusedTaxLossAmount > 0) {
+          console.log('🚫 Skipping API call - unusedTaxLossAmount already set to', companyData.unusedTaxLossAmount);
+          return;
+        }
+        
         if (companyData.seFileData) {
           const result = await apiService.recalculateInk2({
             current_accounts: companyData.seFileData.current_accounts || {},
@@ -765,6 +771,7 @@ const DatabaseDrivenChat: React.FC<ChatFlowProps> = ({ companyData, onDataUpdate
       setInputValue('');
 
       // Navigate to step 303 after a short delay
+      // Note: We skip the API call in step 303 since we already did the recalculation
       setTimeout(() => {
         loadChatStep(303);
       }, 1000);
