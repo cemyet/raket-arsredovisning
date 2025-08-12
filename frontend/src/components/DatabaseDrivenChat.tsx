@@ -81,17 +81,17 @@ interface ChatFlowResponse {
   const substituteVariables = (text: string, context: Record<string, any> = {}): string => {
     let result = text;
     
-    // Create context from company data
+    // Create context from company data, but prioritize context values over companyData
     const fullContext = {
-      ...context,
       ...companyData,
-      unusedTaxLossAmount: companyData.unusedTaxLossAmount || 0,
-      inkBeraknadSkatt: companyData.inkBeraknadSkatt || 0,
-      inkBokfordSkatt: companyData.inkBokfordSkatt || 0,
-      SkattAretsResultat: companyData.skattAretsResultat || 0,
-      pension_premier: companyData.pensionPremier || 0,
-      sarskild_loneskatt_pension: companyData.sarskildLoneskattPension || 0,
-      sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated || 0
+      ...context,  // Context values should override companyData values
+      unusedTaxLossAmount: context.unusedTaxLossAmount || companyData.unusedTaxLossAmount || 0,
+      inkBeraknadSkatt: context.inkBeraknadSkatt || companyData.inkBeraknadSkatt || 0,
+      inkBokfordSkatt: context.inkBokfordSkatt || companyData.inkBokfordSkatt || 0,
+      SkattAretsResultat: context.SkattAretsResultat || companyData.skattAretsResultat || 0,
+      pension_premier: context.pension_premier || companyData.pensionPremier || 0,
+      sarskild_loneskatt_pension: context.sarskild_loneskatt_pension || companyData.sarskildLoneskattPension || 0,
+      sarskild_loneskatt_pension_calculated: context.sarskild_loneskatt_pension_calculated || companyData.sarskildLoneskattPensionCalculated || 0
     };
 
     // Replace variables
