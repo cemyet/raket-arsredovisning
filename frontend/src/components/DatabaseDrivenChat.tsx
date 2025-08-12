@@ -212,7 +212,7 @@ interface ChatFlowResponse {
         
         // Substitute variables in question text
         console.log('🔍 Loading step', stepNumber, 'with inkBeraknadSkatt:', mostRecentInkBeraknadSkatt);
-        const questionText = substituteVariables(response.question_text, {
+        const substitutionVars = {
           SumAretsResultat: companyData.sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.sumAretsResultat) : '0',
           SkattAretsResultat: companyData.skattAretsResultat ? new Intl.NumberFormat('sv-SE').format(companyData.skattAretsResultat) : '0',
           pension_premier: companyData.pensionPremier ? new Intl.NumberFormat('sv-SE').format(companyData.pensionPremier) : '0',
@@ -221,7 +221,9 @@ interface ChatFlowResponse {
           inkBeraknadSkatt: mostRecentInkBeraknadSkatt ? new Intl.NumberFormat('sv-SE').format(mostRecentInkBeraknadSkatt) : '0',
           inkBokfordSkatt: companyData.inkBokfordSkatt ? new Intl.NumberFormat('sv-SE').format(companyData.inkBokfordSkatt) : '0',
           unusedTaxLossAmount: companyData.unusedTaxLossAmount ? new Intl.NumberFormat('sv-SE').format(companyData.unusedTaxLossAmount) : '0'
-        });
+        };
+        console.log('🔍 Substitution variables:', substitutionVars);
+        const questionText = substituteVariables(response.question_text, substitutionVars);
         console.log('🔍 Substituted question text:', questionText);
         
         // Add the question message
