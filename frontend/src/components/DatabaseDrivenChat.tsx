@@ -380,10 +380,7 @@ interface ChatFlowResponse {
             break;
             
           case 'show_input':
-            // Navigate to the input step first, then show input
-            if (next_step) {
-              setTimeout(() => loadChatStep(next_step), 500);
-            }
+            // show_input action should navigate to next step (handled by general navigation below)
             break;
             
           case 'api_call':
@@ -579,17 +576,46 @@ interface ChatFlowResponse {
               });
               
               if (result.success) {
-                onDataUpdate({ ink2Data: result.ink2_data });
+                console.log('✅ Tax recalculation successful');
+                console.log('📋 New INK2 data:', result.ink2_data);
+                
+                // Get the updated inkBeraknadSkatt value
+                const updatedInkBeraknadSkatt = result.ink2_data.find((item: any) => 
+                  item.variable_name === 'INK_beraknad_skatt'
+                )?.amount || companyData.inkBeraknadSkatt;
+                
+                console.log('💰 Updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+                
+                // Store values in state to ensure they're always available (like in handleUnusedTaxLossSubmission)
+                setGlobalInk2Data(result.ink2_data);
+                setGlobalInkBeraknadSkatt(updatedInkBeraknadSkatt);
+                console.log('🌍 Stored in state - globalInkBeraknadSkatt:', updatedInkBeraknadSkatt);
+                
+                // Update the tax data in company state in a single call to prevent multiple updates
+                onDataUpdate({
+                  ink2Data: result.ink2_data,
+                  inkBeraknadSkatt: updatedInkBeraknadSkatt,
+                  showTaxPreview: true
+                });
+                
+                addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+                setShowInput(false);
+                setInputValue('');
+
+                // Navigate to step 202 with the updated ink2Data (following the working pattern)
+                console.log('🔄 Navigating to step 202 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
+                loadChatStep(202, result.ink2_data);
+                return;
               }
             } catch (error) {
               console.error('Error recalculating tax:', error);
             }
           }
           
+          // Fallback if recalculation fails
           addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
           setShowInput(false);
           setInputValue('');
-          // Follow database flow: step 203 -> step 202
           setTimeout(() => loadChatStep(202), 1000);
           return;
         }
