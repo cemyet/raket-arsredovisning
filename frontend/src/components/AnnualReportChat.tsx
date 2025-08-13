@@ -39,6 +39,10 @@ interface CompanyData {
   inkBokfordSkatt?: number | null; // Booked tax amount
   taxChoice?: string; // Tax choice: 'calculated', 'manual', 'booked'
   editableAmounts?: boolean; // Whether amounts are editable
+  // Preview and editing control flags
+  showTaxPreview?: boolean; // Controls tax preview visibility
+  showRRBR?: boolean; // Controls RR/BR data visibility
+  taxEditingEnabled?: boolean; // Controls tax editing mode
   // Pension tax variables
   pensionPremier?: number | null;
   sarskildLoneskattPension?: number | null;
