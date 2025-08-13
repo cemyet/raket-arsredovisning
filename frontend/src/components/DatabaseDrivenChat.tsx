@@ -595,7 +595,8 @@ interface ChatFlowResponse {
           addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
           setShowInput(false);
           setInputValue('');
-          setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
+          // Follow database flow: step 203 -> step 202
+          setTimeout(() => loadChatStep(202), 1000);
           return;
         }
       }
