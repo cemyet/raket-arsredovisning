@@ -167,14 +167,29 @@ interface AnnualReportPreviewProps {
 export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false, onDataUpdate }: AnnualReportPreviewProps) {
   // Safe access; never destructure undefined
   const cd = companyData ?? {};
-  console.log('🔍 AnnualReportPreview RENDERED - editableAmounts:', editableAmounts);
-  console.log('🔍 AnnualReportPreview props keys:', Object.keys(cd));
+  
+  // Debug logging at the top to confirm mounting
+  console.log('🔍 AnnualReportPreview MOUNTED');
+  console.log('🔍 Props:', {
+    editableAmounts,
+    currentStep,
+    hasOnDataUpdate: !!onDataUpdate,
+    companyDataKeys: Object.keys(cd)
+  });
+  console.log('🔍 Rendering flags:', {
+    showTaxPreview: cd.showTaxPreview,
+    showRRBR: cd.showRRBR,
+    taxEditingEnabled: cd.taxEditingEnabled,
+    editableAmounts: cd.editableAmounts
+  });
 
+  // Requirement 2: inputs become editable when taxEditingEnabled OR editableAmounts is true
   const isEditing = Boolean(cd.taxEditingEnabled || editableAmounts);
+  console.log('🔍 isEditing calculated as:', isEditing, '(taxEditingEnabled:', cd.taxEditingEnabled, 'editableAmounts:', editableAmounts, ')');
 
+  // Requirement 1: render when showTaxPreview OR showRRBR is true
   if (!cd.showTaxPreview && !cd.showRRBR) {
-    // Still log once so we know it mounted but is hidden
-    console.log('🔍 AnnualReportPreview mounted but hidden (flags false)');
+    console.log('🔍 AnnualReportPreview mounted but not rendering (both showTaxPreview and showRRBR are false)');
     return null;
   }
   

@@ -1145,28 +1145,21 @@ export function AnnualReportChat() {
               <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
             </div>
             <div className="p-6 h-full overflow-auto">
-              {console.log('🔍 About to render AnnualReportPreview')}
+              {console.log('🔍 Parent about to render AnnualReportPreview with companyData:', companyData)}
               <AnnualReportPreview 
-                companyData={companyData} 
+                companyData={companyData}
                 currentStep={currentStep} 
-                editableAmounts={true}
+                editableAmounts={false}
                 onDataUpdate={(updates) => {
-                  console.log('🔄 onDataUpdate called with:', updates);
+                  console.log('🔄 Parent onDataUpdate called with:', updates);
                   setCompanyData(prev => {
                     const newData = { ...prev, ...updates };
-                    console.log('🔄 Updated companyData:', newData);
+                    console.log('🔄 Parent merged state:', newData);
                     return newData;
                   });
                 }}
               />
-              {console.log('🔍 AnnualReportPreview rendered')}
-              {/* Debug logging */}
-              {console.log('🔍 AnnualReportPreview props:', {
-                editableAmounts: true,
-                companyDataEditableAmounts: companyData.editableAmounts,
-                companyDataTaxEditingEnabled: (companyData as any).taxEditingEnabled,
-                fullCompanyData: companyData
-              })}
+              {console.log('🔍 Parent finished rendering AnnualReportPreview')}
             </div>
           </div>
         </ResizablePanel>
