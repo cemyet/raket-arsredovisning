@@ -765,7 +765,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 </div>
                  <span className="text-right font-medium">
                   {item.show_amount === 'NEVER' || item.header ? '' : 
-                    (editableAmounts && (item.always_show === true || (item.always_show === false && item.amount > 0))) ? (
+                    (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       <input
                         type="number"
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -809,15 +809,17 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       />
                     ) : (
                       (item.amount !== null && item.amount !== undefined) ? 
-                        (item.amount === 0 || item.amount === -0 ? '0 kr' : (() => {
-                          // All tax module values show as integers (no decimals)
-                          const formattedAmount = new Intl.NumberFormat('sv-SE', {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                          }).format(item.amount);
+                        (item.amount === 0 || item.amount === -0 ? '0' : (() => {
+                          // Show integers (no decimals) for these specific variables
+                          const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
                           
-                          return `${formattedAmount} kr`;
-                        })()) : '0 kr'
+                          const shouldShowInteger = integerVariables.includes(item.variable_name);
+                          
+                          return new Intl.NumberFormat('sv-SE', {
+                            minimumFractionDigits: shouldShowInteger ? 0 : 2,
+                            maximumFractionDigits: shouldShowInteger ? 0 : 2
+                          }).format(item.amount);
+                        })()) : '0'
                     )
                   }
                 </span>
