@@ -865,7 +865,14 @@ export function AnnualReportChat() {
             {useDatabaseDrivenChat ? (
               <DatabaseDrivenChat 
                 companyData={companyData}
-                onDataUpdate={(updates) => setCompanyData(prev => ({ ...prev, ...updates }))}
+                onDataUpdate={(updates) => {
+                  console.log('🔄 onDataUpdate called with:', updates);
+                  setCompanyData(prev => {
+                    const newData = { ...prev, ...updates };
+                    console.log('🔄 Updated companyData:', newData);
+                    return newData;
+                  });
+                }}
               />
             ) : (
               <div ref={chatContainerRef} className="flex-1 overflow-auto">
@@ -1141,8 +1148,15 @@ export function AnnualReportChat() {
               <AnnualReportPreview 
                 companyData={companyData} 
                 currentStep={currentStep} 
-                editableAmounts={Boolean(companyData.editableAmounts || (companyData as any).taxEditingEnabled)} 
+                editableAmounts={true} 
               />
+              {/* Debug logging */}
+              {console.log('🔍 AnnualReportPreview props:', {
+                editableAmounts: Boolean(companyData.editableAmounts || (companyData as any).taxEditingEnabled),
+                companyDataEditableAmounts: companyData.editableAmounts,
+                companyDataTaxEditingEnabled: (companyData as any).taxEditingEnabled,
+                fullCompanyData: companyData
+              })}
             </div>
           </div>
         </ResizablePanel>

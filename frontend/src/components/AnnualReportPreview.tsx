@@ -562,7 +562,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
         )}
 
         {/* Tax Calculation Section */}
-        {companyData.showTaxPreview && seFileData?.ink2_data && seFileData.ink2_data.length > 0 && (
+        {companyData.showTaxPreview && ink2Data && ink2Data.length > 0 && (
           <div className="space-y-4 bg-gradient-to-r from-yellow-50 to-amber-50 p-4 rounded-lg border border-yellow-200" data-section="tax-calculation">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-foreground border-b pb-2">Skatteberäkning</h2>

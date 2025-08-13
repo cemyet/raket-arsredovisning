@@ -415,7 +415,9 @@ interface ChatFlowResponse {
             
           case 'enable_editing':
             // Enable tax editing mode immediately
+            console.log('🔧 ENABLE_EDITING ACTION TRIGGERED - Setting editableAmounts to true');
             onDataUpdate({ taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
+            console.log('🔧 onDataUpdate called with:', { taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
             // Ensure we land on the manual editing step 402
             const targetStep = next_step || 402;
             setTimeout(() => loadChatStep(targetStep), 200);
