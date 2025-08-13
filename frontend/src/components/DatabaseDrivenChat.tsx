@@ -336,13 +336,7 @@ interface ChatFlowResponse {
         return;
       }
       
-      if (option.option_value === 'enter_custom') {
-        // Show input for custom pension tax amount
-        setShowInput(true);
-        setInputType('amount');
-        setInputPlaceholder('Ange belopp...');
-        return;
-      }
+      // Note: enter_custom is now handled by database-driven flow (show_input action)
 
       // Get the most recent inkBeraknadSkatt value from global data first, then INK2 data
       let mostRecentInkBeraknadSkatt = globalInkBeraknadSkatt || companyData.inkBeraknadSkatt;
