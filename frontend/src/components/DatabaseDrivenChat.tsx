@@ -380,10 +380,10 @@ interface ChatFlowResponse {
             break;
             
           case 'show_input':
-            setShowInput(true);
-            setInputType(action_data?.input_type || 'text');
-            setInputPlaceholder(action_data?.placeholder || '');
-            // Continue to navigate to next step (the input step)
+            // Navigate to the input step first, then show input
+            if (next_step) {
+              setTimeout(() => loadChatStep(next_step), 500);
+            }
             break;
             
           case 'api_call':
