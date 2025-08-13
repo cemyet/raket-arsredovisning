@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug AnnualReportPreview Flags</title>
+</head>
+<body>
+    <h1>Testing CompanyData flags</h1>
+    <script>
+        // Simulate the interface mismatch issue
+        const companyData1 = {
+            result: null,
+            dividend: "",
+            // Missing showTaxPreview, showRRBR, taxEditingEnabled
+        };
+
+        const updates = {
+            showTaxPreview: true,
+            taxEditingEnabled: true,
+            editableAmounts: true
+        };
+
+        // Simulate TypeScript spread operator
+        const merged1 = { ...companyData1, ...updates };
+        console.log("Before interface fix (missing properties):", merged1);
+
+        // After interface fix
+        const companyData2 = {
+            result: null,
+            dividend: "",
+            showTaxPreview: false,
+            showRRBR: false, 
+            taxEditingEnabled: false
+        };
+
+        const merged2 = { ...companyData2, ...updates };
+        console.log("After interface fix (with properties):", merged2);
+
+        // Test AnnualReportPreview render condition
+        function shouldRender(cd) {
+            return cd.showTaxPreview || cd.showRRBR;
+        }
+
+        console.log("Should render before fix:", shouldRender(merged1));
+        console.log("Should render after fix:", shouldRender(merged2));
+    </script>
+</body>
+</html>

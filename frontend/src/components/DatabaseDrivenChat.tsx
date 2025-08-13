@@ -234,7 +234,9 @@ interface ChatFlowResponse {
         // - Suppress chat options to avoid accidental auto-selection
         // - Scroll the preview into view so inputs are visible
         if (stepNumber === 402) {
+          console.log('🔥 STEP 402 TRIGGERED - Calling onDataUpdate with flags');
           onDataUpdate({ taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
+          console.log('🔥 STEP 402 onDataUpdate called successfully');
           setCurrentOptions([]);
           setTimeout(() => {
             const taxModule = document.querySelector('[data-section="tax-calculation"]');
@@ -256,7 +258,7 @@ interface ChatFlowResponse {
       }
     } catch (error) {
       console.error('❌ Error loading chat step:', error);
-      addMessage('Något gick fel vid laddning av chatten. Växla till gammal chat.', true, '❌');
+      addMessage('Något gick fel vid laddning av chatten. Försök ladda om sidan.', true, '❌');
     }
   };
 
@@ -1021,7 +1023,7 @@ interface ChatFlowResponse {
       setShowFileUpload(true);
     } catch (error) {
       console.error('❌ Error initializing chat:', error);
-      addMessage('Något gick fel vid start av chatten. Växla till gammal chat.', true, '❌');
+      addMessage('Något gick fel vid start av chatten. Försök ladda om sidan.', true, '❌');
     }
   }, []);
 
