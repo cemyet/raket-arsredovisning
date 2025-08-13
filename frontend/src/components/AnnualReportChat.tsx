@@ -1145,11 +1145,21 @@ export function AnnualReportChat() {
               <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
             </div>
             <div className="p-6 h-full overflow-auto">
+              {console.log('🔍 About to render AnnualReportPreview')}
               <AnnualReportPreview 
                 companyData={companyData} 
                 currentStep={currentStep} 
-                editableAmounts={true} 
+                editableAmounts={true}
+                onDataUpdate={(updates) => {
+                  console.log('🔄 onDataUpdate called with:', updates);
+                  setCompanyData(prev => {
+                    const newData = { ...prev, ...updates };
+                    console.log('🔄 Updated companyData:', newData);
+                    return newData;
+                  });
+                }}
               />
+              {console.log('🔍 AnnualReportPreview rendered')}
               {/* Debug logging */}
               {console.log('🔍 AnnualReportPreview props:', {
                 editableAmounts: true,

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -157,14 +159,24 @@ interface AnnualReportPreviewProps {
   companyData: CompanyData;
   currentStep: number;
   editableAmounts?: boolean;
+  onDataUpdate?: (updates: Partial<any>) => void;
 }
 
 // Database-driven always_show logic - no more hardcoded arrays
 
-export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false }: AnnualReportPreviewProps) {
-  // Debug logging for editableAmounts
+export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false, onDataUpdate }: AnnualReportPreviewProps) {
+  // Safe access; never destructure undefined
+  const cd = companyData ?? {};
   console.log('🔍 AnnualReportPreview RENDERED - editableAmounts:', editableAmounts);
-  console.log('🔍 AnnualReportPreview - companyData:', companyData);
+  console.log('🔍 AnnualReportPreview props keys:', Object.keys(cd));
+
+  const isEditing = Boolean(cd.taxEditingEnabled || editableAmounts);
+
+  if (!cd.showTaxPreview && !cd.showRRBR) {
+    // Still log once so we know it mounted but is hidden
+    console.log('🔍 AnnualReportPreview mounted but hidden (flags false)');
+    return null;
+  }
   
   const [showAllRR, setShowAllRR] = useState(false);
   const [showAllBR, setShowAllBR] = useState(false);
@@ -174,15 +186,15 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
   const [recalculatedData, setRecalculatedData] = useState<any[]>([]);
 
   // Get new database-driven parser data (moved up to avoid initialization errors)
-  const seFileData = companyData.seFileData;
+  const seFileData = cd.seFileData;
   const rrData = seFileData?.rr_data || [];
   const brData = seFileData?.br_data || [];
-  const ink2Data = companyData.ink2Data || seFileData?.ink2_data || [];
+  const ink2Data = cd.ink2Data || seFileData?.ink2_data || [];
   const companyInfo = seFileData?.company_info || {};
 
-  // Capture original amounts when editableAmounts becomes true (for undo functionality)
+  // Capture original amounts when isEditing becomes true (for undo functionality)
   useEffect(() => {
-    if (editableAmounts && Object.keys(originalAmounts).length === 0) {
+    if (isEditing && Object.keys(originalAmounts).length === 0) {
       const currentData = recalculatedData.length > 0 ? recalculatedData : ink2Data;
       const amounts: Record<string, number> = {};
       currentData.forEach((item: any) => {
@@ -192,7 +204,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
       });
       setOriginalAmounts(amounts);
     }
-  }, [editableAmounts, ink2Data, recalculatedData, originalAmounts]);
+  }, [isEditing, ink2Data, recalculatedData, originalAmounts]);
 
 
 
@@ -612,7 +624,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 if (item.show_amount === 'NEVER') return false;
 
                 // In manual edit mode, show all non-header rows so the user can edit zeros too
-                if (editableAmounts) {
+                if (isEditing) {
                   if (item.header === true) {
                     return shouldShowBlockContent(item.block);
                   }
@@ -769,10 +781,10 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 </div>
                  <span className="text-right font-medium">
                   {item.show_amount === 'NEVER' || item.header ? '' : 
-                    (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
+                    (isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       (() => {
                         console.log('🔍 SHOWING EDITABLE FIELD for:', item.variable_name, {
-                          editableAmounts,
+                          isEditing,
                           is_calculated: item.is_calculated,
                           variable_name: item.variable_name,
                           show_amount: item.show_amount
@@ -824,11 +836,11 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                     ) : (
                       (() => {
                         console.log('🔍 NOT SHOWING EDITABLE FIELD for:', item.variable_name, {
-                          editableAmounts,
+                          isEditing,
                           is_calculated: item.is_calculated,
                           variable_name: item.variable_name,
                           show_amount: item.show_amount,
-                          condition: editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount
+                          condition: isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount
                         });
                         return (
                           (item.amount !== null && item.amount !== undefined) ? 
@@ -852,7 +864,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
             ))}
             
             {/* Tax Action Buttons */}
-            {editableAmounts && (
+            {isEditing && (
               <div className="pt-4 border-t border-gray-200 flex justify-between">
                 {/* Undo Button - Left */}
                 <Button 
