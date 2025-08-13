@@ -228,9 +228,24 @@ interface ChatFlowResponse {
         
         // Add the question message
         addMessage(questionText, true, response.question_icon);
-        
-        // Store options for this step
-        setCurrentOptions(response.options.filter(opt => opt.option_order > 0)); // Exclude no_option
+
+        // Special handling for manual editing step (402):
+        // - Ensure editing is enabled in the preview
+        // - Suppress chat options to avoid accidental auto-selection
+        // - Scroll the preview into view so inputs are visible
+        if (stepNumber === 402) {
+          onDataUpdate({ taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
+          setCurrentOptions([]);
+          setTimeout(() => {
+            const taxModule = document.querySelector('[data-section="tax-calculation"]');
+            if (taxModule) {
+              taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 200);
+        } else {
+          // Store options for this step
+          setCurrentOptions(response.options.filter(opt => opt.option_order > 0)); // Exclude no_option
+        }
         
         // Check if we should show input instead of options
         if (response.question_type === 'input') {
@@ -399,20 +414,12 @@ interface ChatFlowResponse {
             break;
             
           case 'enable_editing':
-            // Enable tax editing mode
+            // Enable tax editing mode immediately
             onDataUpdate({ taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
-            // Auto-scroll to tax module to make editing visible
-            setTimeout(() => {
-              const taxModule = document.querySelector('[data-section="tax-calculation"]');
-              if (taxModule) {
-                taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-            }, 400);
-            // Navigate to step 402 (manual editing step) if no next_step specified
-            if (!next_step) {
-              setTimeout(() => loadChatStep(402), 500);
-            }
-            break;
+            // Ensure we land on the manual editing step 402
+            const targetStep = next_step || 402;
+            setTimeout(() => loadChatStep(targetStep), 200);
+            return; // Stop further navigation below
 
           case 'show_file_upload':
             setShowFileUpload(true);
