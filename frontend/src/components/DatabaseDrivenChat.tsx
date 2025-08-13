@@ -370,6 +370,8 @@ interface ChatFlowResponse {
 
       if (response.success) {
         const { action_type, action_data, next_step } = response.result;
+        
+        console.log('🔍 API Response:', { action_type, action_data, next_step });
 
         // Handle different action types
         switch (action_type) {
@@ -390,6 +392,10 @@ interface ChatFlowResponse {
           case 'enable_editing':
             // Enable tax editing mode
             onDataUpdate({ taxEditingEnabled: true });
+            // Navigate to step 402 (manual editing step) if no next_step specified
+            if (!next_step) {
+              setTimeout(() => loadChatStep(402), 500);
+            }
             break;
 
           case 'show_file_upload':
@@ -436,8 +442,12 @@ interface ChatFlowResponse {
         }
 
         // Navigate to next step
+        console.log('🔍 General navigation check:', { next_step, action_type });
         if (next_step) {
+          console.log('🚀 Navigating to step:', next_step);
           setTimeout(() => loadChatStep(next_step, updatedInk2Data), 1000);
+        } else {
+          console.log('❌ No next_step specified');
         }
       }
     } catch (error) {
