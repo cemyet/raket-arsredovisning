@@ -382,7 +382,16 @@ interface ChatFlowResponse {
             break;
             
           case 'show_input':
-            // show_input action should navigate to next step (handled by general navigation below)
+            // Prefer explicit navigation to the input step if provided
+            if (next_step) {
+              console.log('🧭 show_input: navigating to input step', next_step);
+              setTimeout(() => loadChatStep(next_step, updatedInk2Data), 300);
+              return; // Avoid double-navigation by skipping general nav below
+            }
+            // Fallback: show inline input on current step if no next_step
+            setShowInput(true);
+            setInputType(action_data?.input_type || 'amount');
+            setInputPlaceholder(action_data?.input_placeholder || 'Ange belopp i kr...');
             break;
             
           case 'api_call':
@@ -391,7 +400,14 @@ interface ChatFlowResponse {
             
           case 'enable_editing':
             // Enable tax editing mode
-            onDataUpdate({ taxEditingEnabled: true, editableAmounts: true });
+            onDataUpdate({ taxEditingEnabled: true, editableAmounts: true, showTaxPreview: true });
+            // Auto-scroll to tax module to make editing visible
+            setTimeout(() => {
+              const taxModule = document.querySelector('[data-section="tax-calculation"]');
+              if (taxModule) {
+                taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 400);
             // Navigate to step 402 (manual editing step) if no next_step specified
             if (!next_step) {
               setTimeout(() => loadChatStep(402), 500);
