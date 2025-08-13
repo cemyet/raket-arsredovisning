@@ -1138,7 +1138,11 @@ export function AnnualReportChat() {
               <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
             </div>
             <div className="p-6 h-full overflow-auto">
-              <AnnualReportPreview companyData={companyData} currentStep={currentStep} editableAmounts={companyData.editableAmounts} />
+              <AnnualReportPreview 
+                companyData={companyData} 
+                currentStep={currentStep} 
+                editableAmounts={Boolean(companyData.editableAmounts || (companyData as any).taxEditingEnabled)} 
+              />
             </div>
           </div>
         </ResizablePanel>
