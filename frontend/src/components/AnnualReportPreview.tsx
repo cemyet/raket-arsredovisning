@@ -765,7 +765,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 </div>
                  <span className="text-right font-medium">
                   {item.show_amount === 'NEVER' || item.header ? '' : 
-                    (editableAmounts) ? (
+                    (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt')) ? (
                       <input
                         type="text"
                         className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7"
