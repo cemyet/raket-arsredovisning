@@ -388,25 +388,16 @@ interface ChatFlowResponse {
         
         console.log('🔍 API Response:', { action_type, action_data, next_step });
 
-        // Handle different action types
+        // Process the action
+        console.log('🔍 Processing action:', action_type, 'with data:', action_data);
+        
         switch (action_type) {
           case 'set_variable':
-            if (action_data?.variable && action_data?.value) {
+            // Handle variable setting
+            if (action_data?.variable && action_data?.value !== undefined) {
+              console.log('🔧 Setting variable:', action_data.variable, 'to:', action_data.value);
               onDataUpdate({ [action_data.variable]: action_data.value });
             }
-            break;
-            
-          case 'show_input':
-            // Prefer explicit navigation to the input step if provided
-            if (next_step) {
-              console.log('🧭 show_input: navigating to input step', next_step);
-              setTimeout(() => loadChatStep(next_step, updatedInk2Data), 300);
-              return; // Avoid double-navigation by skipping general nav below
-            }
-            // Fallback: show inline input on current step if no next_step
-            setShowInput(true);
-            setInputType(action_data?.input_type || 'amount');
-            setInputPlaceholder(action_data?.input_placeholder || 'Ange belopp i kr...');
             break;
             
           case 'api_call':
@@ -423,6 +414,19 @@ interface ChatFlowResponse {
             setTimeout(() => loadChatStep(targetStep), 200);
             return; // Stop further navigation below
 
+          case 'show_input':
+            // Prefer explicit navigation to the input step if provided
+            if (next_step) {
+              console.log('🧭 show_input: navigating to input step', next_step);
+              setTimeout(() => loadChatStep(next_step, updatedInk2Data), 300);
+              return; // Avoid double-navigation by skipping general nav below
+            }
+            // Fallback: show inline input on current step if no next_step
+            setShowInput(true);
+            setInputType(action_data?.input_type || 'amount');
+            setInputPlaceholder(action_data?.input_placeholder || 'Ange belopp i kr...');
+            break;
+            
           case 'show_file_upload':
             setShowFileUpload(true);
             return; // Don't navigate to next step yet
