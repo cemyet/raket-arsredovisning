@@ -391,7 +391,7 @@ interface ChatFlowResponse {
             
           case 'enable_editing':
             // Enable tax editing mode
-            onDataUpdate({ taxEditingEnabled: true });
+            onDataUpdate({ taxEditingEnabled: true, editableAmounts: true });
             // Navigate to step 402 (manual editing step) if no next_step specified
             if (!next_step) {
               setTimeout(() => loadChatStep(402), 500);
@@ -422,12 +422,12 @@ interface ChatFlowResponse {
             
           case 'save_manual_tax':
             // Save manual tax changes
-            onDataUpdate({ taxEditingEnabled: false });
+            onDataUpdate({ taxEditingEnabled: false, editableAmounts: false });
             break;
             
           case 'reset_tax_edits':
             // Reset tax editing mode
-            onDataUpdate({ taxEditingEnabled: false });
+            onDataUpdate({ taxEditingEnabled: false, editableAmounts: false });
             break;
             
           case 'generate_pdf':
