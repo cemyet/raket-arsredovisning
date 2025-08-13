@@ -163,7 +163,7 @@ interface AnnualReportPreviewProps {
 
 export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false }: AnnualReportPreviewProps) {
   // Debug logging for editableAmounts
-  console.log('🔍 AnnualReportPreview - editableAmounts:', editableAmounts);
+  console.log('🔍 AnnualReportPreview RENDERED - editableAmounts:', editableAmounts);
   console.log('🔍 AnnualReportPreview - companyData:', companyData);
   
   const [showAllRR, setShowAllRR] = useState(false);

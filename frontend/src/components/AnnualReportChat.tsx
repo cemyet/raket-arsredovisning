@@ -1152,7 +1152,7 @@ export function AnnualReportChat() {
               />
               {/* Debug logging */}
               {console.log('🔍 AnnualReportPreview props:', {
-                editableAmounts: Boolean(companyData.editableAmounts || (companyData as any).taxEditingEnabled),
+                editableAmounts: true,
                 companyDataEditableAmounts: companyData.editableAmounts,
                 companyDataTaxEditingEnabled: (companyData as any).taxEditingEnabled,
                 fullCompanyData: companyData
