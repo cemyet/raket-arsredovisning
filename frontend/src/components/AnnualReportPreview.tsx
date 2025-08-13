@@ -604,21 +604,26 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
               };
               
               return allData.filter((item: any) => {
-                // Filter logic for tax rows
-                
-                // Always exclude show_amount = NEVER
+                // Always exclude rows explicitly marked to never show
                 if (item.show_amount === 'NEVER') return false;
-                
-                // Check always_show rules first - these override everything except header block logic
-                // Backend normalizes to boolean true/false or null
+
+                // In manual edit mode, show all non-header rows so the user can edit zeros too
+                if (editableAmounts) {
+                  if (item.header === true) {
+                    return shouldShowBlockContent(item.block);
+                  }
+                  return true;
+                }
+
+                // Normal (read-only) mode filter logic
+                // Check always_show rules first
                 if (item.always_show === true) return true;
                 if (item.always_show === false) return false;
-                
-                // For headers with always_show = null, check if its block has any content to show
+
                 if (item.header === true) {
                   return shouldShowBlockContent(item.block);
                 }
-                
+
                 // For non-headers with always_show = null, show only if amount is non-zero
                 return item.amount !== null && item.amount !== 0 && item.amount !== -0;
               });
