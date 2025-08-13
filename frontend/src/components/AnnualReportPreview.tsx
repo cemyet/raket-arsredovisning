@@ -162,6 +162,10 @@ interface AnnualReportPreviewProps {
 // Database-driven always_show logic - no more hardcoded arrays
 
 export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false }: AnnualReportPreviewProps) {
+  // Debug logging for editableAmounts
+  console.log('🔍 AnnualReportPreview - editableAmounts:', editableAmounts);
+  console.log('🔍 AnnualReportPreview - companyData:', companyData);
+  
   const [showAllRR, setShowAllRR] = useState(false);
   const [showAllBR, setShowAllBR] = useState(false);
 
@@ -766,60 +770,81 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                  <span className="text-right font-medium">
                   {item.show_amount === 'NEVER' || item.header ? '' : 
                     (editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
-                      <input
-                        type="number"
-                        className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={
-                          item.variable_name === 'INK_sarskild_loneskatt' 
-                            ? Math.abs(editedAmounts[item.variable_name] ?? item.amount ?? 0)
-                            : (editedAmounts[item.variable_name] ?? item.amount ?? 0)
-                        }
-                        onChange={(e) => {
-                          // Only allow positive values for manual editing
-                          const rawValue = Math.abs(parseFloat(e.target.value)) || 0;
-                          const value = item.variable_name === 'INK_sarskild_loneskatt' ? -rawValue : rawValue;
-                          setEditedAmounts(prev => ({
-                            ...prev,
-                            [item.variable_name]: value
-                          }));
-                        }}
-                        onBlur={(e) => {
-                          const rawValue = parseFloat(e.target.value) || 0;
-                          // Force positive values only
-                          const correctedValue = Math.abs(rawValue);
-                          const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
-                          const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
-                          setEditedAmounts(updatedAmounts);
-                          recalculateValues(updatedAmounts);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const rawValue = parseFloat(e.currentTarget.value) || 0;
-                            // Force positive values only
-                            const correctedValue = Math.abs(rawValue);
-                            const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
-                            const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
-                            setEditedAmounts(updatedAmounts);
-                            recalculateValues(updatedAmounts);
-                            e.currentTarget.blur(); // Remove focus
-                          }
-                        }}
-                        step="0.01"
-                        min="0"
-                      />
+                      (() => {
+                        console.log('🔍 SHOWING EDITABLE FIELD for:', item.variable_name, {
+                          editableAmounts,
+                          is_calculated: item.is_calculated,
+                          variable_name: item.variable_name,
+                          show_amount: item.show_amount
+                        });
+                        return (
+                          <input
+                            type="number"
+                            className="w-32 px-1 py-1 text-sm border border-gray-400 rounded text-right font-medium h-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={
+                              item.variable_name === 'INK_sarskild_loneskatt' 
+                                ? Math.abs(editedAmounts[item.variable_name] ?? item.amount ?? 0)
+                                : (editedAmounts[item.variable_name] ?? item.amount ?? 0)
+                            }
+                            onChange={(e) => {
+                              // Only allow positive values for manual editing
+                              const rawValue = Math.abs(parseFloat(e.target.value)) || 0;
+                              const value = item.variable_name === 'INK_sarskild_loneskatt' ? -rawValue : rawValue;
+                              setEditedAmounts(prev => ({
+                                ...prev,
+                                [item.variable_name]: value
+                              }));
+                            }}
+                            onBlur={(e) => {
+                              const rawValue = parseFloat(e.target.value) || 0;
+                              // Force positive values only
+                              const correctedValue = Math.abs(rawValue);
+                              const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                              const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
+                              setEditedAmounts(updatedAmounts);
+                              recalculateValues(updatedAmounts);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const rawValue = parseFloat(e.currentTarget.value) || 0;
+                                // Force positive values only
+                                const correctedValue = Math.abs(rawValue);
+                                const finalValue = item.variable_name === 'INK_sarskild_loneskatt' ? -correctedValue : correctedValue;
+                                const updatedAmounts = { ...editedAmounts, [item.variable_name]: finalValue };
+                                setEditedAmounts(updatedAmounts);
+                                recalculateValues(updatedAmounts);
+                                e.currentTarget.blur(); // Remove focus
+                              }
+                            }}
+                            step="0.01"
+                            min="0"
+                          />
+                        );
+                      })()
                     ) : (
-                      (item.amount !== null && item.amount !== undefined) ? 
-                        (item.amount === 0 || item.amount === -0 ? '0' : (() => {
-                          // Show integers (no decimals) for these specific variables
-                          const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
-                          
-                          const shouldShowInteger = integerVariables.includes(item.variable_name);
-                          
-                          return new Intl.NumberFormat('sv-SE', {
-                            minimumFractionDigits: shouldShowInteger ? 0 : 2,
-                            maximumFractionDigits: shouldShowInteger ? 0 : 2
-                          }).format(item.amount);
-                        })()) : '0'
+                      (() => {
+                        console.log('🔍 NOT SHOWING EDITABLE FIELD for:', item.variable_name, {
+                          editableAmounts,
+                          is_calculated: item.is_calculated,
+                          variable_name: item.variable_name,
+                          show_amount: item.show_amount,
+                          condition: editableAmounts && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount
+                        });
+                        return (
+                          (item.amount !== null && item.amount !== undefined) ? 
+                            (item.amount === 0 || item.amount === -0 ? '0' : (() => {
+                              // Show integers (no decimals) for these specific variables
+                              const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
+                              
+                              const shouldShowInteger = integerVariables.includes(item.variable_name);
+                              
+                              return new Intl.NumberFormat('sv-SE', {
+                                minimumFractionDigits: shouldShowInteger ? 0 : 2,
+                                maximumFractionDigits: shouldShowInteger ? 0 : 2
+                              }).format(item.amount);
+                            })()) : '0'
+                        );
+                      })()
                     )
                   }
                 </span>
