@@ -629,8 +629,9 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                   if (item.always_show === true) return true;
                   if (item.always_show === false) return false;
                   
-                  // For always_show = null, show only if amount is non-zero
-                  return item.amount !== null && item.amount !== 0 && item.amount !== -0;
+                  // For always_show = null/undefined, show only if amount is non-zero
+                  return item.amount !== null && item.amount !== undefined && 
+                         item.amount !== 0 && item.amount !== -0;
                 });
               };
               
@@ -655,8 +656,20 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                   return shouldShowBlockContent(item.block);
                 }
 
-                // For non-headers with always_show = null, show only if amount is non-zero
-                return item.amount !== null && item.amount !== 0 && item.amount !== -0;
+                // For non-headers with always_show = null/undefined, show only if amount is non-zero
+                const hasNonZeroAmount = item.amount !== null && item.amount !== undefined && 
+                                       item.amount !== 0 && item.amount !== -0;
+                
+                // Debug logging for zero-amount rows that might be showing incorrectly
+                if (!hasNonZeroAmount && item.always_show !== true) {
+                  console.log('🔍 FILTERING OUT zero amount row:', item.row_title, {
+                    amount: item.amount,
+                    always_show: item.always_show,
+                    variable_name: item.variable_name
+                  });
+                }
+                
+                return hasNonZeroAmount;
               });
             })().map((item, index) => (
               <div
@@ -858,18 +871,14 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                           condition: isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount
                         });
                         return (
-                          (item.amount !== null && item.amount !== undefined) ? 
-                            (item.amount === 0 || item.amount === -0 ? '0' : (() => {
-                              // Show integers (no decimals) for these specific variables
-                              const integerVariables = ['INK_skattemassigt_resultat', 'INK_beraknad_skatt', 'INK4.15', 'INK4.16'];
-                              
-                              const shouldShowInteger = integerVariables.includes(item.variable_name);
-                              
-                              return new Intl.NumberFormat('sv-SE', {
-                                minimumFractionDigits: shouldShowInteger ? 0 : 2,
-                                maximumFractionDigits: shouldShowInteger ? 0 : 2
-                              }).format(item.amount);
-                            })()) : '0'
+                        (item.amount !== null && item.amount !== undefined) ? 
+                        (item.amount === 0 || item.amount === -0 ? '0 kr' : (() => {
+                        // Tax calculation should always show integers with Swedish formatting and kr suffix
+                        return new Intl.NumberFormat('sv-SE', {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(item.amount) + ' kr';
+                        })()) : '0 kr'
                         );
                       })()
                     )
