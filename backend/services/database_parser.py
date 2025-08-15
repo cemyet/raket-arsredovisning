@@ -1025,10 +1025,13 @@ class DatabaseParser:
                     if item.get('variable_name'):
                         rr_variables[item['variable_name']] = item.get('current_amount', 0) or 0
                 
-                # Replace RR variable references
+                # Replace RR variable references - Use regex with word boundaries to prevent partial matches
+                import re
                 for var_name, var_value in rr_variables.items():
-                    if var_name in formula_with_values:
-                        formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                    # Use word boundaries (\b) to match whole words only
+                    pattern = r'\b' + re.escape(var_name) + r'\b'
+                    if re.search(pattern, formula_with_values):
+                        formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
                         if variable_name == 'Arets_resultat_justerat':
                             print(f"🔧 Formula debug for {variable_name}: replaced {var_name} with {var_value}")
             
@@ -1042,23 +1045,24 @@ class DatabaseParser:
             
             # Replace INK variable references with their calculated values
             if ink_values:
-                # Sort by length descending to avoid partial replacements (replace longer names first)
-                sorted_ink_vars = sorted(ink_values.items(), key=lambda x: len(x[0]), reverse=True)
-                for var_name, var_value in sorted_ink_vars:
-                    if var_name in formula_with_values:
+                import re
+                for var_name, var_value in ink_values.items():
+                    # Use word boundaries to match whole words only
+                    pattern = r'\b' + re.escape(var_name) + r'\b'
+                    if re.search(pattern, formula_with_values):
                         # Get the sign from the mapping for this variable
                         var_mapping = next((m for m in self.ink2_mappings if m.get('variable_name') == var_name), None)
                         if var_mapping:
                             sign_column = var_mapping.get('*/+/-', '+')
                             if sign_column == '-':
                                 # Apply negative sign for subtraction
-                                formula_with_values = formula_with_values.replace(var_name, f"(-{var_value})")
+                                formula_with_values = re.sub(pattern, f"(-{var_value})", formula_with_values)
                             else:
                                 # Use positive value (+ or *)
-                                formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                                formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
                         else:
                             # Fallback: use value as-is
-                            formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                            formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
                         
                         if variable_name == 'Arets_resultat_justerat':
                             print(f"🔧 Formula debug for {variable_name}: replaced INK variable {var_name} with {var_value}")
