@@ -607,14 +607,16 @@ def substitute_variables(data, context):
     import json
     data_str = json.dumps(data) if data else "{}"
     
+    import re
     for key, value in context.items():
         placeholder = f"{{{key}}}"
+        # Use regex to ensure exact placeholder match (though curly braces make this safer already)
         if isinstance(value, (int, float)):
             # Format numbers with Swedish locale
             formatted_value = f"{value:,.0f}".replace(',', ' ')
-            data_str = data_str.replace(placeholder, formatted_value)
+            data_str = re.sub(re.escape(placeholder), formatted_value, data_str)
         else:
-            data_str = data_str.replace(placeholder, str(value))
+            data_str = re.sub(re.escape(placeholder), str(value), data_str)
     
     return json.loads(data_str)
 

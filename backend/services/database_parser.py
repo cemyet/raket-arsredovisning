@@ -1015,8 +1015,14 @@ class DatabaseParser:
         try:
             # Replace global variable references
             formula_with_values = formula
+            import re
             for var_name, var_value in self.global_variables.items():
-                formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                pattern = r'\b' + re.escape(var_name) + r'\b'
+                if re.search(pattern, formula_with_values):
+                    formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
+                    if variable_name == 'Arets_resultat_justerat':
+                        print(f"🔧 GLOBAL variable replaced: {var_name} -> {var_value} using pattern: {pattern}")
+                        print(f"🔧 Formula after global replacement: {formula_with_values}")
             
             # Replace RR variable references if RR data is available
             if rr_data:
@@ -1079,7 +1085,9 @@ class DatabaseParser:
             matches = re.findall(account_pattern, formula_with_values)
             for account_id in matches:
                 account_value = accounts.get(account_id, 0)
-                formula_with_values = formula_with_values.replace(f'account_{account_id}', str(account_value))
+                # Use word boundaries for account replacement too
+                account_pattern = r'\baccount_' + re.escape(account_id) + r'\b'
+                formula_with_values = re.sub(account_pattern, str(account_value), formula_with_values)
             
             # Clean up formula for Python evaluation
             # Handle common Excel-like syntax issues
