@@ -341,8 +341,8 @@ interface ChatFlowResponse {
           }
         }
         
-        addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
-        setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
+        // Load step 202 from database instead of hardcoded message
+        setTimeout(() => loadChatStep(202), 1000);
         return;
       }
       
@@ -864,17 +864,8 @@ interface ChatFlowResponse {
     
     setShowFileUpload(false);
     
-    // Add the success message manually (step 102)
-    addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
-    
-                // Add the result overview message manually (step 103) - use database template
-    const resultText = substituteVariables(
-      'Årets resultat är: {SumAretsResultat} kr. Se fullständig resultat- och balans rapport i preview fönstret till höger.',
-      {
-        SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
-      }
-    );
-    addMessage(resultText, true, '💰');
+    // Load steps 102 and 103 from database instead of hardcoded messages
+    loadChatStep(102);
         
         // Add debugging for tax amount
         console.log('🏛️ Tax amount for step 104:', skattAretsResultat);
@@ -882,33 +873,12 @@ interface ChatFlowResponse {
     
     // Navigate to next step after file upload
     setTimeout(() => {
-      // Show tax question if we have tax data (including 0)
+      // Show tax question if we have tax data (including 0) - use database-driven step 104
       if (skattAretsResultat !== null) {
-        const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
-        addMessage(`Den bokförda skatten är ${taxAmount} kr. Vill du godkänna den eller vill du se över de skattemässiga justeringarna?`, true, '🏛️');
-        
-        // Set up options for tax question
-        setCurrentOptions([
-          {
-            option_order: 1,
-            option_text: 'Ja, godkänn den bokförda skatten.',
-            option_value: 'approve_tax',
-            next_step: 501,
-            action_type: 'navigate',
-            action_data: null
-          },
-          {
-            option_order: 2,
-            option_text: 'Låt mig se över justeringarna!',
-            option_value: 'review_adjustments',
-            next_step: 201,
-            action_type: 'navigate',
-            action_data: null
-          }
-        ]);
-        
         // Show the tax module (yellow section) when user wants to review adjustments
         onDataUpdate({ showTaxPreview: true });
+        // Load step 104 from database instead of hardcoded implementation
+        loadChatStep(104);
       } else {
         // No tax data found, go directly to dividends
         loadChatStep(501);

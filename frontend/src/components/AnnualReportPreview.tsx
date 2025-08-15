@@ -237,14 +237,20 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
       // Handle pension tax field mapping and preserve existing values
       const preservedAmounts = { ...updatedAmounts };
       
+      // Preserve INK4.14a (unused tax loss) if it exists and not being manually edited
+      if (companyData.unusedTaxLossAmount && !('INK4.14a' in updatedAmounts)) {
+        preservedAmounts['INK4.14a'] = companyData.unusedTaxLossAmount;
+        console.log('Preserving existing INK4.14a (unused tax loss):', companyData.unusedTaxLossAmount);
+      }
+      
       // If user edited INK_sarskild_loneskatt, convert it to justering_sarskild_loneskatt for backend
       if ('INK_sarskild_loneskatt' in updatedAmounts) {
         // Frontend stores positive value, backend expects justering_sarskild_loneskatt (positive = increase, negative = decrease)
         preservedAmounts.justering_sarskild_loneskatt = updatedAmounts.INK_sarskild_loneskatt;
         delete preservedAmounts.INK_sarskild_loneskatt; // Remove the INK version
         console.log('Converting INK_sarskild_loneskatt to justering_sarskild_loneskatt:', preservedAmounts.justering_sarskild_loneskatt);
-      } else if (companyData.justeringSarskildLoneskatt !== null && companyData.justeringSarskildLoneskatt !== undefined) {
-        // Preserve existing value if not being edited
+      } else if (typeof companyData.justeringSarskildLoneskatt === 'number' && companyData.justeringSarskildLoneskatt !== 0) {
+        // Preserve existing numeric value if not being edited
         preservedAmounts.justering_sarskild_loneskatt = companyData.justeringSarskildLoneskatt;
         console.log('Preserving existing justering_sarskild_loneskatt:', companyData.justeringSarskildLoneskatt);
       }
