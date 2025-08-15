@@ -1017,14 +1017,21 @@ interface ChatFlowResponse {
     console.log('CompanyData:', companyData);
     
     // Only start if we have basic setup
-    try {
-      // Start directly with file upload instead of welcome message
-      addMessage('Välkommen till Raketrapport! Ladda upp din SE-fil så börjar vi analysera din årsredovisning.', true, '👋');
-      setShowFileUpload(true);
-    } catch (error) {
-      console.error('❌ Error initializing chat:', error);
-      addMessage('Något gick fel vid start av chatten. Försök ladda om sidan.', true, '❌');
-    }
+    const initializeChat = async () => {
+      try {
+        // Fetch step 101 from database for consistency
+        const response = await apiService.getChatFlowStep(101) as ChatFlowResponse;
+        addMessage(response.question_text, true, response.question_icon || '👋');
+        setShowFileUpload(true);
+      } catch (error) {
+        console.error('❌ Error initializing chat:', error);
+        // Fallback to hardcoded message
+        addMessage('Välkommen till Raketrapport! Ladda upp din SE-fil så börjar vi analysera din årsredovisning.', true, '👋');
+        setShowFileUpload(true);
+      }
+    };
+    
+    initializeChat();
   }, []);
 
   // Auto-scroll when new messages arrive
