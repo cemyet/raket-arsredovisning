@@ -1014,15 +1014,14 @@ class DatabaseParser:
         
         try:
             # Replace global variable references
+            # SKIP global replacement for Årets resultat justerat - it doesn't need global variables
             formula_with_values = formula
-            import re
-            for var_name, var_value in self.global_variables.items():
-                pattern = r'\b' + re.escape(var_name) + r'\b'
-                if re.search(pattern, formula_with_values):
-                    formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
-                    if variable_name == 'Arets_resultat_justerat':
-                        print(f"🔧 GLOBAL variable replaced: {var_name} -> {var_value} using pattern: {pattern}")
-                        print(f"🔧 Formula after global replacement: {formula_with_values}")
+            if variable_name != 'Arets_resultat_justerat':
+                import re
+                for var_name, var_value in self.global_variables.items():
+                    pattern = r'\b' + re.escape(var_name) + r'\b'
+                    if re.search(pattern, formula_with_values):
+                        formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
             
             # Replace RR variable references if RR data is available
             if rr_data:
