@@ -639,12 +639,22 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 // Always exclude rows explicitly marked to never show
                 if (item.show_amount === 'NEVER') return false;
 
-                // In manual edit mode, show all non-header rows so the user can edit zeros too
+                // In manual edit mode, use the same filtering rules as non-edit mode
                 if (isEditing) {
+                  // Always exclude rows explicitly marked to never show
+                  if (item.always_show === false) return false;
+                  
                   if (item.header === true) {
                     return shouldShowBlockContent(item.block);
                   }
-                  return true;
+                  
+                  // Same logic as non-edit mode: show if always_show=true OR (always_show=null AND amount≠0)
+                  if (item.always_show === true) return true;
+                  
+                  // For always_show = null/undefined, only show if amount is non-zero
+                  const hasNonZeroAmount = item.amount !== null && item.amount !== undefined && 
+                                         item.amount !== 0 && item.amount !== -0;
+                  return hasNonZeroAmount;
                 }
 
                 // Normal (read-only) mode filter logic
