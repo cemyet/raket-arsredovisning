@@ -16,7 +16,7 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
           {emoji && (
             <span className="text-base mt-1 flex-shrink-0">{emoji}</span>
           )}
-          <div className="text-sm text-foreground leading-relaxed font-normal">
+          <div className="text-sm text-foreground leading-relaxed font-normal" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
             {message}
           </div>
         </div>
@@ -27,7 +27,7 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
   // User messages with soft beige bubbles
   return (
     <div className={cn("flex w-full mb-6 justify-end animate-fade-in", className)}>
-      <div className="max-w-[75%] px-3 py-2 bg-muted text-foreground rounded-lg text-sm leading-relaxed font-normal">
+      <div className="max-w-[75%] px-3 py-2 bg-muted text-foreground rounded-lg text-sm leading-relaxed font-normal" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
         {message}
       </div>
     </div>
