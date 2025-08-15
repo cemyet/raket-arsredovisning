@@ -683,7 +683,7 @@ interface ChatFlowResponse {
   };
 
   // Handle file upload
-  const handleFileProcessed = (fileData: any) => {
+  const handleFileProcessed = async (fileData: any) => {
     console.log('📁 File processed:', fileData);
     
     // Extract data from the uploaded file (same logic as old system)
@@ -864,8 +864,14 @@ interface ChatFlowResponse {
     
     setShowFileUpload(false);
     
-    // Add the success message manually (step 102)
-    addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
+    // Add the success message from database (step 102)
+    try {
+      const step102Response = await apiService.getChatFlowStep(102) as ChatFlowResponse;
+      addMessage(step102Response.question_text, true, step102Response.question_icon || '✅');
+    } catch (error) {
+      console.error('❌ Error fetching step 102:', error);
+      addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
+    }
     
                 // Add the result overview message manually (step 103) - use database template
     const resultText = substituteVariables(
