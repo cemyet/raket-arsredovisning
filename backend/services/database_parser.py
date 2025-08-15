@@ -1042,7 +1042,9 @@ class DatabaseParser:
             
             # Replace INK variable references with their calculated values
             if ink_values:
-                for var_name, var_value in ink_values.items():
+                # Sort by length descending to avoid partial replacements (replace longer names first)
+                sorted_ink_vars = sorted(ink_values.items(), key=lambda x: len(x[0]), reverse=True)
+                for var_name, var_value in sorted_ink_vars:
                     if var_name in formula_with_values:
                         # Get the sign from the mapping for this variable
                         var_mapping = next((m for m in self.ink2_mappings if m.get('variable_name') == var_name), None)
