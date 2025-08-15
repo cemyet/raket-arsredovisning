@@ -676,14 +676,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                 const hasNonZeroAmount = item.amount !== null && item.amount !== undefined && 
                                        item.amount !== 0 && item.amount !== -0;
                 
-                // Debug logging for zero-amount rows that might be showing incorrectly
-                if (!hasNonZeroAmount && item.always_show !== true) {
-                  console.log('🔍 FILTERING OUT zero amount row:', item.row_title, {
-                    amount: item.amount,
-                    always_show: item.always_show,
-                    variable_name: item.variable_name
-                  });
-                }
+                // Row filtering logic applied
                 
                 return hasNonZeroAmount;
               });
@@ -827,12 +820,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                   {item.show_amount === 'NEVER' || item.header ? '' : 
                     (isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       (() => {
-                        console.log('🔍 SHOWING EDITABLE FIELD for:', item.variable_name, {
-                          isEditing,
-                          is_calculated: item.is_calculated,
-                          variable_name: item.variable_name,
-                          show_amount: item.show_amount
-                        });
+                        // Field is editable
                         return (
                           <input
                             type="number"
@@ -879,13 +867,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                       })()
                     ) : (
                       (() => {
-                        console.log('🔍 NOT SHOWING EDITABLE FIELD for:', item.variable_name, {
-                          isEditing,
-                          is_calculated: item.is_calculated,
-                          variable_name: item.variable_name,
-                          show_amount: item.show_amount,
-                          condition: isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount
-                        });
+                        // Field not editable
                         return (
                         (item.amount !== null && item.amount !== undefined) ? 
                         (item.amount === 0 || item.amount === -0 ? '0 kr' : (() => {

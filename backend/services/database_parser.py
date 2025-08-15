@@ -997,6 +997,7 @@ class DatabaseParser:
         """
         Calculate value using formula that may reference global variables.
         """
+        variable_name = mapping.get('variable_name', '')
         formula = mapping.get('calculation_formula', '')
         if not formula:
             return 0.0
@@ -1016,7 +1017,17 @@ class DatabaseParser:
                 
                 # Replace RR variable references
                 for var_name, var_value in rr_variables.items():
-                    formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                    if var_name in formula_with_values:
+                        formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                        if variable_name == 'Arets_resultat_justerat':
+                            print(f"🔧 Formula debug for {variable_name}: replaced {var_name} with {var_value}")
+            
+            # Debug for Årets resultat justerat formula
+            if variable_name == 'Arets_resultat_justerat':
+                print(f"🔧 Original formula: {formula}")
+                print(f"🔧 Formula after RR substitution: {formula_with_values}")
+                if rr_data:
+                    print(f"🔧 Available RR variables: {list(rr_variables.keys()) if 'rr_variables' in locals() else 'None'}")
             
             # Replace INK variable references with their calculated values
             if ink_values:
@@ -1035,6 +1046,15 @@ class DatabaseParser:
                         else:
                             # Fallback: use value as-is
                             formula_with_values = formula_with_values.replace(var_name, str(var_value))
+                        
+                        if variable_name == 'Arets_resultat_justerat':
+                            print(f"🔧 Formula debug for {variable_name}: replaced INK variable {var_name} with {var_value}")
+            
+            # More debug for Årets resultat justerat after INK substitution
+            if variable_name == 'Arets_resultat_justerat':
+                print(f"🔧 Formula after INK substitution: {formula_with_values}")
+                if ink_values:
+                    print(f"🔧 Available INK variables: {list(ink_values.keys())}")
             
             # Replace account references (format: account_XXXX)
             import re
@@ -1050,7 +1070,13 @@ class DatabaseParser:
             
             # Evaluate the formula safely
             # Note: In production, consider using a safer eval alternative
-            return float(eval(formula_with_values))
+            result = float(eval(formula_with_values))
+            
+            if variable_name == 'Arets_resultat_justerat':
+                print(f"🔧 Final formula for evaluation: {formula_with_values}")
+                print(f"🔧 Final result: {result}")
+            
+            return result
             
         except Exception as e:
             print(f"Error evaluating formula '{formula}': {e}")
