@@ -873,14 +873,26 @@ interface ChatFlowResponse {
       addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
     }
     
-                // Add the result overview message manually (step 103) - use database template
-    const resultText = substituteVariables(
-      'Årets resultat är: {SumAretsResultat} kr. Se fullständig resultat- och balans rapport i preview fönstret till höger.',
-      {
-        SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
-      }
-    );
-    addMessage(resultText, true, '💰');
+    // Add the result overview message from database (step 103) - with variable substitution
+    try {
+      const step103Response = await apiService.getChatFlowStep(103) as ChatFlowResponse;
+      const resultText = substituteVariables(
+        step103Response.question_text,
+        {
+          SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
+        }
+      );
+      addMessage(resultText, true, step103Response.question_icon || '💰');
+    } catch (error) {
+      console.error('❌ Error fetching step 103:', error);
+      const resultText = substituteVariables(
+        'Årets resultat är: {SumAretsResultat} kr. Se fullständig resultat- och balans rapport i preview fönstret till höger.',
+        {
+          SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
+        }
+      );
+      addMessage(resultText, true, '💰');
+    }
         
         // Add debugging for tax amount
         console.log('🏛️ Tax amount for step 104:', skattAretsResultat);
