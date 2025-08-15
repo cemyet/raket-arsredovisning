@@ -1093,8 +1093,8 @@ interface ChatFlowResponse {
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-        style={{ maxHeight: 'calc(100vh - 200px)' }}
+        className="flex-1 overflow-y-auto p-4 space-y-4 font-sans"
+        style={{ maxHeight: 'calc(100vh - 200px)', fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
       >
         {messages.map((message) => (
           <ChatMessage

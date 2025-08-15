@@ -125,7 +125,14 @@
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
   }
   
-  .chat-message {
+  .chat-message,
+  .chat-message * {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
+  }
+  
+  /* Force Inter font for all chat elements */
+  [class*="chat"], 
+  [class*="message"] {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
   }
 }
