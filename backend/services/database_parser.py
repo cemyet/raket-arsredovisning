@@ -745,9 +745,13 @@ class DatabaseParser:
             print(f"Injected ink4_16_underskott_adjustment: {manual_amounts['ink4_16_underskott_adjustment']}")
         
         
+        print(f"🔧 Processing {len(sorted_mappings)} INK2 mappings...")
         for mapping in sorted_mappings:
             try:
                 variable_name = mapping.get('variable_name', '')
+                # Debug: Show row 71 specifically
+                if mapping.get('row_id') == 71:
+                    print(f"🔧 Found row 71: {variable_name} - {mapping.get('row_title', 'N/A')}")
                 
                 # Force recalculation of dependent summary values even if not manually edited
                 force_recalculate = variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']
@@ -767,6 +771,12 @@ class DatabaseParser:
                     ink_values[variable_name] = amount
                     if variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']:
                         print(f"Calculated {variable_name}: {amount} (available ink_values: {list(ink_values.keys())})")
+                
+                # Debug for any variable containing "resultat" or "justerat" 
+                if 'resultat' in variable_name.lower() or 'justerat' in variable_name.lower():
+                    print(f"🔧 Processing variable: {variable_name}, amount: {amount}")
+                    print(f"🔧 Row title: {mapping.get('row_title', 'N/A')}")
+                    print(f"🔧 Formula: {mapping.get('calculation_formula', 'N/A')}")
                 
                 # Special handling: hide INK4_header (duplicate "Skatteberäkning")
                 if variable_name == 'INK4_header':
@@ -1022,8 +1032,9 @@ class DatabaseParser:
                         if variable_name == 'Arets_resultat_justerat':
                             print(f"🔧 Formula debug for {variable_name}: replaced {var_name} with {var_value}")
             
-            # Debug for Årets resultat justerat formula
-            if variable_name == 'Arets_resultat_justerat':
+            # Debug for any formula-based variable (not just Årets resultat justerat)
+            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
+                print(f"🔧 FORMULA DEBUG - Variable: {variable_name}")
                 print(f"🔧 Original formula: {formula}")
                 print(f"🔧 Formula after RR substitution: {formula_with_values}")
                 if rr_data:
@@ -1050,8 +1061,8 @@ class DatabaseParser:
                         if variable_name == 'Arets_resultat_justerat':
                             print(f"🔧 Formula debug for {variable_name}: replaced INK variable {var_name} with {var_value}")
             
-            # More debug for Årets resultat justerat after INK substitution
-            if variable_name == 'Arets_resultat_justerat':
+            # More debug after INK substitution
+            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
                 print(f"🔧 Formula after INK substitution: {formula_with_values}")
                 if ink_values:
                     print(f"🔧 Available INK variables: {list(ink_values.keys())}")
@@ -1072,7 +1083,7 @@ class DatabaseParser:
             # Note: In production, consider using a safer eval alternative
             result = float(eval(formula_with_values))
             
-            if variable_name == 'Arets_resultat_justerat':
+            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
                 print(f"🔧 Final formula for evaluation: {formula_with_values}")
                 print(f"🔧 Final result: {result}")
             
