@@ -62,16 +62,16 @@ export function AnnualReportChat() {
     <div className="h-screen w-full bg-background overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Chat Panel */}
-        <ResizablePanel defaultSize={40} minSize={30} maxSize={60}>
-          <div className="flex flex-col h-full border-r border-border">
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <div className="flex flex-col h-full">
             {/* Header */}
             <div className="px-6 py-4 border-b border-border bg-background">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between h-8">
                 <div className="flex items-center">
                   <img 
                     src="/raketrapport (logo).png" 
                     alt="RaketRapport" 
-                    className="h-12 w-auto"
+                    className="h-8 w-auto"
                   />
                 </div>
               </div>
@@ -97,11 +97,13 @@ export function AnnualReportChat() {
         <ResizableHandle />
 
         {/* Annual Report Preview Panel */}
-        <ResizablePanel defaultSize={60} minSize={40}>
+        <ResizablePanel defaultSize={70} minSize={50}>
           <div className="h-full">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-base font-medium text-foreground">Förhandsvisning</h2>
-              <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
+              <div className="h-8 flex flex-col justify-center">
+                <h2 className="text-base font-medium text-foreground">Förhandsvisning</h2>
+                <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
+              </div>
             </div>
             <div className="p-6 h-full overflow-auto">
               {console.log('🔍 PARENT: About to render AnnualReportPreview with companyData:', companyData)}
