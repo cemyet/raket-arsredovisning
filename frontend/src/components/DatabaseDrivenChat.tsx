@@ -899,11 +899,24 @@ interface ChatFlowResponse {
         console.log('📊 Annual result for step 103:', sumAretsResultat);
     
     // Navigate to next step after file upload
-    setTimeout(() => {
+    setTimeout(async () => {
       // Show tax question if we have tax data (including 0)
       if (skattAretsResultat !== null) {
-        const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
-        addMessage(`Den bokförda skatten är ${taxAmount} kr. Vill du godkänna den eller vill du se över de skattemässiga justeringarna?`, true, '🏛️');
+        try {
+          const step104Response = await apiService.getChatFlowStep(104) as ChatFlowResponse;
+          const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
+          const taxText = substituteVariables(
+            step104Response.question_text,
+            {
+              SkattAretsResultat: taxAmount
+            }
+          );
+          addMessage(taxText, true, step104Response.question_icon || '🏛️');
+        } catch (error) {
+          console.error('❌ Error fetching step 104:', error);
+          const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
+          addMessage(`Den bokförda skatten är ${taxAmount} kr. Vill du godkänna den eller vill du se över de skattemässiga justeringarna?`, true, '🏛️');
+        }
         
         // Set up options for tax question
         setCurrentOptions([
