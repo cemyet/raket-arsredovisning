@@ -772,11 +772,12 @@ class DatabaseParser:
                     if variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']:
                         print(f"Calculated {variable_name}: {amount} (available ink_values: {list(ink_values.keys())})")
                 
-                # Debug for any variable containing "resultat" or "justerat" 
-                if 'resultat' in variable_name.lower() or 'justerat' in variable_name.lower():
+                # Debug for any variable containing "resultat" or "justerat" or "header"
+                if 'resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or 'header' in variable_name.lower():
                     print(f"🔧 Processing variable: {variable_name}, amount: {amount}")
                     print(f"🔧 Row title: {mapping.get('row_title', 'N/A')}")
                     print(f"🔧 Formula: {mapping.get('calculation_formula', 'N/A')}")
+                    print(f"🔧 always_show: {mapping.get('always_show', 'N/A')}")
                 
                 # Special handling: hide INK4_header (duplicate "Skatteberäkning")
                 if variable_name == 'INK4_header':
@@ -1019,7 +1020,9 @@ class DatabaseParser:
             if variable_name != 'Arets_resultat_justerat':
                 import re
                 for var_name, var_value in self.global_variables.items():
-                    pattern = r'\b' + re.escape(var_name) + r'\b'
+                    # Ultra-strict matching: only replace if variable is surrounded by operators, whitespace, or string boundaries
+                    # Pattern matches: start-of-string OR operator/whitespace, then variable, then operator/whitespace OR end-of-string
+                    pattern = r'(?<=^|[\s\+\-\*/\(\),]){0}(?=[\s\+\-\*/\(\),]|$)'.format(re.escape(var_name))
                     if re.search(pattern, formula_with_values):
                         formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
             
