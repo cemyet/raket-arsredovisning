@@ -341,7 +341,13 @@ interface ChatFlowResponse {
           }
         }
         
-        addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+        try {
+          const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
+          addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+        } catch (error) {
+          console.error('❌ Error fetching step 202:', error);
+          addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+        }
         setTimeout(() => loadChatStep(301), 1000); // Go to underskott question
         return;
       }
@@ -639,7 +645,13 @@ interface ChatFlowResponse {
                   showTaxPreview: true
                 });
                 
-                addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+                try {
+                  const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
+                  addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+                } catch (error) {
+                  console.error('❌ Error fetching step 202:', error);
+                  addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+                }
                 setShowInput(false);
                 setInputValue('');
 
@@ -654,7 +666,13 @@ interface ChatFlowResponse {
           }
           
           // Fallback if recalculation fails
-          addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+          try {
+            const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
+            addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+          } catch (error) {
+            console.error('❌ Error fetching step 202:', error);
+            addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
+          }
           setShowInput(false);
           setInputValue('');
           setTimeout(() => loadChatStep(202), 1000);
