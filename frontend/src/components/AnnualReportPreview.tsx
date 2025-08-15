@@ -817,7 +817,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
                   )}
                 </div>
                  <span className="text-right font-medium">
-                  {item.show_amount === 'NEVER' || item.header ? '' : 
+                  {item.show_amount === 'NEVER' || item.header ? '' :
                     (isEditing && (!item.is_calculated || item.variable_name === 'INK_sarskild_loneskatt') && item.show_amount) ? (
                       (() => {
                         // Field is editable

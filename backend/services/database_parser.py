@@ -745,13 +745,9 @@ class DatabaseParser:
             print(f"Injected ink4_16_underskott_adjustment: {manual_amounts['ink4_16_underskott_adjustment']}")
         
         
-        print(f"🔧 Processing {len(sorted_mappings)} INK2 mappings...")
         for mapping in sorted_mappings:
             try:
                 variable_name = mapping.get('variable_name', '')
-                # Debug: Show row 71 specifically
-                if mapping.get('row_id') == 71:
-                    print(f"🔧 Found row 71: {variable_name} - {mapping.get('row_title', 'N/A')}")
                 
                 # Force recalculation of dependent summary values even if not manually edited
                 force_recalculate = variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']
@@ -772,12 +768,7 @@ class DatabaseParser:
                     if variable_name in ['INK_skattemassigt_resultat', 'INK_beraknad_skatt']:
                         print(f"Calculated {variable_name}: {amount} (available ink_values: {list(ink_values.keys())})")
                 
-                # Debug for any variable containing "resultat" or "justerat" or "header"
-                if 'resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or 'header' in variable_name.lower():
-                    print(f"🔧 Processing variable: {variable_name}, amount: {amount}")
-                    print(f"🔧 Row title: {mapping.get('row_title', 'N/A')}")
-                    print(f"🔧 Formula: {mapping.get('calculation_formula', 'N/A')}")
-                    print(f"🔧 always_show: {mapping.get('always_show', 'N/A')}")
+                # Keep only essential debug for important tax calculations
                 
                 # Special handling: hide INK4_header (duplicate "Skatteberäkning")
                 if variable_name == 'INK4_header':
@@ -1014,17 +1005,13 @@ class DatabaseParser:
             return 0.0
         
         try:
-            # Replace global variable references
-            # SKIP global replacement for Årets resultat justerat - it doesn't need global variables
+            # Replace global variable references using safe curly brace syntax
             formula_with_values = formula
-            if variable_name != 'Arets_resultat_justerat':
-                import re
-                for var_name, var_value in self.global_variables.items():
-                    # Ultra-strict matching: only replace if variable is surrounded by operators, whitespace, or string boundaries
-                    # Pattern matches: start-of-string OR operator/whitespace, then variable, then operator/whitespace OR end-of-string
-                    pattern = r'(?<=^|[\s\+\-\*/\(\),]){0}(?=[\s\+\-\*/\(\),]|$)'.format(re.escape(var_name))
-                    if re.search(pattern, formula_with_values):
-                        formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
+            for var_name, var_value in self.global_variables.items():
+                # Safe replacement: only replace {variable_name} patterns
+                placeholder = f"{{{var_name}}}"
+                if placeholder in formula_with_values:
+                    formula_with_values = formula_with_values.replace(placeholder, str(var_value))
             
             # Replace RR variable references if RR data is available
             if rr_data:
@@ -1040,16 +1027,9 @@ class DatabaseParser:
                     pattern = r'\b' + re.escape(var_name) + r'\b'
                     if re.search(pattern, formula_with_values):
                         formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
-                        if variable_name == 'Arets_resultat_justerat':
-                            print(f"🔧 Formula debug for {variable_name}: replaced {var_name} with {var_value}")
+                        # Variable replacement completed
             
-            # Debug for any formula-based variable (not just Årets resultat justerat)
-            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
-                print(f"🔧 FORMULA DEBUG - Variable: {variable_name}")
-                print(f"🔧 Original formula: {formula}")
-                print(f"🔧 Formula after RR substitution: {formula_with_values}")
-                if rr_data:
-                    print(f"🔧 Available RR variables: {list(rr_variables.keys()) if 'rr_variables' in locals() else 'None'}")
+            # Keep formula debugging minimal
             
             # Replace INK variable references with their calculated values
             if ink_values:
@@ -1072,15 +1052,6 @@ class DatabaseParser:
                             # Fallback: use value as-is
                             formula_with_values = re.sub(pattern, str(var_value), formula_with_values)
                         
-                        if variable_name == 'Arets_resultat_justerat':
-                            print(f"🔧 Formula debug for {variable_name}: replaced INK variable {var_name} with {var_value}")
-            
-            # More debug after INK substitution
-            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
-                print(f"🔧 Formula after INK substitution: {formula_with_values}")
-                if ink_values:
-                    print(f"🔧 Available INK variables: {list(ink_values.keys())}")
-            
             # Replace account references (format: account_XXXX)
             import re
             account_pattern = r'account_(\d+)'
@@ -1097,13 +1068,7 @@ class DatabaseParser:
             
             # Evaluate the formula safely
             # Note: In production, consider using a safer eval alternative
-            result = float(eval(formula_with_values))
-            
-            if formula and ('resultat' in variable_name.lower() or 'justerat' in variable_name.lower() or mapping.get('row_id') == 71):
-                print(f"🔧 Final formula for evaluation: {formula_with_values}")
-                print(f"🔧 Final result: {result}")
-            
-            return result
+            return float(eval(formula_with_values))
             
         except Exception as e:
             print(f"Error evaluating formula '{formula}': {e}")
