@@ -105,7 +105,7 @@ export function AnnualReportChat() {
                 <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
               </div>
             </div>
-            <div className="p-6 h-full overflow-auto pt-2">
+            <div className="p-6 h-full overflow-auto pt-5">
               {console.log('🔍 PARENT: About to render AnnualReportPreview with companyData:', companyData)}
               {console.log('🔍 PARENT: Flags - showTaxPreview:', companyData.showTaxPreview, 'showRRBR:', companyData.showRRBR, 'taxEditingEnabled:', companyData.taxEditingEnabled)}
               <AnnualReportPreview 

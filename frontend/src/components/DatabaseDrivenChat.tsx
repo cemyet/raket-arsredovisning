@@ -242,7 +242,7 @@ interface ChatFlowResponse {
           setTimeout(() => {
             const taxModule = document.querySelector('[data-section="tax-calculation"]');
             if (taxModule) {
-              taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              taxModule.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }, 200);
         } else {
@@ -322,7 +322,7 @@ interface ChatFlowResponse {
         setTimeout(() => {
           const taxModule = document.querySelector('[data-section="tax-calculation"]');
           if (taxModule) {
-            taxModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            taxModule.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 500);
         // Go directly to pension tax check
