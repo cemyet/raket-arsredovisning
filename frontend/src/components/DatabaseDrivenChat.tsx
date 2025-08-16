@@ -260,6 +260,10 @@ interface ChatFlowResponse {
           setShowInput(true);
           setInputType(response.input_type || 'text');
           setInputPlaceholder(response.input_placeholder || '');
+        } else {
+          // Ensure input is hidden for non-input steps
+          setShowInput(false);
+          setInputValue('');
         }
       }
     } catch (error) {
@@ -1097,7 +1101,7 @@ interface ChatFlowResponse {
       <div 
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto p-4 space-y-4 font-sans"
-        style={{ maxHeight: 'calc(100vh - 200px)', fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
       >
         {messages.map((message) => (
           <ChatMessage
