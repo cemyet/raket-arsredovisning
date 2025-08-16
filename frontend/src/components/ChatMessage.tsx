@@ -24,13 +24,13 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
           <TooltipProvider key={index}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-blue-500 hover:text-blue-700 cursor-help mx-1">ⓘ</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-help mx-1">i</span>
               </TooltipTrigger>
               <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
                 <img 
                   src="/ink2_fortryckt_outnyttjat_underskott.gif" 
                   alt="Förtryckt underskott guide"
-                  className="max-w-xs rounded-lg"
+                  className="max-w-lg rounded-lg"
                 />
               </TooltipContent>
             </Tooltip>
@@ -41,13 +41,13 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
           <TooltipProvider key={index}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-blue-500 hover:text-blue-700 cursor-help mx-1">ⓘ</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-help mx-1">i</span>
               </TooltipTrigger>
               <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
                 <img 
                   src="/ink2_inlamnad_outnyttjat_underskott.gif" 
                   alt="Inlämnad underskott guide"
-                  className="max-w-xs rounded-lg"
+                  className="max-w-lg rounded-lg"
                 />
               </TooltipContent>
             </Tooltip>
