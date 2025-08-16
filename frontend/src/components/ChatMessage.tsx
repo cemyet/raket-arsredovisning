@@ -24,7 +24,7 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
           <TooltipProvider key={index}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-help mx-1">i</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-pointer mx-1">i</span>
               </TooltipTrigger>
               <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
                 <img 
@@ -41,7 +41,7 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
           <TooltipProvider key={index}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-help mx-1">i</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full cursor-pointer mx-1">i</span>
               </TooltipTrigger>
               <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
                 <img 
