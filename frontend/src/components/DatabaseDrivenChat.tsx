@@ -57,6 +57,7 @@ interface ChatFlowResponse {
   const [currentStep, setCurrentStep] = useState<number>(101); // Start with introduction
   const [currentQuestion, setCurrentQuestion] = useState<ChatStep | null>(null);
   const [currentOptions, setCurrentOptions] = useState<ChatOption[]>([]);
+  const [lastLoadedOptions, setLastLoadedOptions] = useState<ChatOption[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -245,7 +246,10 @@ interface ChatFlowResponse {
             }
           }, 200);
         } else {
-          // Store options for this step with variable substitution
+          // Store all options (unfiltered) for submit logic
+          setLastLoadedOptions(response.options);
+          
+          // Store filtered options for display with variable substitution
           const substitutedOptions = response.options
             .filter(opt => opt.option_order > 0 && opt.option_value !== 'submit') // Exclude no_option and submit options
             .map(option => ({
@@ -585,8 +589,8 @@ interface ChatFlowResponse {
       : value;
     addMessage(displayValue, false);
 
-    // Find the submit option for this step
-    const submitOption = currentOptions.find(opt => opt.option_value === 'submit');
+    // Find the submit option for this step from the last loaded response (not filtered options)
+    const submitOption = lastLoadedOptions?.find(opt => opt.option_value === 'submit');
 
     if (submitOption) {
       // Store the input value based on action data
@@ -1100,7 +1104,7 @@ interface ChatFlowResponse {
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 font-sans"
+        className="flex-1 overflow-y-auto p-4 space-y-4 font-sans pt-20"
         style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
       >
         {messages.map((message) => (
