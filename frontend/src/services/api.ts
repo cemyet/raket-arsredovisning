@@ -141,7 +141,7 @@ class ApiService {
   async calculatePeriodiseringsfonder(data: {
     current_accounts: Record<string, number>;
   }): Promise<{ success: boolean; periodiseringsfonder_data: any[] }> {
-    return this.makeRequest(`${API_ENDPOINTS.base}/calculate-periodiseringsfonder`, {
+    return this.makeRequest(`${API_ENDPOINTS.base}/api/calculate-periodiseringsfonder`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
