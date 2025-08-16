@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChatMessageProps {
   message: string;
@@ -8,6 +9,56 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, isBot = false, emoji, className }: ChatMessageProps) {
+  // Process message to add tooltips for info icons
+  const processMessageWithTooltips = (text: string) => {
+    // Replace info icons with hover tooltips
+    let processedText = text.replace(/(\[i1\])/g, '<span class="info-hover" data-gif="ink2_fortryckt_outnyttjat_underskott.gif">ⓘ</span>');
+    processedText = processedText.replace(/(\[i2\])/g, '<span class="info-hover" data-gif="ink2_inlamnad_outnyttjat_underskott.gif">ⓘ</span>');
+    
+    // Split by info icons to create JSX elements
+    const parts = text.split(/(\[i1\]|\[i2\])/);
+    
+    return parts.map((part, index) => {
+      if (part === '[i1]') {
+        return (
+          <TooltipProvider key={index}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-blue-500 hover:text-blue-700 cursor-help mx-1">ⓘ</span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
+                <img 
+                  src="/ink2_fortryckt_outnyttjat_underskott.gif" 
+                  alt="Förtryckt underskott guide"
+                  className="max-w-xs rounded-lg"
+                />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      } else if (part === '[i2]') {
+        return (
+          <TooltipProvider key={index}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-blue-500 hover:text-blue-700 cursor-help mx-1">ⓘ</span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="p-0 border-0 bg-transparent shadow-lg">
+                <img 
+                  src="/ink2_inlamnad_outnyttjat_underskott.gif" 
+                  alt="Inlämnad underskott guide"
+                  className="max-w-xs rounded-lg"
+                />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      } else {
+        return <span key={index}>{part}</span>;
+      }
+    });
+  };
+
   if (isBot) {
     // Bot messages without bubbles, clean like Lovable
     return (
@@ -17,7 +68,7 @@ export function ChatMessage({ message, isBot = false, emoji, className }: ChatMe
             <span className="text-base mt-1 flex-shrink-0">{emoji}</span>
           )}
           <div className="text-sm text-foreground leading-relaxed font-light font-inter chat-message">
-            {message}
+            {processMessageWithTooltips(message)}
           </div>
         </div>
       </div>
