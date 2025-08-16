@@ -147,7 +147,7 @@ interface ChatFlowResponse {
         );
         console.log('🔍 API call - inkBeraknadSkattItem:', inkBeraknadSkattItem);
       }
-      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber, ink2DataToUse);
+      const response: ChatFlowResponse = await apiService.getChatFlowStep(stepNumber);
       
       if (response.success) {
         setCurrentStep(stepNumber);
@@ -245,8 +245,14 @@ interface ChatFlowResponse {
             }
           }, 200);
         } else {
-          // Store options for this step
-          setCurrentOptions(response.options.filter(opt => opt.option_order > 0)); // Exclude no_option
+          // Store options for this step with variable substitution
+          const substitutedOptions = response.options
+            .filter(opt => opt.option_order > 0) // Exclude no_option
+            .map(option => ({
+              ...option,
+              option_text: option.option_text ? substituteVariables(option.option_text, substitutionVars) : option.option_text
+            }));
+          setCurrentOptions(substitutedOptions);
         }
         
         // Check if we should show input instead of options
