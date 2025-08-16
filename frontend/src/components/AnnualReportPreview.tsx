@@ -474,7 +474,7 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
             Räkenskapsår: {headerData.fiscal_year}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            {headerData.location}, {headerData.date}
+            {[headerData.location, headerData.date].filter(Boolean).join(', ')}
           </p>
         </div>
 
