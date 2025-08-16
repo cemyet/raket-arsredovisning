@@ -645,17 +645,10 @@ interface ChatFlowResponse {
                   showTaxPreview: true
                 });
                 
-                try {
-                  const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
-                  addMessage(step202Response.question_text, true, step202Response.question_icon);
-                } catch (error) {
-                  console.error('❌ Error fetching step 202:', error);
-                  addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
-                }
                 setShowInput(false);
                 setInputValue('');
 
-                // Navigate to step 202 with the updated ink2Data (following the working pattern)
+                // Navigate to step 202 with the updated ink2Data (step 202 will show its own message)
                 console.log('🔄 Navigating to step 202 with updated inkBeraknadSkatt:', updatedInkBeraknadSkatt);
                 loadChatStep(202, result.ink2_data);
                 return;
