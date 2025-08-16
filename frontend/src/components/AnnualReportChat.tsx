@@ -63,9 +63,9 @@ export function AnnualReportChat() {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Chat Panel */}
         <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-border bg-background">
+          <div className="relative h-full">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background">
               <div className="flex items-center justify-between h-8">
                 <div className="flex items-center">
                   <img 

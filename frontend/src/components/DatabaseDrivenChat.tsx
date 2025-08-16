@@ -247,7 +247,7 @@ interface ChatFlowResponse {
         } else {
           // Store options for this step with variable substitution
           const substitutedOptions = response.options
-            .filter(opt => opt.option_order > 0) // Exclude no_option
+            .filter(opt => opt.option_order > 0 && opt.option_value !== 'submit') // Exclude no_option and submit options
             .map(option => ({
               ...option,
               option_text: option.option_text ? substituteVariables(option.option_text, substitutionVars) : option.option_text
@@ -1142,6 +1142,13 @@ interface ChatFlowResponse {
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
+            <button
+              onClick={handleInputSubmit}
+              disabled={!inputValue.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Skicka
+            </button>
           </div>
         ) : (
           /* Option Buttons */
