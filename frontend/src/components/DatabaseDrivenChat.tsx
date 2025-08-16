@@ -343,7 +343,7 @@ interface ChatFlowResponse {
         
         try {
           const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
-          addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+          addMessage(step202Response.question_text, true, step202Response.question_icon);
         } catch (error) {
           console.error('❌ Error fetching step 202:', error);
           addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
@@ -647,7 +647,7 @@ interface ChatFlowResponse {
                 
                 try {
                   const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
-                  addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+                  addMessage(step202Response.question_text, true, step202Response.question_icon);
                 } catch (error) {
                   console.error('❌ Error fetching step 202:', error);
                   addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
@@ -668,7 +668,7 @@ interface ChatFlowResponse {
           // Fallback if recalculation fails
           try {
             const step202Response = await apiService.getChatFlowStep(202) as ChatFlowResponse;
-            addMessage(step202Response.question_text, true, step202Response.question_icon || '✅');
+            addMessage(step202Response.question_text, true, step202Response.question_icon);
           } catch (error) {
             console.error('❌ Error fetching step 202:', error);
             addMessage('Perfekt, nu är den särskilda löneskatten justerad som du kan se i skatteuträkningen till höger.', true, '✅');
@@ -885,7 +885,7 @@ interface ChatFlowResponse {
     // Add the success message from database (step 102)
     try {
       const step102Response = await apiService.getChatFlowStep(102) as ChatFlowResponse;
-      addMessage(step102Response.question_text, true, step102Response.question_icon || '✅');
+      addMessage(step102Response.question_text, true, step102Response.question_icon);
     } catch (error) {
       console.error('❌ Error fetching step 102:', error);
       addMessage('Perfekt! Resultatrapport och balansräkning är nu skapad från SE-filen.', true, '✅');
@@ -900,7 +900,7 @@ interface ChatFlowResponse {
           SumAretsResultat: sumAretsResultat ? new Intl.NumberFormat('sv-SE').format(sumAretsResultat) : '0'
         }
       );
-      addMessage(resultText, true, step103Response.question_icon || '💰');
+      addMessage(resultText, true, step103Response.question_icon);
     } catch (error) {
       console.error('❌ Error fetching step 103:', error);
       const resultText = substituteVariables(
@@ -929,32 +929,35 @@ interface ChatFlowResponse {
               SkattAretsResultat: taxAmount
             }
           );
-          addMessage(taxText, true, step104Response.question_icon || '🏛️');
+          addMessage(taxText, true, step104Response.question_icon);
+          
+          // Use options from database
+          setCurrentOptions(step104Response.options);
         } catch (error) {
           console.error('❌ Error fetching step 104:', error);
           const taxAmount = new Intl.NumberFormat('sv-SE').format(skattAretsResultat);
           addMessage(`Den bokförda skatten är ${taxAmount} kr. Vill du godkänna den eller vill du se över de skattemässiga justeringarna?`, true, '🏛️');
+          
+          // Fallback hardcoded options
+          setCurrentOptions([
+            {
+              option_order: 1,
+              option_text: 'Ja, godkänn den bokförda skatten.',
+              option_value: 'approve_tax',
+              next_step: 501,
+              action_type: 'navigate',
+              action_data: null
+            },
+            {
+              option_order: 2,
+              option_text: 'Låt mig se över justeringarna!',
+              option_value: 'review_adjustments',
+              next_step: 201,
+              action_type: 'navigate',
+              action_data: null
+            }
+          ]);
         }
-        
-        // Set up options for tax question
-        setCurrentOptions([
-          {
-            option_order: 1,
-            option_text: 'Ja, godkänn den bokförda skatten.',
-            option_value: 'approve_tax',
-            next_step: 501,
-            action_type: 'navigate',
-            action_data: null
-          },
-          {
-            option_order: 2,
-            option_text: 'Låt mig se över justeringarna!',
-            option_value: 'review_adjustments',
-            next_step: 201,
-            action_type: 'navigate',
-            action_data: null
-          }
-        ]);
         
         // Show the tax module (yellow section) when user wants to review adjustments
         onDataUpdate({ showTaxPreview: true });
@@ -1070,7 +1073,7 @@ interface ChatFlowResponse {
       try {
         // Fetch step 101 from database for consistency
         const response = await apiService.getChatFlowStep(101) as ChatFlowResponse;
-        addMessage(response.question_text, true, response.question_icon || '👋');
+        addMessage(response.question_text, true, response.question_icon);
         setShowFileUpload(true);
       } catch (error) {
         console.error('❌ Error initializing chat:', error);
