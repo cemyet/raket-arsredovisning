@@ -294,7 +294,7 @@ interface ChatFlowResponse {
   const handleOptionSelect = async (option: ChatOption, explicitStepNumber?: number, updatedInk2Data?: any[]) => {
     try {
       // Add user message only if there's actual text
-      const optionText = substituteVariables(option.option_text || '');
+      const optionText = option.option_text || '';
       if (optionText && optionText.trim() !== '') {
         addMessage(optionText, false);
       }
@@ -1153,7 +1153,7 @@ interface ChatFlowResponse {
                 key={option.option_order}
                 onClick={() => handleOptionSelect(option)}
               >
-                {substituteVariables(option.option_text || '')}
+                {option.option_text || ''}
               </OptionButton>
             ))}
           </div>
