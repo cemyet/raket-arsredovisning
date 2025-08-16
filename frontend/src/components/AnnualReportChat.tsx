@@ -98,14 +98,14 @@ export function AnnualReportChat() {
 
         {/* Annual Report Preview Panel */}
         <ResizablePanel defaultSize={70} minSize={50}>
-          <div className="h-full">
-            <div className="px-6 py-4 border-b border-border">
+          <div className="relative h-full">
+            <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background">
               <div className="h-8 flex flex-col justify-center">
                 <h2 className="text-base font-medium text-foreground">Förhandsvisning</h2>
                 <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
               </div>
             </div>
-            <div className="p-6 h-full overflow-auto">
+            <div className="p-6 h-full overflow-auto pt-20">
               {console.log('🔍 PARENT: About to render AnnualReportPreview with companyData:', companyData)}
               {console.log('🔍 PARENT: Flags - showTaxPreview:', companyData.showTaxPreview, 'showRRBR:', companyData.showRRBR, 'taxEditingEnabled:', companyData.taxEditingEnabled)}
               <AnnualReportPreview 
