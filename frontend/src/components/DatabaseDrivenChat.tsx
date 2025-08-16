@@ -490,6 +490,11 @@ interface ChatFlowResponse {
             // Handle session completion
             console.log('Session completion requested');
             break;
+            
+          case 'show_periodiseringsfonder':
+            // Show periodiseringsfonder module
+            onDataUpdate({ showPeriodiseringsfonder: true });
+            break;
         }
 
         // Navigate to next step

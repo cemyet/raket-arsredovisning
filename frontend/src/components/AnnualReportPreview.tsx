@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateRRSums, extractKeyMetrics, formatAmount, type SEData } from '@/utils/seFileCalculations';
 import { apiService } from '@/services/api';
+import { Periodiseringsfonder } from './Periodiseringsfonder';
 
 interface CompanyData {
   results?: string;
@@ -917,6 +918,12 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
             )}
           </div>
         )}
+
+        {/* Periodiseringsfonder Section */}
+        <Periodiseringsfonder 
+          companyData={companyData}
+          onDataUpdate={onDataUpdate}
+        />
 
         {/* Significant Events Section */}
         {currentStep >= 2 && (

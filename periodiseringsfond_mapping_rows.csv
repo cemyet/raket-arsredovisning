@@ -1,0 +1,11 @@
+variable_name,row_title,accounts_included,aterforing_index,aterforing_year,header,always_show,show_amount,is_calculated,calculation_formula,row_id
+Pfonder_heading,Periodiseringsfonder,,,,true,true,false,false,,1
+Pfonder_minus6,Periodiseringsfond 2018,2128,106%,2024,false,false,false,false,,2
+Pfonder_minus5,Periodiseringsfond 2019,2129,104%,2025,false,true,true,false,,3
+Pfonder_minus4,Periodiseringsfond 2020,2120,104%,2026,false,true,true,false,,4
+Pfonder_minus3,Periodiseringsfond 2021,2121,100%,2027,false,true,true,false,,5
+Pfonder_minus2,Periodiseringsfond 2022,2122,100%,2028,false,true,true,false,,6
+Pfonder_minus1,Periodiseringsfond 2023,2123,100%,2029,false,true,true,false,,7
+Pfonder_fiscal_year,Periodiseringsfond 2024,2124,,2030,false,false,false,false,,8
+Pfonder_sum,Summa periodiseringsfonder,,,,false,true,true,true,Pfonder_minus1+Pfonder_minus2+Pfonder_minus3+Pfonder_minus4+Pfonder_minus5,9
+Schablonranta,Summa Schablonränta,,,,true,true,true,true,Pfonder_sum*statslaneranta,10

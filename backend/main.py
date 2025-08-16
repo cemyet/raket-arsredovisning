@@ -661,6 +661,73 @@ async def recalculate_ink2(request: RecalculateRequest):
         print(f"Error in recalculate_ink2: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error recalculating INK2: {str(e)}")
 
+@app.post("/api/calculate-periodiseringsfonder")
+async def calculate_periodiseringsfonder(request: dict):
+    """
+    Calculate periodiseringsfonder data from SE file accounts
+    """
+    try:
+        supabase = get_supabase_client()
+        current_accounts = request.get('current_accounts', {})
+        
+        # Get mapping data from database
+        result = supabase.table('periodiseringsfond_mapping').select('*').order('row_id').execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Periodiseringsfond mapping not found")
+        
+        periodiseringsfonder_data = []
+        calculated_values = {}
+        
+        # Process each row
+        for row in result.data:
+            item = {
+                'variable_name': row['variable_name'],
+                'row_title': row['row_title'],
+                'header': row['header'],
+                'always_show': row['always_show'],
+                'show_amount': row['show_amount'],
+                'is_calculated': row['is_calculated'],
+                'amount': 0
+            }
+            
+            if row['is_calculated'] and row['calculation_formula']:
+                # Handle calculated fields (like Pfonder_sum and Schablonranta)
+                formula = row['calculation_formula']
+                
+                if 'Pfonder_sum*statslaneranta' in formula:
+                    # Calculate schablonranta (need statslaneranta from somewhere)
+                    pfonder_sum = calculated_values.get('Pfonder_sum', 0)
+                    statslaneranta = 0.016  # 1.6% - this should come from settings/config
+                    item['amount'] = pfonder_sum * statslaneranta
+                    calculated_values[row['variable_name']] = item['amount']
+                elif '+' in formula:
+                    # Sum formula like Pfonder_minus1+Pfonder_minus2+...
+                    total = 0
+                    for var_name in formula.split('+'):
+                        var_name = var_name.strip()
+                        total += calculated_values.get(var_name, 0)
+                    item['amount'] = total
+                    calculated_values[row['variable_name']] = item['amount']
+                    
+            elif row['accounts_included']:
+                # Get account balance from SE file
+                account_number = row['accounts_included']
+                account_balance = current_accounts.get(account_number, 0)
+                item['amount'] = float(account_balance)
+                calculated_values[row['variable_name']] = item['amount']
+            
+            periodiseringsfonder_data.append(item)
+        
+        return {
+            "success": True,
+            "periodiseringsfonder_data": periodiseringsfonder_data
+        }
+        
+    except Exception as e:
+        print(f"Error calculating periodiseringsfonder: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error calculating periodiseringsfonder: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     import os

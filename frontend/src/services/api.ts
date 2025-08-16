@@ -137,6 +137,15 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  async calculatePeriodiseringsfonder(data: {
+    current_accounts: Record<string, number>;
+  }): Promise<{ success: boolean; periodiseringsfonder_data: any[] }> {
+    return this.makeRequest(`${API_ENDPOINTS.base}/calculate-periodiseringsfonder`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiService = new ApiService();
