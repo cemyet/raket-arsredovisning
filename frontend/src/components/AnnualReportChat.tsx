@@ -69,7 +69,7 @@ export function AnnualReportChat() {
               <div className="flex items-center justify-between h-8">
                 <div className="flex items-center">
                   <img 
-                    src="/raketrapport v2 (logo).png"
+                    src="/raketrapport v3 (logo).png"
                     alt="RaketRapport" 
                     className="h-8 w-auto"
                   />
