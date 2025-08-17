@@ -457,6 +457,9 @@ interface ChatFlowResponse {
             
             if (response.success) {
               onDataUpdate({ ink2Data: response.ink2_data });
+              // Pass updated ink2Data to step 401
+              setTimeout(() => loadChatStep(401, response.ink2_data), 1000);
+              return;
             }
           } catch (error) {
             console.error('Error recalculating tax for no unused loss:', error);
