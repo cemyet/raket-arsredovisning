@@ -12,4 +12,13 @@ export const API_ENDPOINTS = {
   downloadReport: `${API_BASE_URL}/download-report`,
   recalculateInk2: `${API_BASE_URL}/api/recalculate-ink2`,
   chatFlow: `${API_BASE_URL}/api/chat-flow`,
+  // Förvaltningsberättelse endpoints
+  managementReportTemplate: `${API_BASE_URL}/forvaltningsberattelse/template`,
+  managementReportValidate: `${API_BASE_URL}/forvaltningsberattelse/validate`,
+  managementReportSubmit: `${API_BASE_URL}/forvaltningsberattelse/submit`,
+  // Bolagsverket API endpoints
+  bolagsverketCompany: `${API_BASE_URL}/bolagsverket/company`,
+  bolagsverketDocuments: `${API_BASE_URL}/bolagsverket/documents`,
+  bolagsverketDocument: `${API_BASE_URL}/bolagsverket/document`,
+  bolagsverketHealth: `${API_BASE_URL}/bolagsverket/health`,
 } as const; 

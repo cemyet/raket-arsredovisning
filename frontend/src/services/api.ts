@@ -138,13 +138,39 @@ class ApiService {
     });
   }
 
-  async calculatePeriodiseringsfonder(data: {
-    current_accounts: Record<string, number>;
-  }): Promise<{ success: boolean; periodiseringsfonder_data: any[] }> {
-    return this.makeRequest(`${API_ENDPOINTS.base}/api/calculate-periodiseringsfonder`, {
+  // Förvaltningsberättelse API methods
+  async getManagementReportTemplate(): Promise<{ success: boolean; template: any; message: string }> {
+    return this.makeRequest(API_ENDPOINTS.managementReportTemplate);
+  }
+
+  async validateManagementReport(reportData: any): Promise<{ success: boolean; validation_result: any; message: string }> {
+    return this.makeRequest(API_ENDPOINTS.managementReportValidate, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(reportData),
     });
+  }
+
+  async submitManagementReport(reportRequest: any): Promise<{ success: boolean; validation_result: any; submission_id?: string; message: string }> {
+    return this.makeRequest(API_ENDPOINTS.managementReportSubmit, {
+      method: 'POST',
+      body: JSON.stringify(reportRequest),
+    });
+  }
+
+  async getCompanyInfoFromBolagsverket(orgNumber: string): Promise<{ success: boolean; company_info: any; message: string }> {
+    return this.makeRequest(`${API_ENDPOINTS.bolagsverketCompany}/${orgNumber}`);
+  }
+
+  async getCompanyDocumentsFromBolagsverket(orgNumber: string): Promise<{ success: boolean; document_list: any; message: string }> {
+    return this.makeRequest(`${API_ENDPOINTS.bolagsverketDocuments}/${orgNumber}`);
+  }
+
+  async getDocumentFromBolagsverket(documentId: string): Promise<{ success: boolean; document: any; message: string }> {
+    return this.makeRequest(`${API_ENDPOINTS.bolagsverketDocument}/${documentId}`);
+  }
+
+  async checkBolagsverketHealth(): Promise<{ success: boolean; healthy: boolean; message: string }> {
+    return this.makeRequest(API_ENDPOINTS.bolagsverketHealth);
   }
 }
 

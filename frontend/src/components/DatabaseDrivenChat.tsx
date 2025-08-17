@@ -280,22 +280,58 @@ interface ChatFlowResponse {
   const evaluateConditions = (conditions: any): boolean => {
     if (!conditions) return true;
 
-    // Simple condition evaluation
-    for (const [key, condition] of Object.entries(conditions)) {
-      const value = (companyData as any)[key];
+    try {
+      // Parse JSON conditions if string
+      const parsedConditions = typeof conditions === 'string' ? JSON.parse(conditions) : conditions;
       
-      if (typeof condition === 'object' && condition !== null) {
-        if ('gt' in condition) {
-          const compareValue = typeof condition.gt === 'string' 
-            ? (companyData as any)[condition.gt] 
-            : condition.gt;
-          if (!(value > compareValue)) return false;
+      // Check for complex mathematical conditions
+      if (parsedConditions.formula) {
+        // Handle formula-based conditions like "pension_premier * sarskild_loneskatt < sarskild_loneskatt_pension_calculated"
+        const formula = parsedConditions.formula;
+        const variables = {
+          pension_premier: companyData.pensionPremier || 0,
+          sarskild_loneskatt: companyData.sarskildLoneskatt || 0,
+          sarskild_loneskatt_pension: companyData.sarskildLoneskattPension || 0,
+          sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated || 0
+        };
+        
+        // Replace variables in formula
+        let evaluatedFormula = formula;
+        for (const [varName, varValue] of Object.entries(variables)) {
+          evaluatedFormula = evaluatedFormula.replace(new RegExp(varName, 'g'), varValue.toString());
         }
-        // Add more condition types as needed
+        
+        console.log('🔍 Evaluating formula:', formula, '→', evaluatedFormula);
+        
+        // Safely evaluate the mathematical expression
+        try {
+          return Function('"use strict"; return (' + evaluatedFormula + ')')();
+        } catch (e) {
+          console.error('Error evaluating formula:', e);
+          return false;
+        }
       }
-    }
 
-    return true;
+      // Simple condition evaluation for backward compatibility
+      for (const [key, condition] of Object.entries(parsedConditions)) {
+        const value = (companyData as any)[key];
+        
+        if (typeof condition === 'object' && condition !== null) {
+          if ('gt' in condition) {
+            const compareValue = typeof condition.gt === 'string' 
+              ? (companyData as any)[condition.gt] 
+              : condition.gt;
+            if (!(value > compareValue)) return false;
+          }
+          // Add more condition types as needed
+        }
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Error parsing conditions:', e);
+      return true; // Default to showing step if condition parsing fails
+    }
   };
 
   // Handle option selection
@@ -325,8 +361,32 @@ interface ChatFlowResponse {
             taxModule.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 500);
-        // Go directly to pension tax check
-        setTimeout(() => loadChatStep(201), 1000);
+        
+        // Check conditions for step 201 before navigating
+        setTimeout(async () => {
+          try {
+            const step201Response = await apiService.getChatFlowStep(201) as ChatFlowResponse;
+            if (step201Response.success && step201Response.show_conditions) {
+              const shouldShow = evaluateConditions(step201Response.show_conditions);
+              console.log('🔍 Step 201 condition evaluation:', shouldShow);
+              
+              if (shouldShow) {
+                loadChatStep(201);
+              } else {
+                // Skip to step 301 if condition not met
+                console.log('⏭️ Skipping step 201, going to 301');
+                loadChatStep(301);
+              }
+            } else {
+              // No conditions, proceed normally
+              loadChatStep(201);
+            }
+          } catch (error) {
+            console.error('Error checking step 201 conditions:', error);
+            // Fallback to normal navigation
+            loadChatStep(201);
+          }
+        }, 1000);
         return;
       }
       

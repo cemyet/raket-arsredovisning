@@ -52,4 +52,36 @@ class CompanyInfo(BaseModel):
     location: str
     board_members: List[str]
     employee_count: Optional[int]
-    key_figures: Dict[str, Any] 
+    key_figures: Dict[str, Any]
+
+class ManagementReportData(BaseModel):
+    """Förvaltningsberättelse data"""
+    business_description: str = Field(..., description="Verksamhetsbeskrivning")
+    significant_events: str = Field(..., description="Väsentliga händelser under räkenskapsåret")
+    development_work: str = Field(..., description="Forsknings- och utvecklingsarbete")
+    financial_position: Dict[str, str] = Field(..., description="Finansiell ställning")
+    risk_management: str = Field(..., description="Riskhantering och osäkerhetsfaktorer")
+    future_outlook: str = Field(..., description="Förväntad framtida utveckling")
+    environmental_impact: Optional[str] = Field(None, description="Miljöpåverkan")
+    personnel_information: Optional[str] = Field(None, description="Personalförhållanden")
+
+class ManagementReportRequest(BaseModel):
+    """Request för förvaltningsberättelse"""
+    organization_number: str
+    company_name: str
+    fiscal_year: int
+    management_report: ManagementReportData
+
+class ManagementReportResponse(BaseModel):
+    """Response för förvaltningsberättelse"""
+    success: bool
+    validation_result: Dict[str, Any]
+    submission_id: Optional[str] = None
+    message: str
+
+class BolagsverketCompanyInfo(BaseModel):
+    """Företagsinformation från Bolagsverket API"""
+    organization_number: str
+    company_name: str
+    latest_event: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None 

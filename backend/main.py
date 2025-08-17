@@ -14,7 +14,12 @@ from services.report_generator import ReportGenerator
 from services.supabase_service import SupabaseService
 from services.database_parser import DatabaseParser
 from services.supabase_database import db
-from models.schemas import ReportRequest, ReportResponse, CompanyData
+from services.bolagsverket_service import BolagsverketService
+from models.schemas import (
+    ReportRequest, ReportResponse, CompanyData, 
+    ManagementReportRequest, ManagementReportResponse, 
+    BolagsverketCompanyInfo, ManagementReportData
+)
 
 app = FastAPI(
     title="Raketrapport API",
@@ -41,6 +46,7 @@ app.add_middleware(
 # Initiera services
 report_generator = ReportGenerator()
 supabase_service = SupabaseService()
+bolagsverket_service = BolagsverketService()
 
 def get_supabase_client():
     """Get Supabase client from the service"""
@@ -727,6 +733,200 @@ async def calculate_periodiseringsfonder(request: dict):
     except Exception as e:
         print(f"Error calculating periodiseringsfonder: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error calculating periodiseringsfonder: {str(e)}")
+
+# Förvaltningsberättelse endpoints
+
+@app.get("/forvaltningsberattelse/template")
+async def get_management_report_template():
+    """
+    Hämta mall för förvaltningsberättelse
+    """
+    try:
+        template = bolagsverket_service.get_management_report_template()
+        return {
+            "success": True,
+            "template": template,
+            "message": "Template hämtad framgångsrikt"
+        }
+    except Exception as e:
+        print(f"Error getting template: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/forvaltningsberattelse/validate", response_model=dict)
+async def validate_management_report(management_report: ManagementReportData):
+    """
+    Validera förvaltningsberättelse data
+    """
+    try:
+        validation_result = await bolagsverket_service.validate_management_report(
+            management_report.dict()
+        )
+        
+        return {
+            "success": True,
+            "validation_result": validation_result,
+            "message": "Validation completed"
+        }
+    except Exception as e:
+        print(f"Error validating management report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/bolagsverket/company/{org_number}", response_model=dict)
+async def get_company_info_from_bolagsverket(org_number: str):
+    """
+    Hämta företagsinformation från Bolagsverket API
+    """
+    try:
+        # Validate org number format (should be 10 digits)
+        if not org_number.isdigit() or len(org_number) != 10:
+            raise HTTPException(
+                status_code=400, 
+                detail="Organization number must be 10 digits"
+            )
+        
+        company_info = await bolagsverket_service.get_company_info(org_number)
+        
+        if not company_info:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"No information found for organization {org_number}"
+            )
+        
+        return {
+            "success": True,
+            "company_info": company_info,
+            "message": "Företagsinformation hämtad från Bolagsverket"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching company info: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/bolagsverket/documents/{org_number}", response_model=dict)
+async def get_company_documents_from_bolagsverket(org_number: str):
+    """
+    Hämta dokumentlista för företag från Bolagsverket API
+    """
+    try:
+        # Validate org number format (should be 10 digits)
+        if not org_number.isdigit() or len(org_number) != 10:
+            raise HTTPException(
+                status_code=400, 
+                detail="Organization number must be 10 digits"
+            )
+        
+        document_list = await bolagsverket_service.get_document_list(org_number)
+        
+        if document_list is None:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"No documents found for organization {org_number}"
+            )
+        
+        return {
+            "success": True,
+            "document_list": document_list,
+            "message": "Dokumentlista hämtad från Bolagsverket"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching document list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/bolagsverket/document/{document_id}", response_model=dict)
+async def get_document_from_bolagsverket(document_id: str):
+    """
+    Hämta specifikt dokument från Bolagsverket API
+    """
+    try:
+        document = await bolagsverket_service.get_document(document_id)
+        
+        if not document:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Document {document_id} not found"
+            )
+        
+        return {
+            "success": True,
+            "document": document,
+            "message": "Dokument hämtat från Bolagsverket"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching document: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/bolagsverket/health", response_model=dict)
+async def check_bolagsverket_health():
+    """
+    Kontrollera hälsa för Bolagsverket API
+    """
+    try:
+        is_healthy = await bolagsverket_service.check_api_health()
+        
+        return {
+            "success": True,
+            "healthy": is_healthy,
+            "message": "Bolagsverket API health check completed"
+        }
+    except Exception as e:
+        print(f"Error checking Bolagsverket health: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/forvaltningsberattelse/submit", response_model=ManagementReportResponse)
+async def submit_management_report(report_request: ManagementReportRequest):
+    """
+    Skicka in förvaltningsberättelse till Bolagsverket
+    """
+    try:
+        # First validate the management report
+        validation_result = await bolagsverket_service.validate_management_report(
+            report_request.management_report.dict()
+        )
+        
+        if not validation_result["valid"]:
+            return ManagementReportResponse(
+                success=False,
+                validation_result=validation_result,
+                message="Validation failed. Please correct the errors before submitting."
+            )
+        
+        # Prepare the complete annual report data structure
+        annual_report_data = {
+            "organizationNumber": report_request.organization_number,
+            "companyName": report_request.company_name,
+            "fiscalYear": report_request.fiscal_year,
+            "managementReport": report_request.management_report.dict(),
+            "submissionDate": datetime.now().isoformat()
+        }
+        
+        # Submit to Bolagsverket
+        submission_result = await bolagsverket_service.submit_annual_report(
+            report_request.organization_number,
+            annual_report_data
+        )
+        
+        if submission_result:
+            return ManagementReportResponse(
+                success=True,
+                validation_result=validation_result,
+                submission_id=submission_result.get("submissionId"),
+                message="Förvaltningsberättelse submitted successfully to Bolagsverket"
+            )
+        else:
+            return ManagementReportResponse(
+                success=False,
+                validation_result=validation_result,
+                message="Failed to submit to Bolagsverket. Please try again later."
+            )
+            
+    except Exception as e:
+        print(f"Error submitting management report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
