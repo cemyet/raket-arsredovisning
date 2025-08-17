@@ -434,6 +434,39 @@ interface ChatFlowResponse {
         return;
       }
       
+      // Handle "no unused tax loss" from step 301
+      if (option.option_value === 'none' && (explicitStepNumber || currentStep) === 301) {
+        // Set unused tax loss to 0 and trigger tax recalculation
+        onDataUpdate({ unusedTaxLossAmount: 0 });
+        
+        // Trigger recalculation to update inkBeraknadSkatt
+        if (companyData.seFileData) {
+          try {
+            const response = await apiService.recalculateInk2({
+              current_accounts: companyData.seFileData.accountBalances,
+              rr_data: companyData.seFileData.rr_data || [],
+              br_data: companyData.seFileData.br_data || [],
+              fiscal_year: companyData.fiscalYear,
+              manual_amounts: {
+                justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt === 'calculated' 
+                  ? companyData.sarskildLoneskattPensionCalculated - companyData.sarskildLoneskattPension 
+                  : 0,
+                outnyttjat_underskott_foregaende_ar: 0 // No unused tax loss
+              }
+            });
+            
+            if (response.success) {
+              onDataUpdate({ ink2Data: response.ink2_data });
+            }
+          } catch (error) {
+            console.error('Error recalculating tax for no unused loss:', error);
+          }
+        }
+        
+        setTimeout(() => loadChatStep(401), 1000);
+        return;
+      }
+
       // Note: enter_custom is now handled by database-driven flow (show_input action)
 
       // Get the most recent inkBeraknadSkatt value from global data first, then INK2 data
