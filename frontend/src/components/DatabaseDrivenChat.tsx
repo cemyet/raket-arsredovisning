@@ -284,32 +284,24 @@ interface ChatFlowResponse {
       // Parse JSON conditions if string
       const parsedConditions = typeof conditions === 'string' ? JSON.parse(conditions) : conditions;
       
-      // Check for complex mathematical conditions
+      // Check for complex mathematical conditions  
       if (parsedConditions.formula) {
-        // Handle formula-based conditions like "pension_premier * sarskild_loneskatt < sarskild_loneskatt_pension_calculated"
-        const formula = parsedConditions.formula;
-        const variables = {
-          pension_premier: companyData.pensionPremier || 0,
-          sarskild_loneskatt: companyData.sarskildLoneskatt || 0,
-          sarskild_loneskatt_pension: companyData.sarskildLoneskattPension || 0,
-          sarskild_loneskatt_pension_calculated: companyData.sarskildLoneskattPensionCalculated || 0
-        };
+        // For step 201: Should show if sarskild_loneskatt_pension_calculated > sarskild_loneskatt_pension
+        // The calculated amount is already computed by backend using the correct global rate
+        const pensionPremier = companyData.pensionPremier || 0;
+        const sarskildLoneskattPension = companyData.sarskildLoneskattPension || 0;
+        const sarskildLoneskattPensionCalculated = companyData.sarskildLoneskattPensionCalculated || 0;
         
-        // Replace variables in formula
-        let evaluatedFormula = formula;
-        for (const [varName, varValue] of Object.entries(variables)) {
-          evaluatedFormula = evaluatedFormula.replace(new RegExp(varName, 'g'), varValue.toString());
-        }
+        console.log('🔍 Step 201 condition debug:');
+        console.log('📊 pension_premier:', pensionPremier);
+        console.log('📊 sarskild_loneskatt_pension (booked):', sarskildLoneskattPension);
+        console.log('📊 sarskild_loneskatt_pension_calculated:', sarskildLoneskattPensionCalculated);
         
-        console.log('🔍 Evaluating formula:', formula, '→', evaluatedFormula);
+        // Show step 201 if there are pension premiums AND calculated tax > booked tax
+        const shouldShow = pensionPremier > 0 && sarskildLoneskattPensionCalculated > sarskildLoneskattPension;
+        console.log('💡 Should show step 201?', shouldShow);
         
-        // Safely evaluate the mathematical expression
-        try {
-          return Function('"use strict"; return (' + evaluatedFormula + ')')();
-        } catch (e) {
-          console.error('Error evaluating formula:', e);
-          return false;
-        }
+        return shouldShow;
       }
 
       // Simple condition evaluation for backward compatibility
