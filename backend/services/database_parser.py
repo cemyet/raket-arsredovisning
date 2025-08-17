@@ -856,7 +856,7 @@ class DatabaseParser:
             return sum_arets if sum_arets > 0 else 0.0
         if variable_name == 'INK4.2':
             sum_arets = rr('SumAretsResultat')
-            return sum_arets if sum_arets < 0 else 0.0
+            return -sum_arets if sum_arets < 0 else 0.0
         if variable_name == 'INK4.3a':
             return rr('SkattAretsResultat')
         if variable_name == 'INK4.6a':
@@ -905,7 +905,7 @@ class DatabaseParser:
             # Hardcoded formula: INK4.1-INK4.2+INK4.3b+INK4.3c-INK4.4a-INK4.4b-INK4.5a-INK4.5b-INK4.5c+INK4.6a+INK4.6b+INK4.6c+INK4.6d+INK4.6e-INK4.7a+INK4.7b-INK4.7c+INK4.7d+INK4.7e-INK4.7f-INK4.8a+INK4.8b+INK4.8c-INK4.8d+INK4.9(+)-INK4.9(-)+INK4.10(+)-INK4.10(-)-INK4.11+INK4.12+INK4.13(+)-INK4.13(-)-INK4.14a+INK4.14b+INK4.14c-justering_sarskild_loneskatt
             justering = float(ink_values.get('justering_sarskild_loneskatt', 0.0)) if ink_values else 0.0
             total = (
-                v('INK4.1') + v('INK4.2') + v('INK4.3b') + v('INK4.3c')
+                v('INK4.1') - v('INK4.2') + v('INK4.3b') + v('INK4.3c')
                 - v('INK4.4a') - v('INK4.4b') - v('INK4.5a') - v('INK4.5b') - v('INK4.5c')
                 + v('INK4.6a') + v('INK4.6b') + v('INK4.6c') + v('INK4.6d') + v('INK4.6e')
                 - v('INK4.7a') + v('INK4.7b') - v('INK4.7c') + v('INK4.7d') + v('INK4.7e') - v('INK4.7f')
@@ -926,10 +926,10 @@ class DatabaseParser:
                     return 0.0
                 return float(ink_values.get(name, 0.0))
             
-            # Hardcoded formula: MAX(0, INK4.1+INK4.2+INK4.3a+INK4.3b+INK4.3c-INK4.4a-INK4.4b-INK4.5a-INK4.5b-INK4.5c+INK4.6a+INK4.6b+INK4.6c+INK4.6d+INK4.6e-INK4.7a+INK4.7b-INK4.7c+INK4.7d+INK4.7e-INK4.7f-INK4.8a+INK4.8b+INK4.8c-INK4.8d+INK4.9(+)-INK4.9(-)+INK4.10(+)-INK4.10(-)-INK4.11+INK4.12+INK4.13(+)-INK4.13(-)-INK4.14a+INK4.14b+INK4.14c-justering_sarskild_loneskatt)
+            # Hardcoded formula: MAX(0, INK4.1-INK4.2+INK4.3a+INK4.3b+INK4.3c-INK4.4a-INK4.4b-INK4.5a-INK4.5b-INK4.5c+INK4.6a+INK4.6b+INK4.6c+INK4.6d+INK4.6e-INK4.7a+INK4.7b-INK4.7c+INK4.7d+INK4.7e-INK4.7f-INK4.8a+INK4.8b+INK4.8c-INK4.8d+INK4.9(+)-INK4.9(-)+INK4.10(+)-INK4.10(-)-INK4.11+INK4.12+INK4.13(+)-INK4.13(-)-INK4.14a+INK4.14b+INK4.14c-justering_sarskild_loneskatt)
             justering = float(ink_values.get('justering_sarskild_loneskatt', 0.0)) if ink_values else 0.0
             total = (
-                v('INK4.1') + v('INK4.2') + v('INK4.3a') + v('INK4.3b') + v('INK4.3c')
+                v('INK4.1') - v('INK4.2') + v('INK4.3a') + v('INK4.3b') + v('INK4.3c')
                 - v('INK4.4a') - v('INK4.4b') - v('INK4.5a') - v('INK4.5b') - v('INK4.5c')
                 + v('INK4.6a') + v('INK4.6b') + v('INK4.6c') + v('INK4.6d') + v('INK4.6e')
                 - v('INK4.7a') + v('INK4.7b') - v('INK4.7c') + v('INK4.7d') + v('INK4.7e') - v('INK4.7f')
@@ -948,10 +948,10 @@ class DatabaseParser:
                     return 0.0
                 return float(ink_values.get(name, 0.0))
             
-            # Hardcoded formula: IF(INK4.1+INK4.2+INK4.3a+INK4.3b+INK4.3c-INK4.4a-INK4.4b-INK4.5a-INK4.5b-INK4.5c+INK4.6a+INK4.6b+INK4.6c+INK4.6d+INK4.6e-INK4.7a+INK4.7b-INK4.7c+INK4.7d+INK4.7e-INK4.7f-INK4.8a+INK4.8b+INK4.8c-INK4.8d+INK4.9(+)-INK4.9(-)+INK4.10(+)-INK4.10(-)-INK4.11+INK4.12+INK4.13(+)-INK4.13(-)-INK4.14a+INK4.14b+INK4.14c-justering_sarskild_loneskatt < 0, sum, 0)
+            # Hardcoded formula: IF(INK4.1-INK4.2+INK4.3a+INK4.3b+INK4.3c-INK4.4a-INK4.4b-INK4.5a-INK4.5b-INK4.5c+INK4.6a+INK4.6b+INK4.6c+INK4.6d+INK4.6e-INK4.7a+INK4.7b-INK4.7c+INK4.7d+INK4.7e-INK4.7f-INK4.8a+INK4.8b+INK4.8c-INK4.8d+INK4.9(+)-INK4.9(-)+INK4.10(+)-INK4.10(-)-INK4.11+INK4.12+INK4.13(+)-INK4.13(-)-INK4.14a+INK4.14b+INK4.14c-justering_sarskild_loneskatt < 0, sum, 0)
             justering = float(ink_values.get('justering_sarskild_loneskatt', 0.0)) if ink_values else 0.0
             total = (
-                v('INK4.1') + v('INK4.2') + v('INK4.3a') + v('INK4.3b') + v('INK4.3c')
+                v('INK4.1') - v('INK4.2') + v('INK4.3a') + v('INK4.3b') + v('INK4.3c')
                 - v('INK4.4a') - v('INK4.4b') - v('INK4.5a') - v('INK4.5b') - v('INK4.5c')
                 + v('INK4.6a') + v('INK4.6b') + v('INK4.6c') + v('INK4.6d') + v('INK4.6e')
                 - v('INK4.7a') + v('INK4.7b') - v('INK4.7c') + v('INK4.7d') + v('INK4.7e') - v('INK4.7f')
