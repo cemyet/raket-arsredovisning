@@ -350,8 +350,16 @@ interface ChatFlowResponse {
         // Auto-scroll to tax module after a short delay
         setTimeout(() => {
           const taxModule = document.querySelector('[data-section="tax-calculation"]');
-          if (taxModule) {
-            taxModule.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const scrollContainer = document.querySelector('.overflow-auto');
+          if (taxModule && scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const taxRect = taxModule.getBoundingClientRect();
+            const scrollTop = scrollContainer.scrollTop + taxRect.top - containerRect.top - 100; // 100px offset from top
+            
+            scrollContainer.scrollTo({
+              top: scrollTop,
+              behavior: 'smooth'
+            });
           }
         }, 500);
         
@@ -943,6 +951,7 @@ interface ChatFlowResponse {
       sarskildLoneskattPension: sarskildLoneskattPension,
       sarskildLoneskattPensionCalculated: sarskildLoneskattPensionCalculated,
       fiscalYear: fileData.data?.company_info?.fiscal_year || new Date().getFullYear(),
+      companyName: fileData.data?.company_info?.company_name || 'Företag AB',
       showRRBR: true // Show RR and BR data in preview
     });
     

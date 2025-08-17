@@ -18,6 +18,7 @@ interface CompanyData {
   seFileData?: any; // Store processed SE file data
   organizationNumber?: string; // From SE file
   fiscalYear?: number; // From SE file
+  companyName?: string; // From SE file
   sumAretsResultat?: number; // From SE file RR data
   sumFrittEgetKapital?: number; // From SE file RR data
   taxApproved: boolean; // New field for tax approval
@@ -101,8 +102,17 @@ export function AnnualReportChat() {
           <div className="relative h-full">
             <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background">
               <div className="h-8 flex flex-col justify-center">
-                <h2 className="text-base font-medium text-foreground">Förhandsvisning</h2>
-                <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
+                {companyData.companyName ? (
+                  <>
+                    <h2 className="text-base font-medium text-foreground">{companyData.companyName}</h2>
+                    <p className="text-xs text-muted-foreground">Årsredovisning {companyData.fiscalYear}</p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-base font-medium text-foreground">Förhandsvisning</h2>
+                    <p className="text-xs text-muted-foreground">Din årsredovisning uppdateras live</p>
+                  </>
+                )}
               </div>
             </div>
             <div className="p-6 h-full overflow-auto pt-5">
