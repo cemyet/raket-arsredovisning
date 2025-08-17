@@ -854,7 +854,7 @@ interface ChatFlowResponse {
         item.id === 'ÅR' || item.label?.toLowerCase().includes('årets resultat')
       );
       if (netResultItem && netResultItem.current_amount !== null) {
-        extractedResults = Math.abs(netResultItem.current_amount).toString();
+        extractedResults = netResultItem.current_amount.toString();
       }
       
             // Extract SumAretsResultat for chat options (check RR first, then BR)
@@ -900,7 +900,7 @@ interface ChatFlowResponse {
         );
       }
       if (sumAretsResultatItem && sumAretsResultatItem.current_amount !== null) {
-        sumAretsResultat = Math.abs(Math.round(sumAretsResultatItem.current_amount));
+        sumAretsResultat = Math.round(sumAretsResultatItem.current_amount);
         console.log('📊 Found SumAretsResultat:', sumAretsResultat, 'from item:', sumAretsResultatItem);
       } else {
         console.log('❌ Could not find SumAretsResultat in RR or BR data');
@@ -912,7 +912,7 @@ interface ChatFlowResponse {
           (item.label?.toLowerCase().includes('resultat') || item.id?.includes('RES'))
         );
         if (fallbackItem) {
-          sumAretsResultat = Math.abs(Math.round(fallbackItem.current_amount));
+          sumAretsResultat = Math.round(fallbackItem.current_amount);
           console.log('📊 Using fallback SumAretsResultat:', sumAretsResultat, 'from item:', fallbackItem);
         }
       }
