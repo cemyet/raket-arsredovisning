@@ -442,33 +442,49 @@ interface ChatFlowResponse {
         // Trigger recalculation to update inkBeraknadSkatt
         if (companyData.seFileData) {
           try {
+            const justeringSarskildLoneskattValue = companyData.justeringSarskildLoneskatt === 'calculated' 
+              ? (companyData.sarskildLoneskattPensionCalculated || 0) - (companyData.sarskildLoneskattPension || 0)
+              : 0;
+              
+            console.log('🔍 Step 301 option 1 - API call parameters:');
+            console.log('📊 current_accounts:', companyData.seFileData.accountBalances);
+            console.log('📊 rr_data length:', companyData.seFileData.rr_data?.length || 0);
+            console.log('📊 br_data length:', companyData.seFileData.br_data?.length || 0);
+            console.log('📊 fiscal_year:', companyData.fiscalYear);
+            console.log('📊 justering_sarskild_loneskatt:', justeringSarskildLoneskattValue);
+            console.log('📊 ink4_14a_outnyttjat_underskott: 0');
+            
             const response = await apiService.recalculateInk2({
-              current_accounts: companyData.seFileData.accountBalances,
+              current_accounts: companyData.seFileData.current_accounts || {},
               rr_data: companyData.seFileData.rr_data || [],
               br_data: companyData.seFileData.br_data || [],
               fiscal_year: companyData.fiscalYear,
-              manual_amounts: {
-                justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt === 'calculated' 
-                  ? companyData.sarskildLoneskattPensionCalculated - companyData.sarskildLoneskattPension 
-                  : 0
-              },
-              ink4_14a_outnyttjat_underskott: 0 // No unused tax loss
+              manual_amounts: {}, // Keep manual_amounts separate
+              ink4_14a_outnyttjat_underskott: 0, // No unused tax loss
+              justering_sarskild_loneskatt: justeringSarskildLoneskattValue
             });
             
             if (response.success) {
               console.log('🔍 Step 301 option 1 - Tax recalculation result:', response.ink2_data);
-              const inkBeraknadSkattItem = response.ink2_data.find((item: any) => 
+              
+              // Get the updated inkBeraknadSkatt value (same as option 2 pattern)
+              const updatedInkBeraknadSkatt = response.ink2_data.find((item: any) => 
                 item.variable_name === 'INK_beraknad_skatt'
-              );
-              console.log('🔍 Step 301 option 1 - INK_beraknad_skatt item:', inkBeraknadSkattItem);
+              )?.amount || companyData.inkBeraknadSkatt;
               
-              // Update global inkBeraknadSkatt value for variable substitution
-              if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
-                setGlobalInkBeraknadSkatt(inkBeraknadSkattItem.amount);
-                console.log('🔧 Updated global inkBeraknadSkatt to:', inkBeraknadSkattItem.amount);
-              }
+              console.log('💰 Updated inkBeraknadSkatt for step 401:', updatedInkBeraknadSkatt);
               
-              onDataUpdate({ ink2Data: response.ink2_data });
+              // Store values in state to ensure they're always available (same as option 2)
+              setGlobalInk2Data(response.ink2_data);
+              setGlobalInkBeraknadSkatt(updatedInkBeraknadSkatt);
+              
+              // Update the tax data in company state (same as option 2)
+              onDataUpdate({
+                ink2Data: response.ink2_data,
+                inkBeraknadSkatt: updatedInkBeraknadSkatt,
+                unusedTaxLossAmount: 0
+              });
+              
               // Pass updated ink2Data to step 401
               setTimeout(() => loadChatStep(401, response.ink2_data), 1000);
               return;
