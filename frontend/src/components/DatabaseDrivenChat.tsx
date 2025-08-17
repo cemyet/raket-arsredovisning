@@ -456,6 +456,18 @@ interface ChatFlowResponse {
             });
             
             if (response.success) {
+              console.log('🔍 Step 301 option 1 - Tax recalculation result:', response.ink2_data);
+              const inkBeraknadSkattItem = response.ink2_data.find((item: any) => 
+                item.variable_name === 'INK_beraknad_skatt'
+              );
+              console.log('🔍 Step 301 option 1 - INK_beraknad_skatt item:', inkBeraknadSkattItem);
+              
+              // Update global inkBeraknadSkatt value for variable substitution
+              if (inkBeraknadSkattItem && inkBeraknadSkattItem.amount !== undefined) {
+                setGlobalInkBeraknadSkatt(inkBeraknadSkattItem.amount);
+                console.log('🔧 Updated global inkBeraknadSkatt to:', inkBeraknadSkattItem.amount);
+              }
+              
               onDataUpdate({ ink2Data: response.ink2_data });
               // Pass updated ink2Data to step 401
               setTimeout(() => loadChatStep(401, response.ink2_data), 1000);
