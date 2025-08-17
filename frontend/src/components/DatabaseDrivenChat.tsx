@@ -354,7 +354,7 @@ interface ChatFlowResponse {
           if (taxModule && scrollContainer) {
             const containerRect = scrollContainer.getBoundingClientRect();
             const taxRect = taxModule.getBoundingClientRect();
-            const scrollTop = scrollContainer.scrollTop + taxRect.top - containerRect.top - 100; // 100px offset from top
+            const scrollTop = scrollContainer.scrollTop + taxRect.top - containerRect.top - 10; // 5-7pt padding from top
             
             scrollContainer.scrollTo({
               top: scrollTop,
