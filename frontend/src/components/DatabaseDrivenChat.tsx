@@ -450,9 +450,9 @@ interface ChatFlowResponse {
               manual_amounts: {
                 justering_sarskild_loneskatt: companyData.justeringSarskildLoneskatt === 'calculated' 
                   ? companyData.sarskildLoneskattPensionCalculated - companyData.sarskildLoneskattPension 
-                  : 0,
-                outnyttjat_underskott_foregaende_ar: 0 // No unused tax loss
-              }
+                  : 0
+              },
+              ink4_14a_outnyttjat_underskott: 0 // No unused tax loss
             });
             
             if (response.success) {
