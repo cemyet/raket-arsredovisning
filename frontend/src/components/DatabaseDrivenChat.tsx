@@ -338,7 +338,8 @@ interface ChatFlowResponse {
       // Handle special cases first
       // Handle custom tax options to bypass API call
       if (option.option_value === 'approve_tax') {
-        // Go directly to dividends
+        // Hide tax preview and go directly to dividends
+        onDataUpdate({ showTaxPreview: false });
         setTimeout(() => loadChatStep(501), 1000);
         return;
       }
