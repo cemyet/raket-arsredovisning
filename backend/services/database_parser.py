@@ -967,19 +967,17 @@ class DatabaseParser:
             return value.upper() == 'TRUE'
         return bool(value)
     
-    def _normalize_always_show(self, value: Any) -> Any:
-        """Normalize always_show to boolean or null values."""
+    def _normalize_always_show(self, value: Any) -> bool:
+        """Normalize always_show to boolean values only."""
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
             normalized = value.strip().upper()
             if normalized == 'TRUE':
                 return True
-            elif normalized == 'FALSE':
-                return False
             else:
-                return None  # Empty/null means conditional (show if amount != 0)
-        return None  # Default to conditional
+                return False  # Any other string (including 'FALSE', empty, etc.) = False
+        return False  # Default to False for any other type
     
     def calculate_ink2_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float], fiscal_year: int = None, rr_data: List[Dict[str, Any]] = None, ink_values: Optional[Dict[str, float]] = None, br_data: Optional[List[Dict[str, Any]]] = None) -> float:
         """
@@ -1467,23 +1465,19 @@ class DatabaseParser:
                 }
                 print(f"DEBUG: Calculated formula-based {variable_name}: current={current_amount}, previous={previous_amount}")
         
-        # Second pass: calculate formulas and build final results
+        # Build final results (return all rows, let frontend handle filtering like RR/BR do)
         
         for mapping in sorted_mappings:
             try:
-                # Check visibility rules
+                # Get visibility properties but don't filter here - frontend handles it
                 always_show = self._normalize_always_show(mapping.get('always_show', False))
                 toggle_show = self._normalize_always_show(mapping.get('toggle_show', False))
                 block = mapping.get('block', '')
                 
-                # Show logic:
-                # - always_show=TRUE: always show
-                # - always_show=FALSE and toggle_show=TRUE: show only if block toggle is ON
-                # - always_show=FALSE and toggle_show=FALSE: never show
-                should_show = always_show or (toggle_show and user_toggles.get(block, False))
-                
-                if not should_show:
-                    continue
+                # Debug a few key variables
+                variable_name = mapping.get('variable_name', '')
+                if variable_name in ['bygg_ub', 'ack_avskr_bygg_ub', 'arets_avskr_bygg']:
+                    print(f"DEBUG VISIBILITY: {variable_name} - always_show: {always_show}, toggle_show: {toggle_show}, block: {block}")
                 
                 # Calculate amounts for both years
                 current_amount = 0.0
@@ -1503,23 +1497,23 @@ class DatabaseParser:
                         current_amount = values['current']
                         previous_amount = values['previous']
                 
-                # Only include if amounts are non-zero or always_show
-                if current_amount != 0 or previous_amount != 0 or always_show:
-                    result = {
-                        'row_id': mapping.get('row_id'),
-                        'row_title': mapping.get('row_title', ''),
-                        'current_amount': current_amount,
-                        'previous_amount': previous_amount,
-                        'variable_name': mapping.get('variable_name', ''),
-                        'show_tag': mapping.get('show_tag', False),
-                        'accounts_included': mapping.get('accounts_included', ''),
-                        'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_ub) if mapping.get('show_tag', False) else None,
-                        'block': mapping.get('block', ''),
-                        'style': mapping.get('style', ''),
-                        'always_show': always_show,
-                        'toggle_show': toggle_show
-                    }
-                    results.append(result)
+                # Return all rows - frontend will handle filtering based on always_show and toggle_show
+                # This matches how RR/BR work
+                result = {
+                    'row_id': mapping.get('row_id'),
+                    'row_title': mapping.get('row_title', ''),
+                    'current_amount': current_amount,
+                    'previous_amount': previous_amount,
+                    'variable_name': mapping.get('variable_name', ''),
+                    'show_tag': mapping.get('show_tag', False),
+                    'accounts_included': mapping.get('accounts_included', ''),
+                    'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_ub) if mapping.get('show_tag', False) else None,
+                    'block': mapping.get('block', ''),
+                    'style': mapping.get('style', ''),
+                    'always_show': always_show,
+                    'toggle_show': toggle_show
+                }
+                results.append(result)
                     
             except Exception as e:
                 print(f"Error processing Noter mapping {mapping.get('variable_name', 'unknown')}: {e}")
