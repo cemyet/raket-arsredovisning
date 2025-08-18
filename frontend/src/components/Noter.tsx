@@ -22,6 +22,7 @@ interface NoterItem {
   block: string;
   always_show: boolean;
   toggle_show: boolean;
+  style: string;
 }
 
 interface NoterProps {
@@ -127,29 +128,7 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
             ({noterData.length} poster)
           </span>
         </CardTitle>
-        
-        {/* Block toggles */}
-        {blocks.length > 0 && (
-          <div className="flex flex-wrap gap-4 mt-2">
-            {blocks.map(block => (
-              <div key={block} className="flex items-center space-x-2">
-                <Switch
-                  id={`toggle-${block}`}
-                  checked={blockToggles[block] || false}
-                  onCheckedChange={(checked) => 
-                    setBlockToggles(prev => ({ ...prev, [block]: checked }))
-                  }
-                />
-                <label 
-                  htmlFor={`toggle-${block}`} 
-                  className="text-sm font-medium cursor-pointer"
-                >
-                  {block}
-                </label>
-              </div>
-            ))}
-          </div>
-        )}
+
       </CardHeader>
       
       <CardContent>
@@ -160,9 +139,30 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
             
             if (visibleItems.length === 0) return null;
             
+            // Get first row title for block heading
+            const firstRowTitle = blockItems[0]?.row_title || block;
+            const blockHeading = `Not ${firstRowTitle}`;
+            
             return (
               <div key={block} className="space-y-2">
-                <h3 className="font-semibold text-lg border-b pb-1">{block}</h3>
+                <div className="flex items-center justify-between border-b pb-1">
+                  <h3 className="font-semibold text-lg">{blockHeading}</h3>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id={`toggle-${block}`}
+                      checked={blockToggles[block] || false}
+                      onCheckedChange={(checked) => 
+                        setBlockToggles(prev => ({ ...prev, [block]: checked }))
+                      }
+                    />
+                    <label 
+                      htmlFor={`toggle-${block}`} 
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Visa detaljer
+                    </label>
+                  </div>
+                </div>
                 
                 <Table>
                   <TableHeader>
@@ -177,22 +177,41 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {visibleItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">
-                          {item.row_title}
-                          {item.show_tag && (
-                            <AccountDetailsDialog item={item} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatAmount(item.current_amount)} kr
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatAmount(item.previous_amount)} kr
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {visibleItems.map((item, index) => {
+                      // Apply style classes based on item.style
+                      const getStyleClasses = (style: string) => {
+                        let classes = '';
+                        const boldStyles = ['H0','H1','H2','H3','S1','S2','S3','TH0','TH1','TH2','TH3','TS1','TS2','TS3'];
+                        if (boldStyles.includes(style)) {
+                          classes += ' font-semibold';
+                        }
+                        const lineStyles = ['S2','S3','TS2','TS3'];
+                        if (lineStyles.includes(style)) {
+                          classes += ' border-t border-b border-gray-300';
+                        }
+                        return classes;
+                      };
+                      
+                      const rowClasses = getStyleClasses(item.style || '');
+                      const isHeading = item.style && ['H0', 'H1', 'H2', 'H3', 'S1', 'S2', 'S3'].includes(item.style);
+                      
+                      return (
+                        <TableRow key={index} className={rowClasses}>
+                          <TableCell className={`${isHeading ? 'font-bold' : 'font-medium'}`}>
+                            {item.row_title}
+                            {item.show_tag && (
+                              <AccountDetailsDialog item={item} />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatAmount(item.current_amount)} kr
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatAmount(item.previous_amount)} kr
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

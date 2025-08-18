@@ -100,10 +100,12 @@ class DatabaseParser:
             self.global_variables = {}
             self.accounts_lookup = {}
     
-    def parse_account_balances(self, se_content: str) -> Dict[str, float]:
+    def parse_account_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
         """Parse account balances from SE file content using the correct format"""
         current_accounts = {}
         previous_accounts = {}
+        current_ib_accounts = {}  # Incoming balances for current year
+        previous_ib_accounts = {}  # Incoming balances for previous year
         
         # Parse SE file content to extract account balances
         lines = se_content.split('\n')
@@ -124,6 +126,22 @@ class DatabaseParser:
                             current_accounts[account_id] = balance
                         elif fiscal_year == -1:  # Previous year
                             previous_accounts[account_id] = balance
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Handle IB accounts: #IB (Ingående Balans) - both years
+            if line.startswith('#IB '):
+                parts = line.split()
+                if len(parts) >= 4:
+                    try:
+                        fiscal_year = int(parts[1])
+                        account_id = parts[2]
+                        balance = float(parts[3])
+                        
+                        if fiscal_year == 0:  # Current year
+                            current_ib_accounts[account_id] = balance
+                        elif fiscal_year == -1:  # Previous year
+                            previous_ib_accounts[account_id] = balance
                     except (ValueError, TypeError):
                         continue
                         
@@ -161,6 +179,52 @@ class DatabaseParser:
             print(f"Sample previous accounts: {dict(list(previous_accounts.items())[:5])}")
         
         return current_accounts, previous_accounts
+    
+    def parse_ib_ub_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
+        """Parse both IB and UB balances from SE file for noter calculations"""
+        current_ub_accounts = {}
+        previous_ub_accounts = {}
+        current_ib_accounts = {}
+        previous_ib_accounts = {}
+        
+        lines = se_content.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Handle UB accounts: #UB
+            if line.startswith('#UB '):
+                parts = line.split()
+                if len(parts) >= 4:
+                    try:
+                        fiscal_year = int(parts[1])
+                        account_id = parts[2]
+                        balance = float(parts[3])
+                        
+                        if fiscal_year == 0:  # Current year
+                            current_ub_accounts[account_id] = balance
+                        elif fiscal_year == -1:  # Previous year
+                            previous_ub_accounts[account_id] = balance
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Handle IB accounts: #IB
+            if line.startswith('#IB '):
+                parts = line.split()
+                if len(parts) >= 4:
+                    try:
+                        fiscal_year = int(parts[1])
+                        account_id = parts[2]
+                        balance = float(parts[3])
+                        
+                        if fiscal_year == 0:  # Current year
+                            current_ib_accounts[account_id] = balance
+                        elif fiscal_year == -1:  # Previous year
+                            previous_ib_accounts[account_id] = balance
+                    except (ValueError, TypeError):
+                        continue
+        
+        return current_ub_accounts, previous_ub_accounts, current_ib_accounts, previous_ib_accounts
     
     def calculate_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float]) -> float:
         """Calculate value for a specific variable based on its mapping"""
@@ -390,6 +454,49 @@ class DatabaseParser:
         results.sort(key=lambda x: int(x['id']))
         
         return results
+    
+    def _calculate_noter_amounts(self, mapping: Dict[str, Any], current_ub: Dict[str, float], previous_ub: Dict[str, float], current_ib: Dict[str, float], previous_ib: Dict[str, float]) -> tuple[float, float]:
+        """Calculate current and previous amounts for a noter mapping based on ib_ub column"""
+        accounts_included = mapping.get('accounts_included', '')
+        ib_ub = mapping.get('ib_ub', 'UB')  # Default to UB
+        
+        if not accounts_included:
+            return 0.0, 0.0
+        
+        # Choose the correct account dictionaries based on ib_ub
+        if ib_ub == 'IB':
+            current_accounts = current_ib
+            previous_accounts = previous_ib
+        else:  # Default to UB
+            current_accounts = current_ub
+            previous_accounts = previous_ub
+        
+        # Sum included accounts for both years
+        current_amount = self.sum_included_accounts(accounts_included, current_accounts)
+        previous_amount = self.sum_included_accounts(accounts_included, previous_accounts)
+        
+        return current_amount, previous_amount
+    
+    def _evaluate_noter_formula(self, formula: str, calculated_variables: Dict[str, Dict[str, float]]) -> tuple[float, float]:
+        """Evaluate a noter formula using calculated variables"""
+        try:
+            # Simple formula evaluation - replace variable names with values
+            current_formula = formula
+            previous_formula = formula
+            
+            for var_name, values in calculated_variables.items():
+                current_formula = current_formula.replace(var_name, str(values['current']))
+                previous_formula = previous_formula.replace(var_name, str(values['previous']))
+            
+            # Evaluate the formulas
+            current_result = eval(current_formula) if current_formula.replace('+', '').replace('-', '').replace('.', '').replace(' ', '').isdigit() or any(op in current_formula for op in ['+', '-', '*', '/']) else 0.0
+            previous_result = eval(previous_formula) if previous_formula.replace('+', '').replace('-', '').replace('.', '').replace(' ', '').isdigit() or any(op in previous_formula for op in ['+', '-', '*', '/']) else 0.0
+            
+            return float(current_result), float(previous_result)
+            
+        except Exception as e:
+            print(f"Error evaluating noter formula '{formula}': {e}")
+            return 0.0, 0.0
     
     def store_calculated_values(self, results: List[Dict[str, Any]], report_type: str):
         """Store calculated values in database for future retrieval"""
@@ -1269,7 +1376,7 @@ class DatabaseParser:
             pass
         return f'Konto {key_str}'
     
-    def parse_noter_data(self, current_accounts: Dict[str, float], previous_accounts: Dict[str, float] = None, user_toggles: Dict[str, bool] = None) -> List[Dict[str, Any]]:
+    def parse_noter_data(self, se_content: str, user_toggles: Dict[str, bool] = None) -> List[Dict[str, Any]]:
         """
         Parse Noter (Notes) data using database mappings.
         Returns structure with current_amount and previous_amount for both fiscal year and previous year.
@@ -1280,11 +1387,33 @@ class DatabaseParser:
             print("No Noter mappings available")
             return []
         
+        # Parse all balance types from SE file
+        current_ub, previous_ub, current_ib, previous_ib = self.parse_ib_ub_balances(se_content)
+        
         results = []
         user_toggles = user_toggles or {}
+        calculated_variables = {}  # Store calculated values for formula references
         
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
+        
+        # First pass: calculate account-based values
+        for mapping in sorted_mappings:
+            if self._normalize_is_calculated(mapping.get('calculated', False)):
+                continue  # Skip formulas in first pass
+                
+            # Calculate account-based values and store in calculated_variables
+            variable_name = mapping.get('variable_name', '')
+            if variable_name:
+                current_amount, previous_amount = self._calculate_noter_amounts(
+                    mapping, current_ub, previous_ub, current_ib, previous_ib
+                )
+                calculated_variables[variable_name] = {
+                    'current': current_amount, 
+                    'previous': previous_amount
+                }
+        
+        # Second pass: calculate formulas and build final results
         
         for mapping in sorted_mappings:
             try:
@@ -1303,18 +1432,26 @@ class DatabaseParser:
                 current_amount = 0.0
                 previous_amount = 0.0
                 
+                variable_name = mapping.get('variable_name', '')
+                
                 if self._normalize_is_calculated(mapping.get('calculated', False)):
-                    # Use formula calculation (would need to implement formula logic)
-                    # For now, return 0 for calculated fields
-                    current_amount = 0.0
-                    previous_amount = 0.0
+                    # Use formula calculation with calculated_variables
+                    formula = mapping.get('formula', '')
+                    if formula and variable_name:
+                        current_amount, previous_amount = self._evaluate_noter_formula(
+                            formula, calculated_variables
+                        )
+                        # Store calculated result for other formulas
+                        calculated_variables[variable_name] = {
+                            'current': current_amount,
+                            'previous': previous_amount
+                        }
                 else:
-                    # Sum included accounts
-                    accounts_included = mapping.get('accounts_included', '')
-                    if accounts_included:
-                        current_amount = self.sum_included_accounts(accounts_included, current_accounts)
-                        if previous_accounts:
-                            previous_amount = self.sum_included_accounts(accounts_included, previous_accounts)
+                    # Use pre-calculated account values
+                    if variable_name in calculated_variables:
+                        values = calculated_variables[variable_name]
+                        current_amount = values['current']
+                        previous_amount = values['previous']
                 
                 # Only include if amounts are non-zero or always_show
                 if current_amount != 0 or previous_amount != 0 or always_show:
@@ -1326,8 +1463,9 @@ class DatabaseParser:
                         'variable_name': mapping.get('variable_name', ''),
                         'show_tag': mapping.get('show_tag', False),
                         'accounts_included': mapping.get('accounts_included', ''),
-                        'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_accounts) if mapping.get('show_tag', False) else None,
+                        'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_ub) if mapping.get('show_tag', False) else None,
                         'block': mapping.get('block', ''),
+                        'style': mapping.get('style', ''),
                         'always_show': always_show,
                         'toggle_show': toggle_show
                     }

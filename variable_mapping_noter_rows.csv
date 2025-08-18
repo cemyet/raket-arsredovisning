@@ -1,0 +1,101 @@
+row,id,row_title,block,+/-,accounts_included,variable_name,text_field,variable_text,ib_ub,calculated,formula,Saldo,always_show,toggle_show,editable,style,item_name,Abstrakt,Datatyp,period_type
+401,1089,"Tillskott till/uttag från handelsbolag ",LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringAnskaffningsvardenTillskottUttagHandelsbolag,false,xbrli:monetaryItemType,duration
+402,1090,Årets resultatandel,LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringAnskaffningsvardenAretsResultatAndel,false,xbrli:monetaryItemType,duration
+403,1091,Omklassificeringar,LVP,,,,,,,,,,false,true,true,,AndraLangfristigaVardepappersinnehavForandringAnskaffningsvardenAretsOmklassificeringar,false,xbrli:monetaryItemType,duration
+404,1092,Omräkningsdifferenser,LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringAnskaffningsvardenAretsOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+405,1093,Utgående anskaffningsvärden,LVP,,1350-1357,lang_vardepapper_ub,,,UB,,,debit,true,,,S2,AndraLangfristigaVardepappersinnehavAnskaffningsvarden,false,xbrli:monetaryItemType,instant
+406,,Nedskrivningar,LVP,,,,,,,,,,false,true,,H2,,,,
+407,1094,Ingående nedskrivningar,LVP,,1358,ack_nedskr_lang_vardepapper_ib,,,IB,,,credit,false,true,true,,AndraLangfristigaVardepappersinnehavNedskrivningar,false,xbrli:monetaryItemType,instant
+408,1095,Förändring av nedskrivningar,LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarAbstract,true,xbrli:stringItemType,duration
+409,1096,Fusion,LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarFusion,false,xbrli:monetaryItemType,duration
+410,1097,Försäljningar,LVP,,,,,,,,,,false,true,true,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarAterfordaNedskrivningarForsaljningar,false,xbrli:monetaryItemType,duration
+411,1098,Återförda nedskrivningar,LVP,,,,,,,,,,false,true,true,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarAterfordaNedskrivningar,false,xbrli:monetaryItemType,duration
+412,1099,Omklassificeringar,LVP,,,,,,,,,,false,true,true,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarOmklassificeringar,false,xbrli:monetaryItemType,duration
+413,1100,Årets nedskrivningar,LVP,,,arets_nedskr_lang_vardepapper,,,,true,ack_nedskr_lang_vardepapper_ub-ack_nedskr_lang_vardepapper_ib,,false,true,true,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarAretsNedskrivningar,false,xbrli:monetaryItemType,duration
+414,1101,Omräkningsdifferenser,LVP,,,,,,,,,,false,,,,AndraLangfristigaVardepappersinnehavForandringNedskrivningarOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+415,1102,Utgående nedskrivningar,LVP,,1358,ack_nedskr_lang_vardepapper_ub,,,UB,,,credit,false,true,,S2,AndraLangfristigaVardepappersinnehavNedskrivningar,false,xbrli:monetaryItemType,instant
+416,1103,Redovisat värde,LVP,,,,,,,true,lang_vardepapper_ub+ack_nedskr_lang_vardepapper_ub,debit,true,,,S2,AndraLangfristigaVardepappersinnehav,false,xbrli:monetaryItemType,instant
+417,1104,Kommentar till not,LVP,,,,,,,,,,false,,,,NotAndraLangfristigaVardepappersinnehavKommentar,false,xbrli:stringItemType,duration
+418,1105,Lån till delägare eller närstående,,,,,,,,,,,false,,,,NotLanDelagareNarstaende,false,xbrli:stringItemType,duration
+419,1106,Lån till delägare eller närstående,,,,,,,,,,,false,,,,LanDelagareNarstaendeAbstract,true,xbrli:stringItemType,duration
+420,1107,Ingående anskaffningsvärden,,,,,,,,,,debit,false,,,,LanDelagareNarstaendeAnskaffningsvarden,false,xbrli:monetaryItemType,instant
+421,1108,Förändringar av anskaffningsvärden,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenAbstract,true,xbrli:stringItemType,duration
+422,1109,Årets lämnade lån,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenAretsLamnadeLan,false,xbrli:monetaryItemType,duration
+423,1110,Fusion,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenFusion,false,xbrli:monetaryItemType,duration
+424,1111,Årets amorteringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenAretsAmorteringar,false,xbrli:monetaryItemType,duration
+425,1112,Bortskrivna fordringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenBortskrivnafordringar,false,xbrli:monetaryItemType,duration
+426,1113,Omklassificeringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenOmklassificeringar,false,xbrli:monetaryItemType,duration
+427,1114,Omräkningsdifferenser,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringAnskaffningsvardenOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+428,1115,Utgående anskaffningsvärden,,,,,,,,,,debit,false,,,,LanDelagareNarstaendeAnskaffningsvarden,false,xbrli:monetaryItemType,instant
+429,1116,Ingående nedskrivningar,,,,,,,,,,credit,false,,,,LanDelagareNarstaendeNedskrivningar,false,xbrli:monetaryItemType,instant
+430,1117,Förändring av nedskrivningar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarAbstract,true,xbrli:stringItemType,duration
+431,1118,Årets amorteringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarAretsAmorteringar,false,xbrli:monetaryItemType,duration
+432,1119,Fusion,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarFusion,false,xbrli:monetaryItemType,duration
+433,1120,Återförda nedskrivningar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarAterfordaNedskrivningar,false,xbrli:monetaryItemType,duration
+434,1121,Bortskrivna fordringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarBortskrivnafordringar,false,xbrli:monetaryItemType,duration
+435,1122,Omklassificeringar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarOmklassificeringar,false,xbrli:monetaryItemType,duration
+436,1123,Årets nedskrivningar,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarAretsNedskrivningar,false,xbrli:monetaryItemType,duration
+437,1124,Omräkningsdifferenser,,,,,,,,,,,false,,,,LanDelagareNarstaendeForandringNedskrivningarOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+438,1125,Utgående nedskrivningar,,,,,,,,,,credit,false,,,,LanDelagareNarstaendeNedskrivningar,false,xbrli:monetaryItemType,instant
+439,1126,Redovisat värde,,,,,,,,,,debit,false,,,,LanDelagareNarstaende,false,xbrli:monetaryItemType,instant
+440,1127,Kommentar till not,,,,,,,,,,,false,,,,NotLanDelagareNarstaendeKommentar,false,xbrli:stringItemType,duration
+441,1128,Andra långfristiga fordringar,,,,,,,,,,,false,,,,NotAndraLangfristigaFordringar,false,xbrli:stringItemType,duration
+442,1129,Andra långfristiga fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarAbstract,true,xbrli:stringItemType,duration
+443,1130,Ingående anskaffningsvärden,,,,,,,,,,debit,false,,,,AndraLangfristigaFordringarAnskaffningsvarden,false,xbrli:monetaryItemType,instant
+444,1131,Förändringar av anskaffningsvärden,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenAbstract,true,xbrli:stringItemType,duration
+445,1132,Tillkommande fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenTillkommandeFordringar,false,xbrli:monetaryItemType,duration
+446,1133,Fusion,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenFusion,false,xbrli:monetaryItemType,duration
+447,1134,Reglerade fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenRegleradeFordringar,false,xbrli:monetaryItemType,duration
+448,1135,Bortskrivna fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenBortskrivnafordringar,false,xbrli:monetaryItemType,duration
+449,1136,Omklassificeringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenOmklassificeringar,false,xbrli:monetaryItemType,duration
+450,1137,Omräkningsdifferenser,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringAnskaffningsvardenOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+451,1138,Utgående anskaffningsvärden,,,,,,,,,,debit,false,,,,AndraLangfristigaFordringarAnskaffningsvarden,false,xbrli:monetaryItemType,instant
+452,1139,Ingående nedskrivningar,,,,,,,,,,credit,false,,,,AndraLangfristigaFordringarNedskrivningar,false,xbrli:monetaryItemType,instant
+453,1140,Förändring av nedskrivningar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarAbstract,true,xbrli:stringItemType,duration
+454,1141,Fusion,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarFusion,false,xbrli:monetaryItemType,duration
+455,1142,Reglerade fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarRegleradeFordringar,false,xbrli:monetaryItemType,duration
+456,1143,Återförda nedskrivningar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarAterfordaNedskrivningar,false,xbrli:monetaryItemType,duration
+457,1144,Bortskrivna fordringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarBortskrivnafordringar,false,xbrli:monetaryItemType,duration
+458,1145,Omklassificeringar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarOmklassificeringar,false,xbrli:monetaryItemType,duration
+459,1146,Årets nedskrivningar,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarAretsNedskrivningar,false,xbrli:monetaryItemType,duration
+460,1147,Omräkningsdifferenser,,,,,,,,,,,false,,,,AndraLangfristigaFordringarForandringNedskrivningarOmrakningsdifferenser,false,xbrli:monetaryItemType,duration
+461,1148,Utgående nedskrivningar,,,,,,,,,,credit,false,,,,AndraLangfristigaFordringarNedskrivningar,false,xbrli:monetaryItemType,instant
+462,1149,Redovisat värde,,,,,,,,,,debit,false,,,,AndraLangfristigaFordringar,false,xbrli:monetaryItemType,instant
+463,1150,Kommentar till not,,,,,,,,,,,false,,,,NotAndraLangfristigaFordringarKommentar,false,xbrli:stringItemType,duration
+464,1151,"Lån, säkerheter, åtaganden m.m. till förmån för ledande befattningshavare",,,,,,,,,,,false,,,,NotLanSakerheterAtagandenFormanLedandeBefattningshavare,false,xbrli:stringItemType,duration
+465,1152,Pågående arbete för annans räkning,,,,,,,,,,,false,,,,NotPagaendeArbetenAnnansRakning,false,xbrli:stringItemType,duration
+466,1153,Pågående arbete för annans räkning (Fordran),,,,,,,,,,,false,,,,PagaendeArbetenAnnansRakningOmsattningstillgangarAbstract,true,xbrli:stringItemType,duration
+467,1154,Aktiverade nedlagda utgifter,,,,,,,,,,debit,false,,,,PagaendeArbetenAnnansRakningOmsattningstillgangarAktiveradeUtgifter,false,xbrli:monetaryItemType,instant
+468,1155,Fakturerat belopp,,,,,,,,,,credit,false,,,,PagaendeArbetenAnnansRakningOmsattningstillgangarFaktureradeDelbelopp,false,xbrli:monetaryItemType,instant
+469,1156,Redovisat värde,,,,,,,,,,debit,false,,,,PagaendeArbetenAnnansRakningOmsattningstillgangar,false,xbrli:monetaryItemType,instant
+470,1157,Pågående arbete för annans räkning (Skuld),,,,,,,,,,,false,,,,PagaendeArbetenAnnansRakningKortfristigaSkulderAbstract,true,xbrli:stringItemType,duration
+471,1158,Fakturerat belopp,,,,,,,,,,credit,false,,,,PagaendeArbetenAnnansRakningKortfristigaSkulderFaktureradeDelbelopp,false,xbrli:monetaryItemType,instant
+472,1159,Aktiverade nedlagda utgifter,,,,,,,,,,debit,false,,,,PagaendeArbetenAnnansRakningKortfristigaSkulderAktiveradeUtgifter,false,xbrli:monetaryItemType,instant
+473,1160,Redovisat värde,,,,,,,,,,credit,false,,,,PagaendeArbetenAnnansRakningKortfristigaSkulder,false,xbrli:monetaryItemType,instant
+474,1161,Kommentar till not,,,,,,,,,,,false,,,,NotPagaendeArbetenAnnansRakningKommentar,false,xbrli:stringItemType,duration
+475,1162,Uppskrivningsfond,,,,,,,,,,,false,,,,NotUppskrivningsfond,false,xbrli:stringItemType,duration
+476,1163,Uppskrivningsfond,,,,,,,,,,,false,,,,UppskrivningsfondAbstract,true,xbrli:stringItemType,duration
+477,1164,Belopp vid årets ingång,,,,,,,,,,credit,false,,,,Uppskrivningsfond,false,xbrli:monetaryItemType,instant
+478,1165,Förändringar av uppskrivningsfond,,,,,,,,,,,false,,,,UppskrivningsfondForandringarAbstract,true,xbrli:stringItemType,duration
+479,1166,Avsättning till fonden under räkenskapsåret,,,,,,,,,,credit,false,,,,ForandringAvsattningFondUnderRakenskapsaret,false,xbrli:monetaryItemType,duration
+480,1167,Avskrivning av uppskrivna tillgångar,,,,,,,,,,debit,false,,,,ForandringAvskrivningUppskrivnaTillgangar,false,xbrli:monetaryItemType,duration
+481,1168,Nedskrivning av uppskrivna tillgångar,,,,,,,,,,debit,false,,,,ForandringNedskrivningUppskrivnaTillgangar,false,xbrli:monetaryItemType,duration
+482,1169,Försäljning/utrangering av uppskrivna tillgångar,,,,,,,,,,debit,false,,,,ForandringForsaljningUtrangeringUppskrivnaTillgangar,false,xbrli:monetaryItemType,duration
+483,1170,Ianspråktaget för fondemission,,,,,,,,,,debit,false,,,,ForandringIanspraktagetFondemission,false,xbrli:monetaryItemType,duration
+484,1171,Ianspråktaget för täckande av förlust,,,,,,,,,,debit,false,,,,ForandringIanspraktagetFondemissionTackForlust,false,xbrli:monetaryItemType,duration
+485,1172,Belopp vid årets utgång,,,,,,,,,,credit,false,,,,Uppskrivningsfond,false,xbrli:monetaryItemType,instant
+486,1173,Uppskrivna tillgångarnas värde exkl. uppskrivning,,,,,,,,,,debit,false,,,,UppskrivnaTillgangarVardeExklUppskrivning,false,xbrli:monetaryItemType,instant
+487,1174,Kommentar till not,,,,,,,,,,,false,,,,NotUppskrivningsfondKommentar,false,xbrli:stringItemType,duration
+488,1175,Långfristiga skulder,,,,,,,,,,,false,,,,NotLangfristigaSkulder,false,xbrli:stringItemType,instant
+489,1176,Långfristiga skulder,,,,,,,,,,,false,,,,LangfristigaSkulderForfallerAbstract,true,xbrli:stringItemType,duration
+490,1177,Belopp på skuldpost som förfaller till betalning senare än fem år efter balansdagen,,,,,,,,,,credit,false,,,,LangfristigaSkulderForfallerSenare5Ar,false,xbrli:monetaryItemType,instant
+491,1178,Kommentar till not,,,,,,,,,,,false,,,,NotLangfristigaSkulderKommentar,false,xbrli:stringItemType,instant
+492,1179,Checkräkningskredit,,,,,,,,,,,false,,,,NotCheckrakningskredit,false,xbrli:stringItemType,duration
+493,1180,Checkräkningskredit,,,,,,,,,,,false,,,,CheckrakningskreditAbstract,true,xbrli:stringItemType,duration
+494,1181,Beviljat belopp,,,,,,,,,,,false,,,,CheckrakningskreditBeviljatBelopp,false,xbrli:monetaryItemType,instant
+495,1182,Kommentar till not,,,,,,,,,,,false,,,,NotCheckrakningskreditKommentar,false,xbrli:stringItemType,duration
+496,1183,Upplupna kostnader och förutbetalda intäkter,,,,,,,,,,,false,,,,NotUpplupnaKostnaderForutbetaldaIntakter,false,xbrli:stringItemType,duration
+497,1184,Upplupna kostnader och förutbetalda intäkter,,,,,,,,,,,false,,,,UpplupnaKostnaderForutbetaldaIntakterAbstract,true,xbrli:stringItemType,duration
+498,1185,Upplupna löner,,,,,,,,,,credit,false,,,,UpplupnaKostnaderForutbetaldaIntakterUpplupnaLoner,false,xbrli:monetaryItemType,instant
+499,1186,Upplupna semesterlöner,,,,,,,,,,credit,false,,,,UpplupnaKostnaderForutbetaldaIntakterUpplupnaSemesterloner,false,xbrli:monetaryItemType,instant
+500,1187,Upplupna sociala avgifter,,,,,,,,,,credit,false,,,,UpplupnaKostnaderForutbetaldaIntakterUpplupnaSocialaAvgifter,false,xbrli:monetaryItemType,instant

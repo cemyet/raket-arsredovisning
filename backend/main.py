@@ -103,8 +103,8 @@ async def upload_se_file(file: UploadFile = File(...)):
         # Parse INK2 data (tax calculations) - pass RR data for variable references
         ink2_data = parser.parse_ink2_data(current_accounts, company_info.get('fiscal_year'), rr_data)
         
-        # Parse Noter data (notes) - pass user toggles if needed
-        noter_data = parser.parse_noter_data(current_accounts, previous_accounts)
+        # Parse Noter data (notes) - pass SE content and user toggles if needed
+        noter_data = parser.parse_noter_data(se_content)
         
         # Calculate pension tax variables for frontend
         pension_premier = abs(float(current_accounts.get('7410', 0.0)))
