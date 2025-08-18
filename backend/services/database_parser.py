@@ -1431,6 +1431,8 @@ class DatabaseParser:
         user_toggles = user_toggles or {}
         calculated_variables = {}  # Store calculated values for formula references
         
+        print(f"DEBUG: Noter user_toggles received: {user_toggles}")
+        
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
         
@@ -1474,8 +1476,11 @@ class DatabaseParser:
                 toggle_show = self._normalize_always_show(mapping.get('toggle_show', False))
                 block = mapping.get('block', '')
                 
-                # Show if always_show=true OR (always_show=false AND toggle_show=true AND block toggle is on)
-                should_show = always_show or (not always_show and toggle_show and user_toggles.get(block, False))
+                # Show logic:
+                # - always_show=TRUE: always show
+                # - always_show=FALSE and toggle_show=TRUE: show only if block toggle is ON
+                # - always_show=FALSE and toggle_show=FALSE: never show
+                should_show = always_show or (toggle_show and user_toggles.get(block, False))
                 
                 if not should_show:
                     continue
