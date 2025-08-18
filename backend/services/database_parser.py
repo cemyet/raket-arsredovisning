@@ -1401,21 +1401,49 @@ class DatabaseParser:
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
         
-        # First pass: calculate ALL account-based values (both calculated=false and calculated=true with accounts)
-        for mapping in sorted_mappings:
-            variable_name = mapping.get('variable_name', '')
-            accounts_included = mapping.get('accounts_included', '')
+        # Calculate all variables in one pass (both account-based and formula-based)
+        # Multiple passes may be needed for formula dependencies
+        max_iterations = 5
+        for iteration in range(max_iterations):
+            changes_made = False
             
-            # Calculate if has variable_name and accounts_included (regardless of calculated flag)
-            if variable_name and accounts_included:
-                current_amount, previous_amount = self._calculate_noter_amounts(
-                    mapping, current_ub, previous_ub, current_ib, previous_ib
-                )
-                calculated_variables[variable_name] = {
-                    'current': current_amount, 
-                    'previous': previous_amount
-                }
-                print(f"DEBUG: Calculated {variable_name}: current={current_amount}, previous={previous_amount}")
+            for mapping in sorted_mappings:
+                variable_name = mapping.get('variable_name', '')
+                if not variable_name or variable_name in calculated_variables:
+                    continue
+                    
+                accounts_included = mapping.get('accounts_included', '')
+                is_calculated = self._normalize_is_calculated(mapping.get('calculated', False))
+                
+                if accounts_included:
+                    # Account-based calculation
+                    current_amount, previous_amount = self._calculate_noter_amounts(
+                        mapping, current_ub, previous_ub, current_ib, previous_ib
+                    )
+                    calculated_variables[variable_name] = {
+                        'current': current_amount, 
+                        'previous': previous_amount
+                    }
+                    changes_made = True
+                    print(f"DEBUG: Calculated {variable_name}: current={current_amount}, previous={previous_amount}")
+                    
+                elif is_calculated:
+                    # Formula-based calculation
+                    formula = mapping.get('formula', '')
+                    if formula:
+                        current_amount, previous_amount = self._evaluate_noter_formula(
+                            formula, calculated_variables
+                        )
+                        calculated_variables[variable_name] = {
+                            'current': current_amount,
+                            'previous': previous_amount
+                        }
+                        changes_made = True
+                        print(f"DEBUG: Calculated formula {variable_name}: current={current_amount}, previous={previous_amount}")
+            
+            # Break if no new variables were calculated
+            if not changes_made:
+                break
         
         # Second pass: calculate formulas and build final results
         
@@ -1439,17 +1467,10 @@ class DatabaseParser:
                 variable_name = mapping.get('variable_name', '')
                 
                 if self._normalize_is_calculated(mapping.get('calculated', False)):
-                    # Use formula calculation with calculated_variables
-                    formula = mapping.get('formula', '')
-                    if formula and variable_name:
-                        current_amount, previous_amount = self._evaluate_noter_formula(
-                            formula, calculated_variables
-                        )
-                        # Store calculated result for other formulas
-                        calculated_variables[variable_name] = {
-                            'current': current_amount,
-                            'previous': previous_amount
-                        }
+                    # Use pre-calculated values from first pass if available
+                    if variable_name and variable_name in calculated_variables:
+                        current_amount = calculated_variables[variable_name]['current']
+                        previous_amount = calculated_variables[variable_name]['previous']
                 else:
                     # Use pre-calculated account values
                     if variable_name in calculated_variables:
