@@ -488,9 +488,9 @@ class DatabaseParser:
                 current_formula = current_formula.replace(var_name, str(values['current']))
                 previous_formula = previous_formula.replace(var_name, str(values['previous']))
             
-            # Evaluate the formulas
-            current_result = eval(current_formula) if current_formula.replace('+', '').replace('-', '').replace('.', '').replace(' ', '').isdigit() or any(op in current_formula for op in ['+', '-', '*', '/']) else 0.0
-            previous_result = eval(previous_formula) if previous_formula.replace('+', '').replace('-', '').replace('.', '').replace(' ', '').isdigit() or any(op in previous_formula for op in ['+', '-', '*', '/']) else 0.0
+            # Evaluate the formulas safely
+            current_result = eval(current_formula)
+            previous_result = eval(previous_formula)
             
             return float(current_result), float(previous_result)
             
@@ -1397,14 +1397,13 @@ class DatabaseParser:
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
         
-        # First pass: calculate account-based values
+        # First pass: calculate ALL account-based values (both calculated=false and calculated=true with accounts)
         for mapping in sorted_mappings:
-            if self._normalize_is_calculated(mapping.get('calculated', False)):
-                continue  # Skip formulas in first pass
-                
-            # Calculate account-based values and store in calculated_variables
             variable_name = mapping.get('variable_name', '')
-            if variable_name:
+            accounts_included = mapping.get('accounts_included', '')
+            
+            # Calculate if has variable_name and accounts_included (regardless of calculated flag)
+            if variable_name and accounts_included:
                 current_amount, previous_amount = self._calculate_noter_amounts(
                     mapping, current_ub, previous_ub, current_ib, previous_ib
                 )

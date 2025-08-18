@@ -25,6 +25,32 @@ interface CompanyData {
   boardMembers: Array<{ name: string; personalNumber: string }>;
   ink2Data?: any[]; // INK2 tax calculation data
   showTaxPreview?: boolean; // Show tax calculation module
+  showRRBR?: boolean;
+  taxEditingEnabled?: boolean;
+  editableAmounts?: Record<string, number>;
+  unusedTaxLossAmount?: number;
+  justeringSarskildLoneskatt?: number;
+  pensionPremier?: number;
+  sarskildLoneskattPension?: number;
+  sarskildLoneskattPensionCalculated?: number;
+  noterData?: Array<{
+    row_id: number;
+    row_title: string;
+    current_amount: number;
+    previous_amount: number;
+    variable_name: string;
+    show_tag: boolean;
+    accounts_included: string;
+    account_details?: Array<{
+      account_id: string;
+      account_text: string;
+      balance: number;
+    }>;
+    block: string;
+    always_show: boolean;
+    toggle_show: boolean;
+    style: string;
+  }>;
   seFileData?: SEData & {
     current_accounts?: Record<string, number>;
     annualReport?: {
@@ -168,7 +194,7 @@ interface AnnualReportPreviewProps {
 
 export function AnnualReportPreview({ companyData, currentStep, editableAmounts = false, onDataUpdate }: AnnualReportPreviewProps) {
   // Safe access; never destructure undefined
-  const cd = companyData ?? {};
+  const cd = companyData as CompanyData;
   
   // Debug logging at the top to confirm mounting
   console.log('🔍 AnnualReportPreview MOUNTED');
