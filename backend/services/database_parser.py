@@ -1411,6 +1411,7 @@ class DatabaseParser:
                     'current': current_amount, 
                     'previous': previous_amount
                 }
+                print(f"DEBUG: Calculated {variable_name}: current={current_amount}, previous={previous_amount}")
         
         # Second pass: calculate formulas and build final results
         
