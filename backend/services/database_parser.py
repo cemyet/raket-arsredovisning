@@ -488,6 +488,8 @@ class DatabaseParser:
                 current_formula = current_formula.replace(var_name, str(values['current']))
                 previous_formula = previous_formula.replace(var_name, str(values['previous']))
             
+            print(f"DEBUG FORMULA: '{formula}' -> current: '{current_formula}', previous: '{previous_formula}'")
+            
             # Evaluate the formulas safely
             current_result = eval(current_formula)
             previous_result = eval(previous_formula)
@@ -496,6 +498,8 @@ class DatabaseParser:
             
         except Exception as e:
             print(f"Error evaluating noter formula '{formula}': {e}")
+            print(f"Current formula after substitution: '{current_formula}'")
+            print(f"Previous formula after substitution: '{previous_formula}'")
             return 0.0, 0.0
     
     def store_calculated_values(self, results: List[Dict[str, Any]], report_type: str):
