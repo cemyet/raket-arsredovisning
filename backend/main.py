@@ -103,6 +103,9 @@ async def upload_se_file(file: UploadFile = File(...)):
         # Parse INK2 data (tax calculations) - pass RR data for variable references
         ink2_data = parser.parse_ink2_data(current_accounts, company_info.get('fiscal_year'), rr_data)
         
+        # Parse Noter data (notes) - pass user toggles if needed
+        noter_data = parser.parse_noter_data(current_accounts, previous_accounts)
+        
         # Calculate pension tax variables for frontend
         pension_premier = abs(float(current_accounts.get('7410', 0.0)))
         sarskild_loneskatt_pension = abs(float(current_accounts.get('7531', 0.0)))
@@ -134,9 +137,11 @@ async def upload_se_file(file: UploadFile = File(...)):
                 "rr_data": rr_data,
                 "br_data": br_data,
                 "ink2_data": ink2_data,
+                "noter_data": noter_data,
                 "rr_count": len(rr_data),
                 "br_count": len(br_data),
                 "ink2_count": len(ink2_data),
+                "noter_count": len(noter_data),
                 "pension_premier": pension_premier,
                 "sarskild_loneskatt_pension": sarskild_loneskatt_pension,
                 "sarskild_loneskatt_pension_calculated": sarskild_loneskatt_pension_calculated

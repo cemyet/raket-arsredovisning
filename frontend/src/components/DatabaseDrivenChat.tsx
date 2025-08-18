@@ -1009,6 +1009,7 @@ interface ChatFlowResponse {
       sumFrittEgetKapital: sumFrittEgetKapital,
       skattAretsResultat: skattAretsResultat,
       ink2Data: fileData.data?.ink2_data || [],
+      noterData: fileData.data?.noter_data || [],
       inkBeraknadSkatt: inkBeraknadSkatt,
       inkBokfordSkatt: inkBokfordSkatt,
       pensionPremier: pensionPremier,

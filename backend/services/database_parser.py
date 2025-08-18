@@ -23,6 +23,7 @@ class DatabaseParser:
         self.rr_mappings = None
         self.br_mappings = None
         self.ink2_mappings = None
+        self.noter_mappings = None
         self.global_variables = None
         self.accounts_lookup = None
         self._load_mappings()
@@ -41,6 +42,10 @@ class DatabaseParser:
             # Load INK2 mappings
             ink2_response = supabase.table('variable_mapping_ink2').select('*').execute()
             self.ink2_mappings = ink2_response.data
+            
+            # Load Noter mappings
+            noter_response = supabase.table('variable_mapping_noter').select('*').execute()
+            self.noter_mappings = noter_response.data
             
             # Debug logging for specific problematic variables
             for mapping in self.ink2_mappings:
@@ -84,13 +89,14 @@ class DatabaseParser:
                 # string key
                 self.accounts_lookup[str(acc_id)] = text
             
-            print(f"Loaded {len(self.rr_mappings)} RR mappings, {len(self.br_mappings)} BR mappings, and {len(self.ink2_mappings)} INK2 mappings")
+            print(f"Loaded {len(self.rr_mappings)} RR mappings, {len(self.br_mappings)} BR mappings, {len(self.ink2_mappings)} INK2 mappings, and {len(self.noter_mappings)} Noter mappings")
             
         except Exception as e:
             print(f"Error loading mappings: {e}")
             self.rr_mappings = []
             self.br_mappings = []
             self.ink2_mappings = []
+            self.noter_mappings = []
             self.global_variables = {}
             self.accounts_lookup = {}
     
@@ -1262,3 +1268,73 @@ class DatabaseParser:
         except Exception:
             pass
         return f'Konto {key_str}'
+    
+    def parse_noter_data(self, current_accounts: Dict[str, float], previous_accounts: Dict[str, float] = None, user_toggles: Dict[str, bool] = None) -> List[Dict[str, Any]]:
+        """
+        Parse Noter (Notes) data using database mappings.
+        Returns structure with current_amount and previous_amount for both fiscal year and previous year.
+        """
+        # Force reload mappings to get fresh data from database
+        self._load_mappings()
+        if not self.noter_mappings:
+            print("No Noter mappings available")
+            return []
+        
+        results = []
+        user_toggles = user_toggles or {}
+        
+        # Sort mappings by row_id to maintain correct order
+        sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
+        
+        for mapping in sorted_mappings:
+            try:
+                # Check visibility rules
+                always_show = self._normalize_always_show(mapping.get('always_show', False))
+                toggle_show = self._normalize_always_show(mapping.get('toggle_show', False))
+                block = mapping.get('block', '')
+                
+                # Show if always_show=true OR (always_show=false AND toggle_show=true AND block toggle is on)
+                should_show = always_show or (not always_show and toggle_show and user_toggles.get(block, False))
+                
+                if not should_show:
+                    continue
+                
+                # Calculate amounts for both years
+                current_amount = 0.0
+                previous_amount = 0.0
+                
+                if self._normalize_is_calculated(mapping.get('calculated', False)):
+                    # Use formula calculation (would need to implement formula logic)
+                    # For now, return 0 for calculated fields
+                    current_amount = 0.0
+                    previous_amount = 0.0
+                else:
+                    # Sum included accounts
+                    accounts_included = mapping.get('accounts_included', '')
+                    if accounts_included:
+                        current_amount = self.sum_included_accounts(accounts_included, current_accounts)
+                        if previous_accounts:
+                            previous_amount = self.sum_included_accounts(accounts_included, previous_accounts)
+                
+                # Only include if amounts are non-zero or always_show
+                if current_amount != 0 or previous_amount != 0 or always_show:
+                    result = {
+                        'row_id': mapping.get('row_id'),
+                        'row_title': mapping.get('row_title', ''),
+                        'current_amount': current_amount,
+                        'previous_amount': previous_amount,
+                        'variable_name': mapping.get('variable_name', ''),
+                        'show_tag': mapping.get('show_tag', False),
+                        'accounts_included': mapping.get('accounts_included', ''),
+                        'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_accounts) if mapping.get('show_tag', False) else None,
+                        'block': mapping.get('block', ''),
+                        'always_show': always_show,
+                        'toggle_show': toggle_show
+                    }
+                    results.append(result)
+                    
+            except Exception as e:
+                print(f"Error processing Noter mapping {mapping.get('variable_name', 'unknown')}: {e}")
+                continue
+        
+        return results

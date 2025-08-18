@@ -26,6 +26,7 @@ interface CompanyData {
   ink2Data?: any[]; // INK2 tax calculation data
   inkBeraknadSkatt?: number | null; // Calculated tax amount
   inkBokfordSkatt?: number | null; // Booked tax amount
+  noterData?: any[]; // Noter data
   taxChoice?: string; // Tax choice: 'calculated', 'manual', 'booked'
   editableAmounts?: boolean; // Whether amounts are editable
   // Preview and editing control flags

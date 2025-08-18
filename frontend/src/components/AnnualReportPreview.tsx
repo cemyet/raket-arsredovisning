@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { calculateRRSums, extractKeyMetrics, formatAmount, type SEData } from '@/utils/seFileCalculations';
 import { apiService } from '@/services/api';
 import { Periodiseringsfonder } from './Periodiseringsfonder';
+import { Noter } from './Noter';
 
 interface CompanyData {
   results?: string;
@@ -924,6 +925,15 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
           companyData={companyData}
           onDataUpdate={onDataUpdate}
         />
+
+        {/* Noter Section */}
+        {companyData.noterData && companyData.noterData.length > 0 && (
+          <Noter 
+            noterData={companyData.noterData}
+            fiscalYear={companyData.fiscalYear}
+            previousYear={companyData.fiscalYear ? companyData.fiscalYear - 1 : undefined}
+          />
+        )}
 
         {/* Significant Events Section */}
         {currentStep >= 2 && (
