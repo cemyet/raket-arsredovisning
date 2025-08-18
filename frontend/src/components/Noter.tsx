@@ -148,26 +148,26 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
                 <div className="flex items-center justify-between border-b pb-1">
                   <h3 className="font-semibold text-lg">{blockHeading}</h3>
                   <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`toggle-${block}`}
-                      checked={blockToggles[block] || false}
-                      onCheckedChange={(checked) => 
-                        setBlockToggles(prev => ({ ...prev, [block]: checked }))
-                      }
-                    />
-                    <label 
-                      htmlFor={`toggle-${block}`} 
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Visa detaljer
-                    </label>
+                  <label 
+                  htmlFor={`toggle-${block}`} 
+                  className="text-sm font-medium cursor-pointer"
+                  >
+                  Visa alla rader
+                  </label>
+                  <Switch
+                    id={`toggle-${block}`}
+                  checked={blockToggles[block] || false}
+                  onCheckedChange={(checked) => 
+                      setBlockToggles(prev => ({ ...prev, [block]: checked }))
+                  }
+                  />
                   </div>
                 </div>
                 
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/2">Beskrivning</TableHead>
+                      <TableHead className="w-1/2"></TableHead>
                       <TableHead className="text-right w-1/4">
                         {fiscalYear || new Date().getFullYear()}
                       </TableHead>
@@ -178,22 +178,25 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
                   </TableHeader>
                   <TableBody>
                     {visibleItems.map((item, index) => {
-                      // Apply style classes based on item.style
-                      const getStyleClasses = (style: string) => {
+                      // Apply style classes based on item.style (same as RR/BR)
+                      const getStyleClasses = (style?: string) => {
                         let classes = '';
+                        const s = style || 'NORMAL'; // Default to NORMAL if empty
+                        
                         const boldStyles = ['H0','H1','H2','H3','S1','S2','S3','TH0','TH1','TH2','TH3','TS1','TS2','TS3'];
-                        if (boldStyles.includes(style)) {
+                        if (boldStyles.includes(s)) {
                           classes += ' font-semibold';
                         }
                         const lineStyles = ['S2','S3','TS2','TS3'];
-                        if (lineStyles.includes(style)) {
-                          classes += ' border-t border-b border-gray-300';
+                        if (lineStyles.includes(s)) {
+                          classes += ' border-t border-b border-gray-300 pt-1 pb-1';
                         }
                         return classes;
                       };
                       
-                      const rowClasses = getStyleClasses(item.style || '');
-                      const isHeading = item.style && ['H0', 'H1', 'H2', 'H3', 'S1', 'S2', 'S3'].includes(item.style);
+                      const currentStyle = item.style || 'NORMAL';
+                      const rowClasses = getStyleClasses(currentStyle);
+                      const isHeading = ['H0', 'H1', 'H2'].includes(currentStyle);
                       
                       return (
                         <TableRow key={index} className={rowClasses}>
@@ -204,10 +207,10 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
                             )}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {formatAmount(item.current_amount)} kr
+                            {isHeading ? '' : `${formatAmount(item.current_amount)} kr`}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {formatAmount(item.previous_amount)} kr
+                            {isHeading ? '' : `${formatAmount(item.previous_amount)} kr`}
                           </TableCell>
                         </TableRow>
                       );
