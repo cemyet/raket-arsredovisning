@@ -1290,8 +1290,8 @@ class DatabaseParser:
         
         total = 0.0
         
-        # Split by semicolon for multiple accounts/ranges
-        account_specs = accounts_included.split(';')
+        # Split by both semicolon and comma for multiple accounts/ranges (handle both separators)
+        account_specs = accounts_included.replace(',', ';').split(';')
         
         for spec in account_specs:
             spec = spec.strip()
@@ -1310,6 +1310,7 @@ class DatabaseParser:
                             account_num = int(account_id)
                             if start_num <= account_num <= end_num:
                                 total += balance
+                                print(f"DEBUG: Adding account {account_id} ({balance}) to total")
                         except ValueError:
                             continue
                             
@@ -1320,7 +1321,9 @@ class DatabaseParser:
                 # Single account
                 try:
                     account_id = spec.strip()
-                    total += accounts.get(account_id, 0.0)
+                    balance = accounts.get(account_id, 0.0)
+                    total += balance
+                    print(f"DEBUG: Adding account {account_id} ({balance}) to total")
                 except Exception:
                     print(f"Invalid account format: {spec}")
                     continue
