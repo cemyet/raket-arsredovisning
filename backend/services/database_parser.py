@@ -479,27 +479,57 @@ class DatabaseParser:
     
     def _evaluate_noter_formula(self, formula: str, calculated_variables: Dict[str, Dict[str, float]]) -> tuple[float, float]:
         """Evaluate a noter formula using calculated variables"""
+        import ast
+        import operator
+        
+        # Operators mapping for safe evaluation
+        operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.USub: operator.neg,
+            ast.UAdd: operator.pos,
+        }
+        
+        def safe_eval(node, variables):
+            if isinstance(node, ast.Constant):  # Python 3.8+
+                return node.value
+            elif isinstance(node, ast.Num):  # Python 3.7 and below
+                return node.n
+            elif isinstance(node, ast.Name):
+                if node.id in variables:
+                    return variables[node.id]
+                else:
+                    raise ValueError(f"Unknown variable: {node.id}")
+            elif isinstance(node, ast.BinOp):
+                left = safe_eval(node.left, variables)
+                right = safe_eval(node.right, variables)
+                return operators[type(node.op)](left, right)
+            elif isinstance(node, ast.UnaryOp):
+                operand = safe_eval(node.operand, variables)
+                return operators[type(node.op)](operand)
+            else:
+                raise ValueError(f"Unsupported operation: {type(node)}")
+        
         try:
-            # Simple formula evaluation - replace variable names with values
-            current_formula = formula
-            previous_formula = formula
+            # Parse the formula into AST
+            tree = ast.parse(formula, mode='eval')
             
-            for var_name, values in calculated_variables.items():
-                current_formula = current_formula.replace(var_name, str(values['current']))
-                previous_formula = previous_formula.replace(var_name, str(values['previous']))
+            # Prepare variables for current and previous year
+            current_vars = {var_name: values['current'] for var_name, values in calculated_variables.items()}
+            previous_vars = {var_name: values['previous'] for var_name, values in calculated_variables.items()}
             
-            print(f"DEBUG FORMULA: '{formula}' -> current: '{current_formula}', previous: '{previous_formula}'")
+            # Evaluate for both years
+            current_result = safe_eval(tree.body, current_vars)
+            previous_result = safe_eval(tree.body, previous_vars)
             
-            # Evaluate the formulas safely
-            current_result = eval(current_formula)
-            previous_result = eval(previous_formula)
+            print(f"DEBUG FORMULA: '{formula}' -> current: {current_result}, previous: {previous_result}")
             
             return float(current_result), float(previous_result)
             
         except Exception as e:
             print(f"Error evaluating noter formula '{formula}': {e}")
-            print(f"Current formula after substitution: '{current_formula}'")
-            print(f"Previous formula after substitution: '{previous_formula}'")
             return 0.0, 0.0
     
     def store_calculated_values(self, results: List[Dict[str, Any]], report_type: str):
@@ -1401,49 +1431,36 @@ class DatabaseParser:
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
         
-        # Calculate all variables in one pass (both account-based and formula-based)
-        # Multiple passes may be needed for formula dependencies
-        max_iterations = 5
-        for iteration in range(max_iterations):
-            changes_made = False
+        # First pass: Calculate all account-based variables
+        for mapping in sorted_mappings:
+            variable_name = mapping.get('variable_name', '')
+            accounts_included = mapping.get('accounts_included', '')
             
-            for mapping in sorted_mappings:
-                variable_name = mapping.get('variable_name', '')
-                if not variable_name or variable_name in calculated_variables:
-                    continue
-                    
-                accounts_included = mapping.get('accounts_included', '')
-                is_calculated = self._normalize_is_calculated(mapping.get('calculated', False))
-                
-                if accounts_included:
-                    # Account-based calculation
-                    current_amount, previous_amount = self._calculate_noter_amounts(
-                        mapping, current_ub, previous_ub, current_ib, previous_ib
-                    )
-                    calculated_variables[variable_name] = {
-                        'current': current_amount, 
-                        'previous': previous_amount
-                    }
-                    changes_made = True
-                    print(f"DEBUG: Calculated {variable_name}: current={current_amount}, previous={previous_amount}")
-                    
-                elif is_calculated:
-                    # Formula-based calculation
-                    formula = mapping.get('formula', '')
-                    if formula:
-                        current_amount, previous_amount = self._evaluate_noter_formula(
-                            formula, calculated_variables
-                        )
-                        calculated_variables[variable_name] = {
-                            'current': current_amount,
-                            'previous': previous_amount
-                        }
-                        changes_made = True
-                        print(f"DEBUG: Calculated formula {variable_name}: current={current_amount}, previous={previous_amount}")
+            if variable_name and accounts_included:
+                current_amount, previous_amount = self._calculate_noter_amounts(
+                    mapping, current_ub, previous_ub, current_ib, previous_ib
+                )
+                calculated_variables[variable_name] = {
+                    'current': current_amount, 
+                    'previous': previous_amount
+                }
+                print(f"DEBUG: Calculated account-based {variable_name}: current={current_amount}, previous={previous_amount}")
+        
+        # Second pass: Calculate all formula-based variables using stored values
+        for mapping in sorted_mappings:
+            variable_name = mapping.get('variable_name', '')
+            is_calculated = self._normalize_is_calculated(mapping.get('calculated', False))
+            formula = mapping.get('formula', '')
             
-            # Break if no new variables were calculated
-            if not changes_made:
-                break
+            if variable_name and is_calculated and formula and variable_name not in calculated_variables:
+                current_amount, previous_amount = self._evaluate_noter_formula(
+                    formula, calculated_variables
+                )
+                calculated_variables[variable_name] = {
+                    'current': current_amount,
+                    'previous': previous_amount
+                }
+                print(f"DEBUG: Calculated formula-based {variable_name}: current={current_amount}, previous={previous_amount}")
         
         # Second pass: calculate formulas and build final results
         
