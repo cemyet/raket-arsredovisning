@@ -140,6 +140,16 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
             const visibleItems = getVisibleItems(blockItems);
             
             if (visibleItems.length === 0) return null;
+
+            // Hide specific blocks if all amounts are zero
+            const blocksToHideIfZero = ['BYGG', 'MASKIN', 'INV', 'MAT', 'LVP'];
+            if (blocksToHideIfZero.includes(block)) {
+              const hasNonZeroAmount = blockItems.some(item => 
+                (item.current_amount !== 0 && item.current_amount !== null) || 
+                (item.previous_amount !== 0 && item.previous_amount !== null)
+              );
+              if (!hasNonZeroAmount) return null;
+            }
             
             // Get first row title for block heading
             const firstRowTitle = blockItems[0]?.row_title || block;
