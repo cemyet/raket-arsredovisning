@@ -127,11 +127,8 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          📝 Noter
-          <span className="text-sm font-normal text-gray-600">
-            ({noterData.length} poster)
-          </span>
+        <CardTitle>
+          Noter
         </CardTitle>
 
       </CardHeader>
