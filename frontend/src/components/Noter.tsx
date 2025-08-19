@@ -59,6 +59,11 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
     return groups;
   }, {});
 
+  // Sort each block by row column to maintain database order
+  Object.keys(groupedItems).forEach(block => {
+    groupedItems[block].sort((a, b) => (a.row_id || 0) - (b.row_id || 0));
+  });
+
   // Get unique blocks for toggle controls
   const blocks = Object.keys(groupedItems);
 
@@ -208,7 +213,7 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
                   };
 
                   const currentStyle = item.style || 'NORMAL';
-                  const isHeading = ['H0', 'H1', 'H2'].includes(currentStyle);
+                  const isHeading = ['H0', 'H1', 'H2', 'H3'].includes(currentStyle);
                   
                   return (
                     <div 
