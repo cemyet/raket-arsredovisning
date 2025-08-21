@@ -71,7 +71,13 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
   const getVisibleItems = (blockItems: NoterItem[]) => {
     return blockItems.filter(item => {
       if (item.always_show) return true;
-      if (item.toggle_show && blockToggles[item.block]) return true;
+      if (!item.always_show) {
+        // Show if has non-zero amounts OR toggle is on
+        const hasNonZeroAmount = (item.current_amount !== 0 && item.current_amount !== null) || 
+                                 (item.previous_amount !== 0 && item.previous_amount !== null);
+        const toggleIsOn = item.toggle_show && blockToggles[item.block];
+        return hasNonZeroAmount || toggleIsOn;
+      }
       return false;
     });
   };
