@@ -170,7 +170,7 @@ class DatabaseParser:
         
 
         
-        return current_accounts, previous_accounts
+        return current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts
     
     def parse_ib_ub_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
         """Parse both IB and UB balances from SE file for noter calculations"""
@@ -1436,8 +1436,6 @@ class DatabaseParser:
             }
             print(f"DEBUG: Pre-loaded BYGG K2 variable {var_name}: {value}")
         
-
-        
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
         
@@ -1485,6 +1483,7 @@ class DatabaseParser:
                 }
         
         # Build final results (return all rows, let frontend handle filtering like RR/BR do)
+        print(f"DEBUG: Building final results from {len(sorted_mappings)} mappings...")
         
         for mapping in sorted_mappings:
             try:
