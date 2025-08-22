@@ -113,14 +113,19 @@ async def upload_se_file(file: UploadFile = File(...)):
         sarskild_loneskatt_rate = float(parser.global_variables.get('sarskild_loneskatt', 0.0))
         sarskild_loneskatt_pension_calculated = pension_premier * sarskild_loneskatt_rate
         
-        # Store financial data in database
+        # Store financial data in database (but don't fail if storage fails)
+        stored_ids = {}
         if company_info.get('organization_number'):
             company_id = company_info['organization_number']
             fiscal_year = company_info.get('fiscal_year', datetime.now().year)
             
-            # Store the parsed financial data
-            stored_ids = parser.store_financial_data(company_id, fiscal_year, rr_data, br_data)
-            print(f"Stored financial data with IDs: {stored_ids}")
+            try:
+                # Store the parsed financial data
+                stored_ids = parser.store_financial_data(company_id, fiscal_year, rr_data, br_data)
+                print(f"Stored financial data with IDs: {stored_ids}")
+            except Exception as e:
+                print(f"Warning: Could not store financial data: {e}")
+                stored_ids = {}
         
         # Rensa upp temporär fil
         os.unlink(temp_path)
@@ -290,14 +295,19 @@ async def test_parser(file: UploadFile = File(...)):
         print(f"Parsed {len(current_accounts)} current year accounts, {len(previous_accounts)} previous year accounts")
         print(f"Generated {len(rr_data)} RR items, {len(br_data)} BR items")
         
-        # Store financial data in database
+        # Store financial data in database (but don't fail if storage fails)
+        stored_ids = {}
         if company_info.get('organization_number'):
             company_id = company_info['organization_number']
             fiscal_year = company_info.get('fiscal_year', datetime.now().year)
             
-            # Store the parsed financial data
-            stored_ids = parser.store_financial_data(company_id, fiscal_year, rr_data, br_data)
-            print(f"Stored financial data with IDs: {stored_ids}")
+            try:
+                # Store the parsed financial data
+                stored_ids = parser.store_financial_data(company_id, fiscal_year, rr_data, br_data)
+                print(f"Stored financial data with IDs: {stored_ids}")
+            except Exception as e:
+                print(f"Warning: Could not store financial data: {e}")
+                stored_ids = {}
         
         # Rensa upp temporär fil
         os.unlink(temp_path)
