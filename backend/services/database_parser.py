@@ -47,11 +47,7 @@ class DatabaseParser:
             noter_response = supabase.table('variable_mapping_noter').select('*').execute()
             self.noter_mappings = noter_response.data
             
-            # Debug logging for specific problematic variables
-            for mapping in self.ink2_mappings:
-                var_name = mapping.get('variable_name', '')
-                if var_name in ['INK4.15', 'INK4.16', 'INK_bokford_skatt']:
-                    print(f"DEBUG BACKEND MAPPING {var_name}: always_show={mapping.get('always_show')} (type: {type(mapping.get('always_show'))})")
+
             
             # Load global variables (normalize values to floats; treat % values as decimals)
             global_vars_response = supabase.table('global_variables').select('*').execute()
@@ -89,7 +85,7 @@ class DatabaseParser:
                 # string key
                 self.accounts_lookup[str(acc_id)] = text
             
-            print(f"Loaded {len(self.rr_mappings)} RR mappings, {len(self.br_mappings)} BR mappings, {len(self.ink2_mappings)} INK2 mappings, and {len(self.noter_mappings)} Noter mappings")
+
             
         except Exception as e:
             print(f"Error loading mappings: {e}")
@@ -172,11 +168,7 @@ class DatabaseParser:
                     except ValueError:
                         continue
         
-        print(f"Parsed {len(current_accounts)} current year accounts, {len(previous_accounts)} previous year accounts")
-        if current_accounts:
-            print(f"Sample current accounts: {dict(list(current_accounts.items())[:5])}")
-        if previous_accounts:
-            print(f"Sample previous accounts: {dict(list(previous_accounts.items())[:5])}")
+
         
         return current_accounts, previous_accounts
     
@@ -524,7 +516,7 @@ class DatabaseParser:
             current_result = safe_eval(tree.body, current_vars)
             previous_result = safe_eval(tree.body, previous_vars)
             
-            print(f"DEBUG FORMULA: '{formula}' -> current: {current_result}, previous: {previous_result}")
+
             
             return float(current_result), float(previous_result)
             
@@ -781,7 +773,7 @@ class DatabaseParser:
                     company_info['start_date'] = parts[2]
                     company_info['end_date'] = parts[3]
         
-        print(f"Extracted company info: {company_info}")
+
         return company_info
     
     def update_calculation_formula(self, row_id: int, formula: str) -> bool:
@@ -793,7 +785,7 @@ class DatabaseParser:
                 'is_calculated': True
             }).eq('id', row_id).execute()
             
-            print(f"Successfully updated formula for row {row_id}: {formula}")
+
             return True
             
         except Exception as e:
@@ -808,7 +800,6 @@ class DatabaseParser:
         # Force reload mappings to get fresh data from database
         self._load_mappings()
         if not self.ink2_mappings:
-            print("No INK2 mappings available")
             return []
         
         results = []
@@ -865,7 +856,6 @@ class DatabaseParser:
         # Force reload mappings to get fresh data from database
         self._load_mappings()
         if not self.ink2_mappings:
-            print("No INK2 mappings available")
             return []
         
         manual_amounts = manual_amounts or {}
@@ -879,12 +869,12 @@ class DatabaseParser:
         # Inject justering_sarskild_loneskatt into ink_values if provided
         if 'justering_sarskild_loneskatt' in manual_amounts:
             ink_values['justering_sarskild_loneskatt'] = manual_amounts['justering_sarskild_loneskatt']
-            print(f"Injected justering_sarskild_loneskatt: {manual_amounts['justering_sarskild_loneskatt']}")
+
         
         # Inject INK4.14a (outnyttjat underskott) into ink_values if provided
         if 'INK4.14a' in manual_amounts:
             ink_values['INK4.14a'] = manual_amounts['INK4.14a']
-            print(f"Injected INK4.14a: {manual_amounts['INK4.14a']}")
+
         
         # Inject underskott adjustment for INK4.16 if provided
         if 'ink4_16_underskott_adjustment' in manual_amounts:
@@ -1308,7 +1298,6 @@ class DatabaseParser:
                             account_num = int(account_id)
                             if start_num <= account_num <= end_num:
                                 total += balance
-                                print(f"DEBUG: Adding account {account_id} ({balance}) to total")
                         except ValueError:
                             continue
                             
@@ -1321,7 +1310,6 @@ class DatabaseParser:
                     account_id = spec.strip()
                     balance = accounts.get(account_id, 0.0)
                     total += balance
-                    print(f"DEBUG: Adding account {account_id} ({balance}) to total")
                 except Exception:
                     print(f"Invalid account format: {spec}")
                     continue
@@ -1437,7 +1425,7 @@ class DatabaseParser:
         user_toggles = user_toggles or {}
         calculated_variables = {}  # Store calculated values for formula references
         
-        print(f"DEBUG: Noter user_toggles received: {user_toggles}")
+
         
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
@@ -1461,7 +1449,6 @@ class DatabaseParser:
                     'current': current_amount, 
                     'previous': previous_amount
                 }
-                print(f"DEBUG: Calculated account-based {variable_name}: current={current_amount}, previous={previous_amount}")
         
         # Second pass: Calculate all formula-based variables using stored values
         for mapping in sorted_mappings:
@@ -1479,7 +1466,6 @@ class DatabaseParser:
                     current_amount, previous_amount = self._evaluate_noter_formula(
                         formula, calculated_variables
                     )
-                    print(f"DEBUG: Calculated formula-based {variable_name}: current={current_amount}, previous={previous_amount}")
                 
                 calculated_variables[variable_name] = {
                     'current': current_amount,
@@ -1495,10 +1481,7 @@ class DatabaseParser:
                 toggle_show = self._normalize_always_show(mapping.get('toggle_show', False))
                 block = mapping.get('block', '')
                 
-                # Debug a few key variables
-                variable_name = mapping.get('variable_name', '')
-                if variable_name in ['bygg_ub', 'ack_avskr_bygg_ub', 'arets_avskr_bygg']:
-                    print(f"DEBUG VISIBILITY: {variable_name} - always_show: {always_show}, toggle_show: {toggle_show}, block: {block}")
+
                 
                 # Calculate amounts for both years
                 current_amount = 0.0
