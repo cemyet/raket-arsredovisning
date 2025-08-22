@@ -1589,7 +1589,12 @@ class DatabaseParser:
         current_ub, previous_ub, current_ib, previous_ib = self.parse_ib_ub_balances(se_content)
         
         # Get precise BYGG calculations from transaction analysis
-        bygg_k2_data = self.parse_bygg_k2_from_sie_text(se_content)
+        try:
+            bygg_k2_data = self.parse_bygg_k2_from_sie_text(se_content)
+            print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
+        except Exception as e:
+            print(f"ERROR: BYGG K2 parser failed: {e}")
+            bygg_k2_data = {}  # Fallback to empty dict
         
         results = []
         user_toggles = user_toggles or {}
