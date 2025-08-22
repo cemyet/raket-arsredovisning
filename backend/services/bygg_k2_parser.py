@@ -88,6 +88,8 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
     aterfor_nedskr_bygg        = 0.0
     aterfor_nedskr_fsg_bygg    = 0.0
 
+    print(f"DEBUG K2: Found {len(trans_by_ver)} vouchers with transactions")
+    
     # --- Per verifikat ---
     for key, txs in trans_by_ver.items():
         A_D  = sum(amt for a,amt in txs if in_building_assets(a) and amt > 0)
@@ -102,6 +104,13 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
         has_depr_cost = any((a in DEPR_COST and amt > 0) for a,amt in txs)
         has_imp_cost  = any((a == IMPAIR_COST and amt > 0) for a,amt in txs)
         has_imp_rev   = any((a == IMPAIR_REV  and amt < 0) for a,amt in txs)
+        
+        # Debug depreciation transactions
+        if DEP_K > 0 or has_depr_cost:
+            print(f"DEBUG K2: Voucher {key} - DEP_K: {DEP_K}, has_depr_cost: {has_depr_cost}, F2085_D: {F2085_D}")
+            depreciating_accounts = [f"{a}:{amt}" for a,amt in txs if a in ACC_DEP_BYGG]
+            cost_accounts = [f"{a}:{amt}" for a,amt in txs if a in DEPR_COST]
+            print(f"DEBUG K2: Depreciation accounts: {depreciating_accounts}, Cost accounts: {cost_accounts}")
 
         # 1) AVYTTRING
         is_disposal = (A_K > 0) and (DEP_D > 0 or has_PL_disposal or F2085_D > 0)
@@ -123,9 +132,11 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
         # 3) ÅRETS AVSKRIVNINGAR
         if DEP_K > 0 and F2085_D > 0:
             arets_avskr_uppskr_bygg += min(DEP_K, F2085_D)
+            print(f"DEBUG K2: Added arets_avskr_uppskr_bygg: {min(DEP_K, F2085_D)}")
 
         if DEP_K > 0 and has_depr_cost and F2085_D == 0:
             arets_avskr_bygg += DEP_K
+            print(f"DEBUG K2: Added arets_avskr_bygg: {DEP_K} (total now: {arets_avskr_bygg})")
 
         # 4) NEDSKRIVNINGAR
         if has_imp_cost and IMP_K > 0:
