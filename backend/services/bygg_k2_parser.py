@@ -1,15 +1,38 @@
 import re
 from collections import defaultdict
 
-def parse_bygg_k2_from_sie_text(sie_text: str):
+def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     """
-    Parser för BYGG-not (K2).
-    Identifierar inköp, uppskrivningar (via 2085), avyttringar, avskrivningar, nedskrivningar
-    och beräknar UB enligt hårdkodade formler.
+    BYGG-note (K2) parser.
+
+    Handles:
+      - #VER with/without quoted titles; extra tokens after date.
+      - #TRANS/#BTRANS/#RTRANS with or without "{}", optional date and trailing text.
+      - IB/UB numbers with thousand spaces and commas (e.g. "-58 216 440,00").
+
+    K2 business rules:
+      • Uppskrivning (revaluation):          D building asset + K 2085
+      • Depreciation on revaluation:         K 1119/1159 + D 2085
+      • Ordinary depreciation:               K 1119/1159 + D 7820/7821/7824/7829 (and no D 2085)
+      • Disposal:                            K building asset AND (D 1119/1159 OR 3972/7972 OR D 2085)
+      • Nedskrivning (impairment):           D 7720 + K 1158
+        Återföring (no disposal):            K 7770 + D 1158
+        Återföring at disposal:              D 1158 within a disposal voucher
+      • Inköp vs uppskrivning split per voucher:
+            uppskr_del  = min(D asset, K 2085)
+            inköp_del   = max(0, D asset - uppskr_del)
+
+    Returns dict with:
+      bygg_ib, arets_inkop_bygg, arets_fsg_bygg, arets_omklass_bygg, bygg_ub,
+      ack_avskr_bygg_ib, aterfor_avskr_fsg_bygg, arets_avskr_bygg, ack_avskr_bygg_ub,
+      ack_uppskr_bygg_ib, arets_uppskr_bygg, arets_avskr_uppskr_bygg, aterfor_uppskr_fsg_bygg, ack_uppskr_bygg_ub,
+      ack_nedskr_bygg_ib, arets_nedskr_bygg, aterfor_nedskr_bygg, aterfor_nedskr_fsg_bygg, ack_nedskr_bygg_ub
     """
+    # Normalize whitespace and NBSP so numbers like "58 216 440,00" parse
+    sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
 
-    # --- KONFIG (K2 – bygg/mark) ---
+    # --- CONFIG (K2 – bygg/mark) ---
     BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
     ACC_DEP_BYGG = {1119, 1159}
     ACC_IMP_BYGG = {1158}
@@ -19,39 +42,38 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
     IMPAIR_COST = 7720
     IMPAIR_REV  = 7770
 
-    # --- Hjälpare ---
+    # --- Helpers ---
     def in_building_assets(acct: int) -> bool:
         return any(lo <= acct <= hi for lo,hi in BUILDING_ASSET_RANGES)
 
     def _to_float(s: str) -> float:
+        # tolerant for "123 456,78" and "123,456.78"
         return float(s.strip().replace(" ", "").replace(",", "."))
 
     def get_balance(kind_flag: str, accounts):
-        """Summera #IB eller #UB för angivet kontoset/range-lista."""
+        """Sum #IB or #UB for the given account set/ranges (current year '0' rows)."""
         total = 0.0
-        for s in lines:
-            m = re.match(rf'#({kind_flag})\s+0\s+(\d+)\s+(-?[0-9.,]+)', s.strip())
-            if not m: 
+        # allow thousand spaces; allow optional trailing text after number
+        bal_re = re.compile(rf'^#(?:{kind_flag})\s+0\s+(\d+)\s+(-?[0-9][0-9\s.,]*)(?:\s+.*)?$')
+        for raw in lines:
+            s = raw.strip()
+            m = bal_re.match(s)
+            if not m:
                 continue
-            _, acct, amount = m.groups()
-            acct = int(acct)
-            amount = float(amount.replace(",", "."))
-            ok = False
+            acct = int(m.group(1))
+            amount = _to_float(m.group(2))
             if isinstance(accounts, (set, frozenset)):
                 ok = acct in accounts
-            else:  # list of ranges
+            else:
                 ok = any(lo <= acct <= hi for lo,hi in accounts)
             if ok:
                 total += amount
         return total
 
-    # --- Läs verifikationer ---
-    # Accepts #VER with/without quotes and extra tokens after date
+    # --- Parse vouchers ---
     ver_header_re = re.compile(
         r'^#VER\s+(\S+)\s+(\d+)\s+(\d{8})(?:\s+(?:"[^"]*"|.+))?\s*$'
     )
-
-    # Accepts #TRANS/#BTRANS/#RTRANS with or without {} + optional date/text
     trans_re = re.compile(
         r'^#(?:BTRANS|RTRANS|TRANS)\s+'
         r'(\d{3,4})'               # account
@@ -65,8 +87,9 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
     trans_by_ver = defaultdict(list)
     current_ver = None
     in_block = False
-    for s in lines:
-        t = s.strip()
+
+    for raw in lines:
+        t = raw.strip()
         mh = ver_header_re.match(t)
         if mh:
             current_ver = (mh.group(1), int(mh.group(2)))
@@ -85,59 +108,56 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
                 amt = _to_float(mt.group(2))
                 trans_by_ver[current_ver].append((acct, amt))
 
-    # --- IB från SIE ---
-    bygg_ib               = get_balance('IB', BUILDING_ASSET_RANGES)
+    # --- IB balances ---
+    bygg_ib               = get_balance('IB', BUILDING_ASSET_RANGES)  # asset (incl. uppskrivning since posted on asset)
     ack_avskr_bygg_ib     = get_balance('IB', ACC_DEP_BYGG)
     ack_nedskr_bygg_ib    = get_balance('IB', ACC_IMP_BYGG)
-    ack_uppskr_bygg_ib    = get_balance('IB', {UPSKR_FOND})
+    ack_uppskr_bygg_ib    = get_balance('IB', {UPSKR_FOND})           # IB on 2085 (can be negative/credit)
 
-    # --- Init totals ---
+    # --- Accumulators ---
     arets_inkop_bygg           = 0.0
     arets_fsg_bygg             = 0.0
     arets_omklass_bygg         = 0.0
+
     arets_avskr_bygg           = 0.0
     aterfor_avskr_fsg_bygg     = 0.0
+
     arets_uppskr_bygg          = 0.0
     arets_avskr_uppskr_bygg    = 0.0
     aterfor_uppskr_fsg_bygg    = 0.0
+
     arets_nedskr_bygg          = 0.0
     aterfor_nedskr_bygg        = 0.0
     aterfor_nedskr_fsg_bygg    = 0.0
 
-    print(f"DEBUG K2: Found {len(trans_by_ver)} vouchers with transactions")
-    
-    # Debug: Look for the specific voucher A 312
-    if ('A', 312) in trans_by_ver:
-        print(f"DEBUG K2: Found voucher A 312: {trans_by_ver[('A', 312)]}")
-    else:
-        print(f"DEBUG K2: Voucher A 312 not found. Available vouchers: {list(trans_by_ver.keys())[:5]}...")
-    
-    # --- Per verifikat ---
+    if debug:
+        print(f"DEBUG K2: vouchers parsed = {len(trans_by_ver)} (sample: {list(trans_by_ver)[:5]})")
+        # Debug: Look for the specific voucher A 312
+        if ('A', 312) in trans_by_ver:
+            print(f"DEBUG K2: Found voucher A 312: {trans_by_ver[('A', 312)]}")
+        else:
+            print(f"DEBUG K2: Voucher A 312 not found. Available vouchers: {list(trans_by_ver.keys())[:5]}...")
+
+    # --- Per voucher classification ---
     for key, txs in trans_by_ver.items():
-        # Debug the specific depreciation voucher
-        if any(a in ACC_DEP_BYGG for a,_ in txs) or any(a in DEPR_COST for a,_ in txs):
+        # Debug depreciation vouchers
+        if debug and (any(a in ACC_DEP_BYGG for a,_ in txs) or any(a in DEPR_COST for a,_ in txs)):
             print(f"DEBUG K2: Checking voucher {key} with transactions: {txs}")
-        A_D  = sum(amt for a,amt in txs if in_building_assets(a) and amt > 0)
-        A_K  = sum(-amt for a,amt in txs if in_building_assets(a) and amt < 0)
-        F2085_D = sum(amt for a,amt in txs if a == UPSKR_FOND and amt > 0)
-        F2085_K = sum(-amt for a,amt in txs if a == UPSKR_FOND and amt < 0)
-        DEP_D = sum(amt for a,amt in txs if a in ACC_DEP_BYGG and amt > 0)
-        DEP_K = sum(-amt for a,amt in txs if a in ACC_DEP_BYGG and amt < 0)
-        IMP_D = sum(amt for a,amt in txs if a in ACC_IMP_BYGG and amt > 0)
-        IMP_K = sum(-amt for a,amt in txs if a in ACC_IMP_BYGG and amt < 0)
+        # Aggregate per voucher
+        A_D  = sum(amt for a,amt in txs if in_building_assets(a) and amt > 0)     # Debet asset
+        A_K  = sum(-amt for a,amt in txs if in_building_assets(a) and amt < 0)    # Kredit asset (abs)
+        F2085_D = sum(amt for a,amt in txs if a == UPSKR_FOND and amt > 0)        # Debet 2085
+        F2085_K = sum(-amt for a,amt in txs if a == UPSKR_FOND and amt < 0)       # Kredit 2085
+        DEP_D = sum(amt for a,amt in txs if a in ACC_DEP_BYGG and amt > 0)        # Debet 1119/1159
+        DEP_K = sum(-amt for a,amt in txs if a in ACC_DEP_BYGG and amt < 0)       # Kredit 1119/1159
+        IMP_D = sum(amt for a,amt in txs if a in ACC_IMP_BYGG and amt > 0)        # Debet 1158
+        IMP_K = sum(-amt for a,amt in txs if a in ACC_IMP_BYGG and amt < 0)       # Kredit 1158
         has_PL_disposal = any(a in DISPOSAL_PL for a,_ in txs)
         has_depr_cost = any((a in DEPR_COST and amt > 0) for a,amt in txs)
         has_imp_cost  = any((a == IMPAIR_COST and amt > 0) for a,amt in txs)
-        has_imp_rev   = any((a == IMPAIR_REV  and amt < 0) for a,amt in txs)
-        
-        # Debug depreciation transactions
-        if DEP_K > 0 or has_depr_cost:
-            print(f"DEBUG K2: Voucher {key} - DEP_K: {DEP_K}, has_depr_cost: {has_depr_cost}, F2085_D: {F2085_D}")
-            depreciating_accounts = [f"{a}:{amt}" for a,amt in txs if a in ACC_DEP_BYGG]
-            cost_accounts = [f"{a}:{amt}" for a,amt in txs if a in DEPR_COST]
-            print(f"DEBUG K2: Depreciation accounts: {depreciating_accounts}, Cost accounts: {cost_accounts}")
+        has_imp_rev   = any((a == IMPAIR_REV  and amt < 0) for a,_ in txs)
 
-        # 1) AVYTTRING
+        # 1) Disposal
         is_disposal = (A_K > 0) and (DEP_D > 0 or has_PL_disposal or F2085_D > 0)
         if is_disposal:
             arets_fsg_bygg         += A_K
@@ -145,8 +165,8 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
             aterfor_uppskr_fsg_bygg+= F2085_D
             aterfor_nedskr_fsg_bygg+= IMP_D
 
-        # 2) UPPDELNING av Debet byggnad
-        uppskr_amount = min(A_D, F2085_K)
+        # 2) Split D asset into uppskrivning vs inköp
+        uppskr_amount = min(A_D, F2085_K)  # part of D asset backed by K 2085
         if uppskr_amount > 0:
             arets_uppskr_bygg += uppskr_amount
 
@@ -154,48 +174,76 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
         if inkop_amount > 0:
             arets_inkop_bygg += inkop_amount
 
-        # 3) ÅRETS AVSKRIVNINGAR
+        # 3) Depreciations
+        #    a) Depreciation on revaluation (K 1119/1159 + D 2085)
         if DEP_K > 0 and F2085_D > 0:
-            arets_avskr_uppskr_bygg += min(DEP_K, F2085_D)
-            print(f"DEBUG K2: Added arets_avskr_uppskr_bygg: {min(DEP_K, F2085_D)}")
+            inc = min(DEP_K, F2085_D)
+            arets_avskr_uppskr_bygg += inc
+            if debug:
+                print(f"DEBUG {key}: avskr uppskr += {inc} (DEP_K={DEP_K}, F2085_D={F2085_D})")
 
+        #    b) Ordinary depreciation (K 1119/1159 + D 78xx, but no D 2085)
         if DEP_K > 0 and has_depr_cost and F2085_D == 0:
             arets_avskr_bygg += DEP_K
-            print(f"DEBUG K2: Added arets_avskr_bygg: {DEP_K} (total now: {arets_avskr_bygg})")
+            if debug:
+                print(f"DEBUG {key}: avskr ord += {DEP_K}")
 
-        # 4) NEDSKRIVNINGAR
+        # 4) Impairments (non-disposal)
         if has_imp_cost and IMP_K > 0:
             arets_nedskr_bygg += sum(amt for a,amt in txs if a == IMPAIR_COST and amt > 0)
-
         if has_imp_rev and IMP_D > 0 and A_K == 0:
             aterfor_nedskr_bygg += IMP_D
 
-        # 5) OMKLASS
+        # 5) Omklass (both D & K asset, no signals)
         signals = (F2085_D+F2085_K+DEP_D+DEP_K+IMP_D+IMP_K) > 0 or has_PL_disposal or has_depr_cost or has_imp_cost or has_imp_rev
         if A_D > 0 and A_K > 0 and not signals:
             arets_omklass_bygg += (A_D - A_K)
 
-    # --- UB-formler ---
+    # --- UB formulas ---
     bygg_ub = bygg_ib + arets_inkop_bygg - arets_fsg_bygg + arets_omklass_bygg
-    ack_avskr_bygg_ub = ack_avskr_bygg_ib + aterfor_avskr_fsg_bygg - arets_avskr_bygg
-    ack_uppskr_bygg_ub = ack_uppskr_bygg_ib + arets_uppskr_bygg - arets_avskr_uppskr_bygg - aterfor_uppskr_fsg_bygg
-    ack_nedskr_bygg_ub = ack_nedskr_bygg_ib + aterfor_nedskr_fsg_bygg + aterfor_nedskr_bygg - arets_nedskr_bygg
+
+    ack_avskr_bygg_ub = (
+        ack_avskr_bygg_ib
+      + aterfor_avskr_fsg_bygg
+      - arets_avskr_bygg
+    )
+
+    ack_uppskr_bygg_ub = (
+        ack_uppskr_bygg_ib       # IB on 2085 (credit balance shows as negative)
+      + arets_uppskr_bygg
+      - arets_avskr_uppskr_bygg
+      - aterfor_uppskr_fsg_bygg
+    )
+
+    ack_nedskr_bygg_ub = (
+        ack_nedskr_bygg_ib
+      + aterfor_nedskr_fsg_bygg
+      + aterfor_nedskr_bygg
+      - arets_nedskr_bygg
+    )
 
     return {
+        # IB/UB assets
         "bygg_ib": bygg_ib,
         "arets_inkop_bygg": arets_inkop_bygg,
         "arets_fsg_bygg": arets_fsg_bygg,
         "arets_omklass_bygg": arets_omklass_bygg,
         "bygg_ub": bygg_ub,
+
+        # Depreciations (historical cost)
         "ack_avskr_bygg_ib": ack_avskr_bygg_ib,
         "aterfor_avskr_fsg_bygg": aterfor_avskr_fsg_bygg,
         "arets_avskr_bygg": arets_avskr_bygg,
         "ack_avskr_bygg_ub": ack_avskr_bygg_ub,
+
+        # Revaluations (via 2085)
         "ack_uppskr_bygg_ib": ack_uppskr_bygg_ib,
         "arets_uppskr_bygg": arets_uppskr_bygg,
         "arets_avskr_uppskr_bygg": arets_avskr_uppskr_bygg,
         "aterfor_uppskr_fsg_bygg": aterfor_uppskr_fsg_bygg,
         "ack_uppskr_bygg_ub": ack_uppskr_bygg_ub,
+
+        # Impairments
         "ack_nedskr_bygg_ib": ack_nedskr_bygg_ib,
         "arets_nedskr_bygg": arets_nedskr_bygg,
         "aterfor_nedskr_bygg": aterfor_nedskr_bygg,

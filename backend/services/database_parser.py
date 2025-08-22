@@ -1429,7 +1429,7 @@ class DatabaseParser:
         print("DEBUG: Starting BYGG K2 parser...")
         from .bygg_k2_parser import parse_bygg_k2_from_sie_text
         print("DEBUG: K2 parser imported successfully")
-        bygg_k2_data = parse_bygg_k2_from_sie_text(se_content)
+        bygg_k2_data = parse_bygg_k2_from_sie_text(se_content, debug=True)
         print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
         print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
         
