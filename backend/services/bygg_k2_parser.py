@@ -90,8 +90,17 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
 
     print(f"DEBUG K2: Found {len(trans_by_ver)} vouchers with transactions")
     
+    # Debug: Look for the specific voucher A 312
+    if ('A', 312) in trans_by_ver:
+        print(f"DEBUG K2: Found voucher A 312: {trans_by_ver[('A', 312)]}")
+    else:
+        print(f"DEBUG K2: Voucher A 312 not found. Available vouchers: {list(trans_by_ver.keys())[:5]}...")
+    
     # --- Per verifikat ---
     for key, txs in trans_by_ver.items():
+        # Debug the specific depreciation voucher
+        if any(a in ACC_DEP_BYGG for a,_ in txs) or any(a in DEPR_COST for a,_ in txs):
+            print(f"DEBUG K2: Checking voucher {key} with transactions: {txs}")
         A_D  = sum(amt for a,amt in txs if in_building_assets(a) and amt > 0)
         A_K  = sum(-amt for a,amt in txs if in_building_assets(a) and amt < 0)
         F2085_D = sum(amt for a,amt in txs if a == UPSKR_FOND and amt > 0)
