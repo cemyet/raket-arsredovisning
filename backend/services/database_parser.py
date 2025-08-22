@@ -1465,6 +1465,11 @@ class DatabaseParser:
             if not variable_name:
                 continue
                 
+            # Completely skip all BYGG variables - no database processing at all
+            # (K2 parser values are already pre-loaded in calculated_variables)
+            if variable_name in bygg_variables:
+                continue
+                
             # Skip rows without accounts (but keep the variable_name for later reference)
             if not accounts_included:
                 # Still add to calculated_variables with 0 amounts for toggle-only rows
@@ -1472,10 +1477,6 @@ class DatabaseParser:
                     'current': 0.0,
                     'previous': 0.0
                 }
-                continue
-                
-            # Completely skip all BYGG variables - no database processing at all
-            if variable_name in bygg_variables:
                 continue
                 
             # Use database calculation only for non-BYGG variables
