@@ -1421,9 +1421,20 @@ class DatabaseParser:
         print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
         print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
         
+        # Define all BYGG variable names to exclude from database processing
+        bygg_variables = set(bygg_k2_data.keys())
+        
         results = []
         user_toggles = user_toggles or {}
         calculated_variables = {}  # Store calculated values for formula references
+        
+        # Pre-populate calculated_variables with K2 parser results
+        for var_name, value in bygg_k2_data.items():
+            calculated_variables[var_name] = {
+                'current': value,
+                'previous': 0.0
+            }
+            print(f"DEBUG: Pre-loaded BYGG K2 variable {var_name}: {value}")
         
 
         
@@ -1432,41 +1443,41 @@ class DatabaseParser:
         
         # First pass: Calculate all account-based variables
         for mapping in sorted_mappings:
-            variable_name = mapping.get('variable_name', '')
+            variable_name = mapping.get('variable_name', '').strip()
             accounts_included = mapping.get('accounts_included', '')
             
-            if variable_name and accounts_included:
-                # Skip database calculation for BYGG variables - use K2 parser only
-                if variable_name in bygg_k2_data:
-                    current_amount = bygg_k2_data[variable_name]
-                    previous_amount = 0.0  # Only current year calculated from transactions
-                    print(f"DEBUG: Using BYGG K2 calculation for {variable_name}: {current_amount}")
-                else:
-                    # Use database calculation for non-BYGG variables
-                    current_amount, previous_amount = self._calculate_noter_amounts(
-                        mapping, current_ub, previous_ub, current_ib, previous_ib
-                    )
+            # Skip rows without variable names (they're display-only or handled elsewhere)
+            if not variable_name or not accounts_included:
+                continue
                 
-                calculated_variables[variable_name] = {
-                    'current': current_amount, 
-                    'previous': previous_amount
-                }
+            # Completely skip all BYGG variables - no database processing at all
+            if variable_name in bygg_variables:
+                continue
+                
+            # Use database calculation only for non-BYGG variables
+            current_amount, previous_amount = self._calculate_noter_amounts(
+                mapping, current_ub, previous_ub, current_ib, previous_ib
+            )
+            
+            calculated_variables[variable_name] = {
+                'current': current_amount, 
+                'previous': previous_amount
+            }
         
         # Second pass: Calculate all formula-based variables using stored values
         for mapping in sorted_mappings:
-            variable_name = mapping.get('variable_name', '')
+            variable_name = mapping.get('variable_name', '').strip()
             is_calculated = self._normalize_is_calculated(mapping.get('calculated', False))
             formula = mapping.get('formula', '')
             
-            if variable_name and is_calculated and formula and variable_name not in calculated_variables:
-                # Don't override BYGG variables that were already calculated in first pass
-                if variable_name in bygg_k2_data:
-                    # Skip - these were already handled in first pass
-                    continue
-                else:
-                    current_amount, previous_amount = self._evaluate_noter_formula(
-                        formula, calculated_variables
-                    )
+            # Skip rows without variable names or BYGG variables
+            if not variable_name or variable_name in bygg_variables:
+                continue
+            
+            if is_calculated and formula and variable_name not in calculated_variables:
+                current_amount, previous_amount = self._evaluate_noter_formula(
+                    formula, calculated_variables
+                )
                 
                 calculated_variables[variable_name] = {
                     'current': current_amount,
