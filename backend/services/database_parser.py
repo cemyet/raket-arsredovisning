@@ -1426,8 +1426,10 @@ class DatabaseParser:
         current_ub, previous_ub, current_ib, previous_ib = self.parse_ib_ub_balances(se_content)
         
         # Get precise BYGG calculations from transaction analysis
+        print("DEBUG: Starting BYGG K2 parser...")
         try:
             from .bygg_k2_parser import parse_bygg_k2_from_sie_text
+            print("DEBUG: K2 parser imported successfully")
             bygg_k2_data = parse_bygg_k2_from_sie_text(se_content)
             print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
             print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
