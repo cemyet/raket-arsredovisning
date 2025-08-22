@@ -76,11 +76,11 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     )
     trans_re = re.compile(
         r'^#(?:BTRANS|RTRANS|TRANS)\s+'
-        r'(\d{3,4})'               # account
-        r'(?:\s+\{.*?\})?'         # optional {...}
-        r'\s+(-?[0-9][0-9\s.,]*)'  # amount
-        r'(?:\s+\d{8})?'           # optional date
-        r'(?:\s+".*?")?'           # optional text
+        r'(\d{3,4})'                            
+        r'(?:\s+\{.*?\})?'                      
+        r'\s+(-?(?:\d{1,3}(?:[ \u00A0]?\d{3})*|\d+)(?:[.,]\d+)?)'  # amount only
+        r'(?:\s+\d{8})?'                        
+        r'(?:\s+".*?")?'                        
         r'\s*$'
     )
 
