@@ -155,7 +155,7 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         has_PL_disposal = any(a in DISPOSAL_PL for a,_ in txs)
         has_depr_cost = any((a in DEPR_COST and amt > 0) for a,amt in txs)
         has_imp_cost  = any((a == IMPAIR_COST and amt > 0) for a,amt in txs)
-        has_imp_rev   = any((a == IMPAIR_REV  and amt < 0) for a,_ in txs)
+        has_imp_rev   = any((a == IMPAIR_REV  and amt < 0) for a,amt in txs)
 
         # 1) Disposal
         is_disposal = (A_K > 0) and (DEP_D > 0 or has_PL_disposal or F2085_D > 0)
