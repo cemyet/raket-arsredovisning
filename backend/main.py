@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 
 # Importera våra moduler
-from services.report_generator import ReportGenerator
+# from services.report_generator import ReportGenerator  # Disabled - using DatabaseParser instead
 from services.supabase_service import SupabaseService
 from services.database_parser import DatabaseParser
 from services.supabase_database import db
@@ -44,7 +44,7 @@ app.add_middleware(
 )
 
 # Initiera services
-report_generator = ReportGenerator()
+# report_generator = ReportGenerator()  # Disabled - using DatabaseParser instead
 supabase_service = SupabaseService()
 bolagsverket_service = BolagsverketService()
 
@@ -93,7 +93,7 @@ async def upload_se_file(file: UploadFile = File(...)):
         
         # Use the new database-driven parser
         parser = DatabaseParser()
-        current_accounts, previous_accounts = parser.parse_account_balances(se_content)
+        current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts = parser.parse_account_balances(se_content)
         company_info = parser.extract_company_info(se_content)
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         
@@ -104,7 +104,12 @@ async def upload_se_file(file: UploadFile = File(...)):
         ink2_data = parser.parse_ink2_data(current_accounts, company_info.get('fiscal_year'), rr_data)
         
         # Parse Noter data (notes) - pass SE content and user toggles if needed
-        noter_data = parser.parse_noter_data(se_content)
+        try:
+            noter_data = parser.parse_noter_data(se_content)
+            print(f"Successfully parsed {len(noter_data)} Noter items")
+        except Exception as e:
+            print(f"Error parsing Noter data: {e}")
+            noter_data = []
         
         # Calculate pension tax variables for frontend
         pension_premier = abs(float(current_accounts.get('7410', 0.0)))
@@ -287,7 +292,7 @@ async def test_parser(file: UploadFile = File(...)):
         parser = DatabaseParser()
         
         # Parse data
-        current_accounts, previous_accounts = parser.parse_account_balances(se_content)
+        current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts = parser.parse_account_balances(se_content)
         company_info = parser.extract_company_info(se_content)
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         br_data = parser.parse_br_data(current_accounts, previous_accounts)
@@ -948,6 +953,6 @@ if __name__ == "__main__":
     import os
     
     # Get port from environment variable (Railway sets this)
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 8080))
     
     uvicorn.run(app, host="0.0.0.0", port=port) 

@@ -1,5 +1,4 @@
 import os
-import sys
 import uuid
 import shutil
 from datetime import datetime
@@ -9,29 +8,8 @@ import asyncio
 # Import the new database-driven parser
 from services.database_parser import DatabaseParser
 
-# Lägg till sökväg till original Python-kod
-sys.path.append('/Users/cem/Desktop/ÅR')
-
-# Importera från original kod
-try:
-    from merged_rr_br_not import (
-        extract_orgnr_from_se,
-        extract_fiscal_year_robust,
-        extract_account_balances_from_se,
-        load_sru_from_se_file,
-        create_rr_structure,
-        create_br1_structure,
-        process_br1_data,
-        calculate_rr_sums,
-        export_pdf,
-        export_pdf_br,
-        create_management_report_pdf,
-        create_notes_pdf,
-        merge_all_pdfs,
-        scrape_allabolag_data
-    )
-except ImportError as e:
-    print(f"Varning: Kunde inte importera från original kod: {e}")
+# Note: Legacy imports from merged_rr_br_not removed since this module is not available
+# and ReportGenerator is currently disabled in favor of DatabaseParser
 
 class ReportGenerator:
     def __init__(self):
@@ -99,7 +77,7 @@ class ReportGenerator:
             print("🔄 Using new database-driven parser...")
             
             # Parse account balances using new parser
-            current_accounts, previous_accounts = self.database_parser.parse_account_balances(se_content)
+            current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts = self.database_parser.parse_account_balances(se_content)
             print(f"📊 Parsed {len(current_accounts)} current year accounts, {len(previous_accounts)} previous year accounts")
             
             # Parse RR and BR data using new parser
