@@ -700,12 +700,28 @@ class DatabaseParser:
                     rr_values[item['variable_name']] = item['current_amount']
             
             if rr_values:
-                supabase.table('financial_data').upsert({
-                    'company_id': company_id,
-                    'fiscal_year': fiscal_year,
-                    'report_type': 'RR',
-                    **rr_values
-                }).execute()
+                try:
+                    supabase.table('financial_data').upsert({
+                        'company_id': company_id,
+                        'fiscal_year': fiscal_year,
+                        'report_type': 'RR',
+                        **rr_values
+                    }).execute()
+                except Exception as e:
+                    print(f"Warning: Could not store some RR data: {e}")
+                    # Try storing only basic data without potentially problematic columns
+                    basic_rr_data = {k: v for k, v in rr_values.items() 
+                                   if not any(problematic in k for problematic in ['AktiveratArbeteEgenRakning'])}
+                    if basic_rr_data:
+                        try:
+                            supabase.table('financial_data').upsert({
+                                'company_id': company_id,
+                                'fiscal_year': fiscal_year,
+                                'report_type': 'RR',
+                                **basic_rr_data
+                            }).execute()
+                        except Exception as e2:
+                            print(f"Warning: Could not store RR data at all: {e2}")
             
             # Store BR data
             br_values = {}
@@ -1441,11 +1457,21 @@ class DatabaseParser:
         
         # First pass: Calculate all account-based variables
         for mapping in sorted_mappings:
-            variable_name = mapping.get('variable_name', '').strip()
+            variable_name = (mapping.get('variable_name') or '').strip()
             accounts_included = mapping.get('accounts_included', '')
             
-            # Skip rows without variable names (they're display-only or handled elsewhere)
-            if not variable_name or not accounts_included:
+            # Skip rows without variable names - they're toggle-only display rows
+            # These will be included in final results with amount = 0
+            if not variable_name:
+                continue
+                
+            # Skip rows without accounts (but keep the variable_name for later reference)
+            if not accounts_included:
+                # Still add to calculated_variables with 0 amounts for toggle-only rows
+                calculated_variables[variable_name] = {
+                    'current': 0.0,
+                    'previous': 0.0
+                }
                 continue
                 
             # Completely skip all BYGG variables - no database processing at all
@@ -1464,7 +1490,7 @@ class DatabaseParser:
         
         # Second pass: Calculate all formula-based variables using stored values
         for mapping in sorted_mappings:
-            variable_name = mapping.get('variable_name', '').strip()
+            variable_name = (mapping.get('variable_name') or '').strip()
             is_calculated = self._normalize_is_calculated(mapping.get('calculated', False))
             formula = mapping.get('formula', '')
             
@@ -1498,7 +1524,7 @@ class DatabaseParser:
                 current_amount = 0.0
                 previous_amount = 0.0
                 
-                variable_name = mapping.get('variable_name', '')
+                variable_name = mapping.get('variable_name') or ''
                 
                 if self._normalize_is_calculated(mapping.get('calculated', False)):
                     # Use pre-calculated values from first pass if available
