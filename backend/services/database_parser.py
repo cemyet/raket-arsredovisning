@@ -1436,14 +1436,16 @@ class DatabaseParser:
             accounts_included = mapping.get('accounts_included', '')
             
             if variable_name and accounts_included:
-                current_amount, previous_amount = self._calculate_noter_amounts(
-                    mapping, current_ub, previous_ub, current_ib, previous_ib
-                )
-                # Override BYGG variables with transaction-based calculations
+                # Skip database calculation for BYGG variables - use K2 parser only
                 if variable_name in bygg_k2_data:
                     current_amount = bygg_k2_data[variable_name]
                     previous_amount = 0.0  # Only current year calculated from transactions
                     print(f"DEBUG: Using BYGG K2 calculation for {variable_name}: {current_amount}")
+                else:
+                    # Use database calculation for non-BYGG variables
+                    current_amount, previous_amount = self._calculate_noter_amounts(
+                        mapping, current_ub, previous_ub, current_ib, previous_ib
+                    )
                 
                 calculated_variables[variable_name] = {
                     'current': current_amount, 
@@ -1457,11 +1459,10 @@ class DatabaseParser:
             formula = mapping.get('formula', '')
             
             if variable_name and is_calculated and formula and variable_name not in calculated_variables:
-                # Check if BYGG variable should use K2 data instead of formula
+                # Don't override BYGG variables that were already calculated in first pass
                 if variable_name in bygg_k2_data:
-                    current_amount = bygg_k2_data[variable_name]
-                    previous_amount = 0.0
-                    print(f"DEBUG: Using BYGG K2 formula override for {variable_name}: {current_amount}")
+                    # Skip - these were already handled in first pass
+                    continue
                 else:
                     current_amount, previous_amount = self._evaluate_noter_formula(
                         formula, calculated_variables

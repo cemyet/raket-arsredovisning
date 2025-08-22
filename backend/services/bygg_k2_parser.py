@@ -222,6 +222,9 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
       - arets_nedskr_bygg
     )
 
+    # --- Derived calculations ---
+    red_varde_bygg = bygg_ub + ack_avskr_bygg_ub + ack_nedskr_bygg_ub + ack_uppskr_bygg_ub  # Book value
+
     return {
         # IB/UB assets
         "bygg_ib": bygg_ib,
@@ -249,4 +252,7 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         "aterfor_nedskr_bygg": aterfor_nedskr_bygg,
         "aterfor_nedskr_fsg_bygg": aterfor_nedskr_fsg_bygg,
         "ack_nedskr_bygg_ub": ack_nedskr_bygg_ub,
+
+        # Derived book value
+        "red_varde_bygg": red_varde_bygg,
     }
