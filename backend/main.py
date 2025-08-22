@@ -160,7 +160,13 @@ async def upload_se_file(file: UploadFile = File(...)):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fel vid laddning av fil: {str(e)}")
+        import traceback
+        error_detail = f"Fel vid laddning av fil: {str(e)}"
+        full_traceback = traceback.format_exc()
+        print(f"ERROR in upload_se_file: {error_detail}")
+        print(f"Full traceback: {full_traceback}")
+        # Return more detailed error for debugging (you may want to remove this in production)
+        raise HTTPException(status_code=500, detail=f"Fel vid laddning av fil: {str(e)} | Traceback: {full_traceback}")
 
 @app.post("/generate-report", response_model=ReportResponse)
 async def generate_report(
