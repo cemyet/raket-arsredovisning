@@ -1427,17 +1427,11 @@ class DatabaseParser:
         
         # Get precise BYGG calculations from transaction analysis
         print("DEBUG: Starting BYGG K2 parser...")
-        try:
-            from .bygg_k2_parser import parse_bygg_k2_from_sie_text
-            print("DEBUG: K2 parser imported successfully")
-            bygg_k2_data = parse_bygg_k2_from_sie_text(se_content)
-            print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
-            print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
-        except Exception as e:
-            print(f"ERROR: BYGG K2 parser failed: {e}")
-            import traceback
-            traceback.print_exc()
-            bygg_k2_data = {}  # Fallback to empty dict
+        from .bygg_k2_parser import parse_bygg_k2_from_sie_text
+        print("DEBUG: K2 parser imported successfully")
+        bygg_k2_data = parse_bygg_k2_from_sie_text(se_content)
+        print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
+        print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
         
         results = []
         user_toggles = user_toggles or {}

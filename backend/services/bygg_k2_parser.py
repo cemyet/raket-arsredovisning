@@ -23,6 +23,9 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
     def in_building_assets(acct: int) -> bool:
         return any(lo <= acct <= hi for lo,hi in BUILDING_ASSET_RANGES)
 
+    def _to_float(s: str) -> float:
+        return float(s.strip().replace(" ", "").replace(",", "."))
+
     def get_balance(kind_flag: str, accounts):
         """Summera #IB eller #UB för angivet kontoset/range-lista."""
         total = 0.0
@@ -43,8 +46,21 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
         return total
 
     # --- Läs verifikationer ---
-    ver_header_re = re.compile(r'#VER\s+([A-ZÅÄÖ])\s+(\d+)\s+(\d{8})\s+"[^"]*"')
-    trans_re = re.compile(r'#(?:BTRANS|RTRANS|TRANS)\s+(\d{3,4})\s+\{\}?\s+(-?[0-9.,]+)')
+    # Accepts #VER with/without quotes and extra tokens after date
+    ver_header_re = re.compile(
+        r'^#VER\s+(\S+)\s+(\d+)\s+(\d{8})(?:\s+(?:"[^"]*"|.+))?\s*$'
+    )
+
+    # Accepts #TRANS/#BTRANS/#RTRANS with or without {} + optional date/text
+    trans_re = re.compile(
+        r'^#(?:BTRANS|RTRANS|TRANS)\s+'
+        r'(\d{3,4})'               # account
+        r'(?:\s+\{.*?\})?'         # optional {...}
+        r'\s+(-?[0-9][0-9\s.,]*)'  # amount
+        r'(?:\s+\d{8})?'           # optional date
+        r'(?:\s+".*?")?'           # optional text
+        r'\s*$'
+    )
 
     trans_by_ver = defaultdict(list)
     current_ver = None
@@ -66,7 +82,7 @@ def parse_bygg_k2_from_sie_text(sie_text: str):
             mt = trans_re.match(t)
             if mt:
                 acct = int(mt.group(1))
-                amt = float(mt.group(2).replace(",", "."))
+                amt = _to_float(mt.group(2))
                 trans_by_ver[current_ver].append((acct, amt))
 
     # --- IB från SIE ---
