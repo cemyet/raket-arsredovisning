@@ -219,7 +219,7 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     )
 
     # --- Derived calculations ---
-    red_varde_ovriga = ovriga_ub + ack_avskr_ovriga_ub + ack_nedskr_ovriga_ub  # Book value
+    red_varde_ovrmat = ovriga_ub + ack_avskr_ovriga_ub + ack_nedskr_ovriga_ub  # Book value
 
     # --- SRU ADDITION: Handle rare cases of accounts from other ranges with SRU 7214 ---
     # This is a separate addition to the base logic, not integrated into it
@@ -262,7 +262,7 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             ovriga_ub = ovriga_ib + arets_inkop_ovriga - arets_fsg_ovriga + arets_omklass_ovriga
             ack_avskr_ovriga_ub = ack_avskr_ovriga_ib + aterfor_avskr_fsg_ovriga - arets_avskr_ovriga
             ack_nedskr_ovriga_ub = ack_nedskr_ovriga_ib + aterfor_nedskr_fsg_ovriga + aterfor_nedskr_ovriga - arets_nedskr_ovriga
-            red_varde_ovriga = ovriga_ub + ack_avskr_ovriga_ub + ack_nedskr_ovriga_ub
+            red_varde_ovrmat = ovriga_ub + ack_avskr_ovriga_ub + ack_nedskr_ovriga_ub
             
             if debug:
                 print(f"DEBUG ÖVRIGA SRU: Added totals - Assets: {additional_ovriga_ib}, Depreciation: {additional_avskr_ib}, Impairment: {additional_nedskr_ib}")
@@ -289,5 +289,5 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         "ack_nedskr_ovriga_ub": ack_nedskr_ovriga_ub,
 
         # Derived book value
-        "red_varde_ovriga": red_varde_ovriga,
+        "red_varde_ovrmat": red_varde_ovrmat,
     }
