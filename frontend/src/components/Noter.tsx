@@ -148,7 +148,7 @@ export function Noter({ noterData, fiscalYear, previousYear }: NoterProps) {
             if (visibleItems.length === 0) return null;
 
             // Hide specific blocks if all amounts are zero
-            const blocksToHideIfZero = ['BYGG', 'MASKIN', 'INV', 'MAT', 'LVP'];
+            const blocksToHideIfZero = ['KONCERN', 'BYGG', 'MASKIN', 'INV', 'MAT', 'LVP'];
             if (blocksToHideIfZero.includes(block)) {
               const hasNonZeroAmount = blockItems.some(item => 
                 (item.current_amount !== 0 && item.current_amount !== null) || 
