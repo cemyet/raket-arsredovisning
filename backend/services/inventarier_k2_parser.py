@@ -34,14 +34,58 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
 
+    # --- Parse SRU codes to filter accounts ---
+    sru_codes = {}
+    sru_re = re.compile(r'^#SRU\s+(\d+)\s+(\d+)\s*$')
+    for raw in lines:
+        s = raw.strip()
+        m = sru_re.match(s)
+        if m:
+            account = int(m.group(1))
+            sru = int(m.group(2))
+            sru_codes[account] = sru
+            if debug:
+                print(f"DEBUG INVENTARIER: Found SRU {account} -> {sru}")
+
     # --- CONFIG (K2 – inventarier) ---
+    # Primary: Account ranges (always included)
     ASSET_RANGES = [(1220, 1227), (1230, 1237), (1240, 1247), (1250, 1257)]
     ACC_DEP = {1229, 1239, 1249, 1259}
     ACC_IMP = {1228, 1238, 1248, 1258}
+    
+    # Secondary: SRU code filtering (only when SRU codes exist)
+    # Exclude accounts that have SRU codes but don't match 7215
+    def should_exclude_account(acct: int) -> bool:
+        if not sru_codes:
+            return False  # No SRU codes = no exclusions
+        if acct not in sru_codes:
+            return False  # Account has no SRU code = include it
+        # Exclude if account has SRU code but it's not 7215 (inventarier)
+        return sru_codes[acct] != 7215
+    
+    # Filter out accounts with wrong SRU codes
+    if sru_codes:
+        # Filter asset ranges
+        filtered_asset_ranges = []
+        for lo, hi in ASSET_RANGES:
+            for acct in range(lo, hi + 1):
+                if not should_exclude_account(acct):
+                    filtered_asset_ranges.append((acct, acct))
+        ASSET_RANGES = filtered_asset_ranges
+        
+        # Filter depreciation and impairment accounts
+        ACC_DEP = {acct for acct in ACC_DEP if not should_exclude_account(acct)}
+        ACC_IMP = {acct for acct in ACC_IMP if not should_exclude_account(acct)}
+    
     DISPOSAL_PL = {3973, 7973}
     DEPR_COST = {7832, 7833, 7834, 7835, 7839}
     IMPAIR_COST = 7730
     IMPAIR_REV = 7780
+    
+    if debug:
+        print(f"DEBUG INVENTARIER: Filtered asset ranges: {ASSET_RANGES}")
+        print(f"DEBUG INVENTARIER: Filtered depreciation accounts: {ACC_DEP}")
+        print(f"DEBUG INVENTARIER: Filtered impairment accounts: {ACC_IMP}")
 
     # --- Helpers ---
     def in_assets(acct: int) -> bool:

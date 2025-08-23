@@ -32,15 +32,71 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
 
+    # --- Parse SRU codes to include additional accounts ---
+    sru_codes = {}
+    sru_re = re.compile(r'^#SRU\s+(\d+)\s+(\d+)\s*$')
+    for raw in lines:
+        s = raw.strip()
+        m = sru_re.match(s)
+        if m:
+            account = int(m.group(1))
+            sru = int(m.group(2))
+            sru_codes[account] = sru
+            if debug:
+                print(f"DEBUG BYGG: Found SRU {account} -> {sru}")
+
     # --- CONFIG (K2 – bygg/mark) ---
+    # Primary: Standard building asset ranges (always included)
     BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
     ACC_DEP_BYGG = {1119, 1159}
     ACC_IMP_BYGG = {1158}
+    
+    # Secondary: SRU code additions (only when SRU codes exist)
+    # Add accounts from inventarier ranges that have SRU 7214 (byggnadsinventarier)
+    if sru_codes:
+        additional_building_assets = []
+        additional_dep_accounts = set()
+        additional_imp_accounts = set()
+        
+        for account, sru in sru_codes.items():
+            if sru == 7214:  # Byggnadsinventarier belongs to bygg
+                if 1220 <= account <= 1259:  # In inventarier range but belongs to bygg
+                    # Categorize based on account number pattern
+                    account_str = str(account)
+                    last_digit = int(account_str[-1])
+                    
+                    if last_digit == 8:  # Pattern: xxx8 = Ack nedskrivningar
+                        additional_imp_accounts.add(account)
+                        if debug:
+                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as impairment account")
+                    elif last_digit == 9:  # Pattern: xxx9 = Ack avskrivningar  
+                        additional_dep_accounts.add(account)
+                        if debug:
+                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
+                    elif last_digit == 4:  # Pattern: xxx4 = Ack avskrivningar (like 1224)
+                        additional_dep_accounts.add(account)
+                        if debug:
+                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
+                    else:  # Asset account
+                        additional_building_assets.append((account, account))
+                        if debug:
+                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as building asset")
+        
+        # Add SRU 7214 accounts to building assets
+        BUILDING_ASSET_RANGES = BUILDING_ASSET_RANGES + additional_building_assets
+        ACC_DEP_BYGG = ACC_DEP_BYGG | additional_dep_accounts
+        ACC_IMP_BYGG = ACC_IMP_BYGG | additional_imp_accounts
+    
     UPSKR_FOND = 2085
     DISPOSAL_PL = {3972, 7972}
     DEPR_COST = {7820, 7821, 7824, 7829}
     IMPAIR_COST = 7720
     IMPAIR_REV  = 7770
+    
+    if debug:
+        print(f"DEBUG BYGG: Final building asset ranges: {BUILDING_ASSET_RANGES}")
+        print(f"DEBUG BYGG: Final depreciation accounts: {ACC_DEP_BYGG}")
+        print(f"DEBUG BYGG: Final impairment accounts: {ACC_IMP_BYGG}")
 
     # --- Helpers ---
     def in_building_assets(acct: int) -> bool:
