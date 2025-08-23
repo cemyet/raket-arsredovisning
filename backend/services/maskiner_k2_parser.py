@@ -16,14 +16,72 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
 
+    # --- Parse SRU codes for combined logic ---
+    sru_codes = {}
+    sru_re = re.compile(r'^#SRU\s+(\d+)\s+(\d+)\s*$')
+    for raw in lines:
+        s = raw.strip()
+        m = sru_re.match(s)
+        if m:
+            account = int(m.group(1))
+            sru = int(m.group(2))
+            sru_codes[account] = sru
+            if debug:
+                print(f"DEBUG MASKINER: Found SRU {account} -> {sru}")
+
     # --- CONFIG (K2 – maskiner) ---
-    ASSET_RANGES = [(1210, 1217)]
-    ACC_DEP_MASK = {1219}
-    ACC_IMP_MASK = {1218}
+    # Base maskiner account ranges
+    BASE_ASSET_RANGES = [(1210, 1217)]
+    BASE_ACC_DEP_MASK = {1219}
+    BASE_ACC_IMP_MASK = {1218}
+    
+    # Combined logic: Account interval AND SRU code must match
+    def belongs_to_maskiner(acct: int) -> bool:
+        # Check if account is in maskiner ranges
+        in_maskiner_range = any(lo <= acct <= hi for lo, hi in BASE_ASSET_RANGES) or \
+                           acct in BASE_ACC_DEP_MASK or acct in BASE_ACC_IMP_MASK
+        
+        if not sru_codes:
+            # No SRU codes = use original interval logic
+            return in_maskiner_range
+        
+        if acct not in sru_codes:
+            # Account has no SRU code = use interval logic
+            return in_maskiner_range
+        
+        account_sru = sru_codes[acct]
+        
+        # Primary rule: In maskiner range AND SRU = 7215
+        if in_maskiner_range and account_sru == 7215:
+            return True
+        
+        # Fallback rule: If in maskiner range but wrong SRU, let SRU decide
+        if in_maskiner_range and account_sru != 7215:
+            # SRU overrides - this account belongs elsewhere
+            return False
+        
+        # Account not in maskiner range - check if SRU brings it in
+        return account_sru == 7215
+    
+    # Build filtered account sets
+    ASSET_RANGES = []
+    for lo, hi in BASE_ASSET_RANGES:
+        for acct in range(lo, hi + 1):
+            if belongs_to_maskiner(acct):
+                ASSET_RANGES.append((acct, acct))
+    
+    ACC_DEP_MASK = {acct for acct in BASE_ACC_DEP_MASK if belongs_to_maskiner(acct)}
+    ACC_IMP_MASK = {acct for acct in BASE_ACC_IMP_MASK if belongs_to_maskiner(acct)}
+    
     DISPOSAL_PL = {3973, 7973}
     DEPR_COST = {7830, 7831}     # exkluderar 7833 och 7839
     IMPAIR_COST = 7730
     IMPAIR_REV  = 7780
+    
+    if debug:
+        print(f"DEBUG MASKINER: Filtered asset ranges: {ASSET_RANGES}")
+        print(f"DEBUG MASKINER: Filtered depreciation accounts: {ACC_DEP_MASK}")
+        print(f"DEBUG MASKINER: Filtered impairment accounts: {ACC_IMP_MASK}")
 
     # --- Helpers ---
     def in_assets(acct: int) -> bool:

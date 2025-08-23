@@ -48,34 +48,49 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
                 print(f"DEBUG INVENTARIER: Found SRU {account} -> {sru}")
 
     # --- CONFIG (K2 – inventarier) ---
-    # Primary: Account ranges (always included)
-    ASSET_RANGES = [(1220, 1227), (1230, 1237), (1240, 1247), (1250, 1257)]
-    ACC_DEP = {1229, 1239, 1249, 1259}
-    ACC_IMP = {1228, 1238, 1248, 1258}
+    # Base account ranges for inventarier
+    BASE_ASSET_RANGES = [(1220, 1227), (1230, 1237), (1240, 1247), (1250, 1257)]
+    BASE_ACC_DEP = {1229, 1239, 1249, 1259}
+    BASE_ACC_IMP = {1228, 1238, 1248, 1258}
     
-    # Secondary: SRU code filtering (only when SRU codes exist)
-    # Exclude accounts that have SRU codes but don't match 7215
-    def should_exclude_account(acct: int) -> bool:
-        if not sru_codes:
-            return False  # No SRU codes = no exclusions
-        if acct not in sru_codes:
-            return False  # Account has no SRU code = include it
-        # Exclude if account has SRU code but it's not 7215 (inventarier)
-        return sru_codes[acct] != 7215
-    
-    # Filter out accounts with wrong SRU codes
-    if sru_codes:
-        # Filter asset ranges
-        filtered_asset_ranges = []
-        for lo, hi in ASSET_RANGES:
-            for acct in range(lo, hi + 1):
-                if not should_exclude_account(acct):
-                    filtered_asset_ranges.append((acct, acct))
-        ASSET_RANGES = filtered_asset_ranges
+    # Combined logic: Account interval AND SRU code must match
+    def belongs_to_inventarier(acct: int) -> bool:
+        # Check if account is in inventarier ranges
+        in_inventarier_range = any(lo <= acct <= hi for lo, hi in BASE_ASSET_RANGES) or \
+                              acct in BASE_ACC_DEP or acct in BASE_ACC_IMP
         
-        # Filter depreciation and impairment accounts
-        ACC_DEP = {acct for acct in ACC_DEP if not should_exclude_account(acct)}
-        ACC_IMP = {acct for acct in ACC_IMP if not should_exclude_account(acct)}
+        if not sru_codes:
+            # No SRU codes = use original interval logic
+            return in_inventarier_range
+        
+        if acct not in sru_codes:
+            # Account has no SRU code = use interval logic
+            return in_inventarier_range
+        
+        account_sru = sru_codes[acct]
+        
+        # Primary rule: In inventarier range AND SRU = 7215
+        if in_inventarier_range and account_sru == 7215:
+            return True
+        
+        # Fallback rule: If in inventarier range but wrong SRU, let SRU decide
+        if in_inventarier_range and account_sru != 7215:
+            # SRU overrides - this account belongs elsewhere
+            return False
+        
+        # Account not in inventarier range - check if SRU brings it in
+        # (This handles cases where accounts outside normal ranges have SRU 7215)
+        return account_sru == 7215
+    
+    # Build filtered account sets
+    ASSET_RANGES = []
+    for lo, hi in BASE_ASSET_RANGES:
+        for acct in range(lo, hi + 1):
+            if belongs_to_inventarier(acct):
+                ASSET_RANGES.append((acct, acct))
+    
+    ACC_DEP = {acct for acct in BASE_ACC_DEP if belongs_to_inventarier(acct)}
+    ACC_IMP = {acct for acct in BASE_ACC_IMP if belongs_to_inventarier(acct)}
     
     DISPOSAL_PL = {3973, 7973}
     DEPR_COST = {7832, 7833, 7834, 7835, 7839}

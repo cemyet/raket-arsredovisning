@@ -46,46 +46,70 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
                 print(f"DEBUG BYGG: Found SRU {account} -> {sru}")
 
     # --- CONFIG (K2 – bygg/mark) ---
-    # Primary: Standard building asset ranges (always included)
-    BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
-    ACC_DEP_BYGG = {1119, 1159}
-    ACC_IMP_BYGG = {1158}
+    # Base building asset ranges
+    BASE_BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
+    BASE_ACC_DEP_BYGG = {1119, 1159}
+    BASE_ACC_IMP_BYGG = {1158}
     
-    # Secondary: SRU code additions (only when SRU codes exist)
-    # Add accounts from inventarier ranges that have SRU 7214 (byggnadsinventarier)
+    # Combined logic: Account interval AND SRU code must match, OR SRU overrides
+    def belongs_to_bygg(acct: int) -> bool:
+        # Check if account is in standard bygg ranges
+        in_bygg_range = any(lo <= acct <= hi for lo, hi in BASE_BUILDING_ASSET_RANGES) or \
+                       acct in BASE_ACC_DEP_BYGG or acct in BASE_ACC_IMP_BYGG
+        
+        if not sru_codes:
+            # No SRU codes = use original interval logic
+            return in_bygg_range
+        
+        if acct not in sru_codes:
+            # Account has no SRU code = use interval logic
+            return in_bygg_range
+        
+        account_sru = sru_codes[acct]
+        
+        # Primary rule: In bygg range AND SRU = 7214
+        if in_bygg_range and account_sru == 7214:
+            return True
+        
+        # Fallback rule: If in bygg range but wrong SRU, let SRU decide
+        if in_bygg_range and account_sru != 7214:
+            # SRU overrides - this account belongs elsewhere (shouldn't happen for standard bygg accounts)
+            return False
+        
+        # Account not in bygg range - check if SRU brings it in
+        # This handles cases like 1222 (byggnadsinventarier) with SRU 7214
+        return account_sru == 7214
+    
+    # Build account sets with combined logic
+    BUILDING_ASSET_RANGES = list(BASE_BUILDING_ASSET_RANGES)  # Start with base ranges
+    ACC_DEP_BYGG = set(BASE_ACC_DEP_BYGG)  # Start with base depreciation accounts
+    ACC_IMP_BYGG = set(BASE_ACC_IMP_BYGG)  # Start with base impairment accounts
+    
+    # Add accounts that belong to bygg based on combined logic
     if sru_codes:
-        additional_building_assets = []
-        additional_dep_accounts = set()
-        additional_imp_accounts = set()
-        
         for account, sru in sru_codes.items():
-            if sru == 7214:  # Byggnadsinventarier belongs to bygg
-                if 1220 <= account <= 1259:  # In inventarier range but belongs to bygg
-                    # Categorize based on account number pattern
-                    account_str = str(account)
-                    last_digit = int(account_str[-1])
-                    
-                    if last_digit == 8:  # Pattern: xxx8 = Ack nedskrivningar
-                        additional_imp_accounts.add(account)
-                        if debug:
-                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as impairment account")
-                    elif last_digit == 9:  # Pattern: xxx9 = Ack avskrivningar  
-                        additional_dep_accounts.add(account)
-                        if debug:
-                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
-                    elif last_digit == 4:  # Pattern: xxx4 = Ack avskrivningar (like 1224)
-                        additional_dep_accounts.add(account)
-                        if debug:
-                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
-                    else:  # Asset account
-                        additional_building_assets.append((account, account))
-                        if debug:
-                            print(f"DEBUG BYGG: Adding SRU 7214 account {account} as building asset")
-        
-        # Add SRU 7214 accounts to building assets
-        BUILDING_ASSET_RANGES = BUILDING_ASSET_RANGES + additional_building_assets
-        ACC_DEP_BYGG = ACC_DEP_BYGG | additional_dep_accounts
-        ACC_IMP_BYGG = ACC_IMP_BYGG | additional_imp_accounts
+            if belongs_to_bygg(account) and account not in [acct for lo, hi in BASE_BUILDING_ASSET_RANGES for acct in range(lo, hi+1)] and \
+               account not in BASE_ACC_DEP_BYGG and account not in BASE_ACC_IMP_BYGG:
+                # This is an additional account brought in by SRU
+                account_str = str(account)
+                last_digit = int(account_str[-1])
+                
+                if last_digit == 8:  # Pattern: xxx8 = Ack nedskrivningar
+                    ACC_IMP_BYGG.add(account)
+                    if debug:
+                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as impairment account")
+                elif last_digit == 9:  # Pattern: xxx9 = Ack avskrivningar  
+                    ACC_DEP_BYGG.add(account)
+                    if debug:
+                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
+                elif last_digit == 4:  # Pattern: xxx4 = Ack avskrivningar (like 1224)
+                    ACC_DEP_BYGG.add(account)
+                    if debug:
+                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
+                else:  # Asset account
+                    BUILDING_ASSET_RANGES.append((account, account))
+                    if debug:
+                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as building asset")
     
     UPSKR_FOND = 2085
     DISPOSAL_PL = {3972, 7972}
