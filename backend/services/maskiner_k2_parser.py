@@ -97,9 +97,11 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     arets_omklass_maskiner      = 0.0
     arets_avskr_maskiner        = 0.0
     aterfor_avskr_fsg_maskiner  = 0.0
+    omklass_avskr_maskiner      = 0.0
     arets_nedskr_maskiner       = 0.0
     aterfor_nedskr_maskiner     = 0.0
     aterfor_nedskr_fsg_maskiner = 0.0
+    omklass_nedskr_maskiner     = 0.0
 
     if debug:
         print(f"DEBUG MASKINER K2: vouchers parsed = {len(trans_by_ver)} (sample: {list(trans_by_ver)[:5]})")
@@ -175,12 +177,14 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         print(f"  maskiner_ub: {maskiner_ub}")
         print(f"  ack_avskr_maskiner_ib: {ack_avskr_maskiner_ib}")
         print(f"  aterfor_avskr_fsg_maskiner: {aterfor_avskr_fsg_maskiner}")
+        print(f"  omklass_avskr_maskiner: {omklass_avskr_maskiner}")
         print(f"  arets_avskr_maskiner: {arets_avskr_maskiner}")
         print(f"  ack_avskr_maskiner_ub: {ack_avskr_maskiner_ub}")
         print(f"  ack_nedskr_maskiner_ib: {ack_nedskr_maskiner_ib}")
         print(f"  arets_nedskr_maskiner: {arets_nedskr_maskiner}")
         print(f"  aterfor_nedskr_maskiner: {aterfor_nedskr_maskiner}")
         print(f"  aterfor_nedskr_fsg_maskiner: {aterfor_nedskr_fsg_maskiner}")
+        print(f"  omklass_nedskr_maskiner: {omklass_nedskr_maskiner}")
         print(f"  ack_nedskr_maskiner_ub: {ack_nedskr_maskiner_ub}")
         print(f"  red_varde_maskiner: {red_varde_maskiner}")
 
@@ -192,12 +196,14 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         "maskiner_ub": maskiner_ub,
         "ack_avskr_maskiner_ib": ack_avskr_maskiner_ib,
         "aterfor_avskr_fsg_maskiner": aterfor_avskr_fsg_maskiner,
+        "omklass_avskr_maskiner": omklass_avskr_maskiner,
         "arets_avskr_maskiner": arets_avskr_maskiner,
         "ack_avskr_maskiner_ub": ack_avskr_maskiner_ub,
         "ack_nedskr_maskiner_ib": ack_nedskr_maskiner_ib,
         "arets_nedskr_maskiner": arets_nedskr_maskiner,
         "aterfor_nedskr_maskiner": aterfor_nedskr_maskiner,
         "aterfor_nedskr_fsg_maskiner": aterfor_nedskr_fsg_maskiner,
+        "omklass_nedskr_maskiner": omklass_nedskr_maskiner,
         "ack_nedskr_maskiner_ub": ack_nedskr_maskiner_ub,
         "red_varde_maskiner": red_varde_maskiner,
     }

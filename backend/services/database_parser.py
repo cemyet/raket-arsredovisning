@@ -1556,6 +1556,17 @@ class DatabaseParser:
                         current_amount = values['current']
                         previous_amount = values['previous']
                 
+                # Apply +/- sign override from database mapping (for K2 parser values and others)
+                sign_override = mapping.get('plus_minus') or mapping.get('+/-') or mapping.get('sign')
+                if sign_override:
+                    s = str(sign_override).strip()
+                    if s == '+':
+                        current_amount = abs(current_amount)
+                        previous_amount = abs(previous_amount)
+                    elif s == '-':
+                        current_amount = -abs(current_amount)
+                        previous_amount = -abs(previous_amount)
+                
                 # Return all rows - frontend will handle filtering based on always_show and toggle_show
                 # This matches how RR/BR work
                 result = {
