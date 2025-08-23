@@ -32,11 +32,16 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
 
-    # --- Parse SRU codes to include additional accounts ---
+    # --- Parse SRU codes and account descriptions ---
     sru_codes = {}
+    account_descriptions = {}
+    
     sru_re = re.compile(r'^#SRU\s+(\d+)\s+(\d+)\s*$')
+    konto_re = re.compile(r'^#KONTO\s+(\d+)\s+"([^"]*)"')
+    
     for raw in lines:
         s = raw.strip()
+        # Parse SRU codes
         m = sru_re.match(s)
         if m:
             account = int(m.group(1))
@@ -44,72 +49,21 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             sru_codes[account] = sru
             if debug:
                 print(f"DEBUG BYGG: Found SRU {account} -> {sru}")
+        
+        # Parse account descriptions
+        m = konto_re.match(s)
+        if m:
+            account = int(m.group(1))
+            description = m.group(2)
+            account_descriptions[account] = description
+            if debug:
+                print(f"DEBUG BYGG: Found account {account} -> '{description}'")
 
     # --- CONFIG (K2 – bygg/mark) ---
-    # Base building asset ranges
-    BASE_BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
-    BASE_ACC_DEP_BYGG = {1119, 1159}
-    BASE_ACC_IMP_BYGG = {1158}
-    
-    # Combined logic: Account interval AND SRU code must match, OR SRU overrides
-    def belongs_to_bygg(acct: int) -> bool:
-        # Check if account is in standard bygg ranges
-        in_bygg_range = any(lo <= acct <= hi for lo, hi in BASE_BUILDING_ASSET_RANGES) or \
-                       acct in BASE_ACC_DEP_BYGG or acct in BASE_ACC_IMP_BYGG
-        
-        if not sru_codes:
-            # No SRU codes = use original interval logic
-            return in_bygg_range
-        
-        if acct not in sru_codes:
-            # Account has no SRU code = use interval logic
-            return in_bygg_range
-        
-        account_sru = sru_codes[acct]
-        
-        # Primary rule: In bygg range AND SRU = 7214
-        if in_bygg_range and account_sru == 7214:
-            return True
-        
-        # Fallback rule: If in bygg range but wrong SRU, let SRU decide
-        if in_bygg_range and account_sru != 7214:
-            # SRU overrides - this account belongs elsewhere (shouldn't happen for standard bygg accounts)
-            return False
-        
-        # Account not in bygg range - check if SRU brings it in
-        # This handles cases like 1222 (byggnadsinventarier) with SRU 7214
-        return account_sru == 7214
-    
-    # Build account sets with combined logic
-    BUILDING_ASSET_RANGES = list(BASE_BUILDING_ASSET_RANGES)  # Start with base ranges
-    ACC_DEP_BYGG = set(BASE_ACC_DEP_BYGG)  # Start with base depreciation accounts
-    ACC_IMP_BYGG = set(BASE_ACC_IMP_BYGG)  # Start with base impairment accounts
-    
-    # Add accounts that belong to bygg based on combined logic
-    if sru_codes:
-        for account, sru in sru_codes.items():
-            if belongs_to_bygg(account) and account not in [acct for lo, hi in BASE_BUILDING_ASSET_RANGES for acct in range(lo, hi+1)] and \
-               account not in BASE_ACC_DEP_BYGG and account not in BASE_ACC_IMP_BYGG:
-                # This is an additional account brought in by SRU
-                account_str = str(account)
-                last_digit = int(account_str[-1])
-                
-                if last_digit == 8:  # Pattern: xxx8 = Ack nedskrivningar
-                    ACC_IMP_BYGG.add(account)
-                    if debug:
-                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as impairment account")
-                elif last_digit == 9:  # Pattern: xxx9 = Ack avskrivningar  
-                    ACC_DEP_BYGG.add(account)
-                    if debug:
-                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
-                elif last_digit == 4:  # Pattern: xxx4 = Ack avskrivningar (like 1224)
-                    ACC_DEP_BYGG.add(account)
-                    if debug:
-                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as depreciation account")
-                else:  # Asset account
-                    BUILDING_ASSET_RANGES.append((account, account))
-                    if debug:
-                        print(f"DEBUG BYGG: Adding SRU 7214 account {account} as building asset")
+    # Use original base logic - no SRU integration here
+    BUILDING_ASSET_RANGES = [(1110,1117),(1130,1139),(1140,1149),(1150,1157),(1180,1189)]
+    ACC_DEP_BYGG = {1119, 1159}
+    ACC_IMP_BYGG = {1158}
     
     UPSKR_FOND = 2085
     DISPOSAL_PL = {3972, 7972}
@@ -305,6 +259,52 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     # --- Derived calculations ---
     red_varde_bygg = bygg_ub + ack_avskr_bygg_ub + ack_nedskr_bygg_ub + ack_uppskr_bygg_ub  # Book value
 
+    # --- SRU ADDITION: Handle rare cases of accounts from other ranges with SRU 7214 ---
+    # This is a separate addition to the base logic, not integrated into it
+    if sru_codes:
+        additional_bygg_ib = 0.0
+        additional_avskr_ib = 0.0
+        additional_nedskr_ib = 0.0
+        
+        for account, sru in sru_codes.items():
+            # Check if this account is from the 1200-1299 range with SRU 7214
+            in_other_ranges = 1200 <= account <= 1299
+            
+            if in_other_ranges and sru == 7214:
+                # Get the IB balance for this account
+                account_ib = get_balance('IB', {account})
+                
+                # Use account description to determine BYGG categorization
+                description = account_descriptions.get(account, "").lower()
+                
+                if "avskr" in description:  # Contains "avskr" (avskrivning, avskrivningar, etc.)
+                    additional_avskr_ib += account_ib
+                    if debug:
+                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to depreciation: {account_ib}")
+                elif "nedskr" in description:  # Contains "nedskr" (nedskrivning, nedskrivningar, etc.)
+                    additional_nedskr_ib += account_ib
+                    if debug:
+                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to impairment: {account_ib}")
+                else:  # No special keywords or "uppskr" - treat as main asset
+                    additional_bygg_ib += account_ib
+                    if debug:
+                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to building assets: {account_ib}")
+        
+        # Add the additional amounts to the results
+        if additional_bygg_ib != 0 or additional_avskr_ib != 0 or additional_nedskr_ib != 0:
+            bygg_ib += additional_bygg_ib
+            ack_avskr_bygg_ib += additional_avskr_ib
+            ack_nedskr_bygg_ib += additional_nedskr_ib
+            
+            # Recalculate UB values with the additions
+            bygg_ub = bygg_ib + arets_inkop_bygg - arets_fsg_bygg + arets_omklass_bygg
+            ack_avskr_bygg_ub = ack_avskr_bygg_ib + aterfor_avskr_fsg_bygg - arets_avskr_bygg
+            ack_nedskr_bygg_ub = ack_nedskr_bygg_ib + aterfor_nedskr_fsg_bygg + aterfor_nedskr_bygg - arets_nedskr_bygg
+            red_varde_bygg = bygg_ub + ack_avskr_bygg_ub + ack_nedskr_bygg_ub + ack_uppskr_bygg_ub
+            
+            if debug:
+                print(f"DEBUG BYGG SRU: Added totals - Assets: {additional_bygg_ib}, Depreciation: {additional_avskr_ib}, Impairment: {additional_nedskr_ib}")
+
     return {
         # IB/UB assets
         "bygg_ib": bygg_ib,
@@ -336,3 +336,4 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         # Derived book value
         "red_varde_bygg": red_varde_bygg,
     }
+
