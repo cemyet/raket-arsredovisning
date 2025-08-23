@@ -1437,6 +1437,14 @@ class DatabaseParser:
         print(f"DEBUG: KONCERN K2 data calculated successfully: {len(koncern_k2_data)} variables")
         print(f"DEBUG: KONCERN K2 data: {koncern_k2_data}")
         
+        # Get precise INTRESSEFTG calculations from transaction analysis
+        print("DEBUG: Starting INTRESSEFTG K2 parser...")
+        from .intresseftg_k2_parser import parse_intresseftg_k2_from_sie_text
+        print("DEBUG: INTRESSEFTG K2 parser imported successfully")
+        intresseftg_k2_data = parse_intresseftg_k2_from_sie_text(se_content, debug=True)
+        print(f"DEBUG: INTRESSEFTG K2 data calculated successfully: {len(intresseftg_k2_data)} variables")
+        print(f"DEBUG: INTRESSEFTG K2 data: {intresseftg_k2_data}")
+        
         # Get precise BYGG calculations from transaction analysis
         print("DEBUG: Starting BYGG K2 parser...")
         from .bygg_k2_parser import parse_bygg_k2_from_sie_text
@@ -1479,12 +1487,13 @@ class DatabaseParser:
         
         # Define all K2 variable names to exclude from database processing
         koncern_variables = set(koncern_k2_data.keys())
+        intresseftg_variables = set(intresseftg_k2_data.keys())
         bygg_variables = set(bygg_k2_data.keys())
         maskiner_variables = set(maskiner_k2_data.keys())
         inventarier_variables = set(inventarier_k2_data.keys())
         ovriga_variables = set(ovriga_k2_data.keys())
         lvp_variables = set(lvp_k2_data.keys())
-        k2_variables = koncern_variables | bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables | lvp_variables
+        k2_variables = koncern_variables | intresseftg_variables | bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables | lvp_variables
         
         results = []
         user_toggles = user_toggles or {}
@@ -1497,6 +1506,13 @@ class DatabaseParser:
                 'previous': 0.0
             }
             print(f"DEBUG: Pre-loaded KONCERN K2 variable {var_name}: {value}")
+            
+        for var_name, value in intresseftg_k2_data.items():
+            calculated_variables[var_name] = {
+                'current': value,
+                'previous': 0.0
+            }
+            print(f"DEBUG: Pre-loaded INTRESSEFTG K2 variable {var_name}: {value}")
             
         for var_name, value in bygg_k2_data.items():
             calculated_variables[var_name] = {
