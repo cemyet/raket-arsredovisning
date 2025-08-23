@@ -238,7 +238,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     )
 
     # --- Derived calculations ---
-    red_varde_koncern = koncern_ub - ack_nedskr_koncern_ub
+    red_varde_koncern = koncern_ub + ack_nedskr_koncern_ub
 
     if debug:
         print(f"DEBUG KONCERN K2: Final results:")
