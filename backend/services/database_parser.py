@@ -1445,10 +1445,19 @@ class DatabaseParser:
         print(f"DEBUG: MASKINER K2 data calculated successfully: {len(maskiner_k2_data)} variables")
         print(f"DEBUG: MASKINER K2 data: {maskiner_k2_data}")
         
+        # Get precise INVENTARIER calculations from transaction analysis
+        print("DEBUG: Starting INVENTARIER K2 parser...")
+        from .inventarier_k2_parser import parse_inventarier_k2_from_sie_text
+        print("DEBUG: INVENTARIER K2 parser imported successfully")
+        inventarier_k2_data = parse_inventarier_k2_from_sie_text(se_content, debug=True)
+        print(f"DEBUG: INVENTARIER K2 data calculated successfully: {len(inventarier_k2_data)} variables")
+        print(f"DEBUG: INVENTARIER K2 data: {inventarier_k2_data}")
+        
         # Define all K2 variable names to exclude from database processing
         bygg_variables = set(bygg_k2_data.keys())
         maskiner_variables = set(maskiner_k2_data.keys())
-        k2_variables = bygg_variables | maskiner_variables
+        inventarier_variables = set(inventarier_k2_data.keys())
+        k2_variables = bygg_variables | maskiner_variables | inventarier_variables
         
         results = []
         user_toggles = user_toggles or {}
@@ -1468,6 +1477,13 @@ class DatabaseParser:
                 'previous': 0.0
             }
             print(f"DEBUG: Pre-loaded MASKINER K2 variable {var_name}: {value}")
+            
+        for var_name, value in inventarier_k2_data.items():
+            calculated_variables[var_name] = {
+                'current': value,
+                'previous': 0.0
+            }
+            print(f"DEBUG: Pre-loaded INVENTARIER K2 variable {var_name}: {value}")
         
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
