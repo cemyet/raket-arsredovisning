@@ -1461,12 +1461,21 @@ class DatabaseParser:
         print(f"DEBUG: ÖVRIGA K2 data calculated successfully: {len(ovriga_k2_data)} variables")
         print(f"DEBUG: ÖVRIGA K2 data: {ovriga_k2_data}")
         
+        # Get precise LVP calculations from transaction analysis
+        print("DEBUG: Starting LVP K2 parser...")
+        from .lvp_k2_parser import parse_lvp_k2_from_sie_text
+        print("DEBUG: LVP K2 parser imported successfully")
+        lvp_k2_data = parse_lvp_k2_from_sie_text(se_content, debug=True)
+        print(f"DEBUG: LVP K2 data calculated successfully: {len(lvp_k2_data)} variables")
+        print(f"DEBUG: LVP K2 data: {lvp_k2_data}")
+        
         # Define all K2 variable names to exclude from database processing
         bygg_variables = set(bygg_k2_data.keys())
         maskiner_variables = set(maskiner_k2_data.keys())
         inventarier_variables = set(inventarier_k2_data.keys())
         ovriga_variables = set(ovriga_k2_data.keys())
-        k2_variables = bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables
+        lvp_variables = set(lvp_k2_data.keys())
+        k2_variables = bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables | lvp_variables
         
         results = []
         user_toggles = user_toggles or {}
@@ -1500,6 +1509,13 @@ class DatabaseParser:
                 'previous': 0.0
             }
             print(f"DEBUG: Pre-loaded ÖVRIGA K2 variable {var_name}: {value}")
+            
+        for var_name, value in lvp_k2_data.items():
+            calculated_variables[var_name] = {
+                'current': value,
+                'previous': 0.0
+            }
+            print(f"DEBUG: Pre-loaded LVP K2 variable {var_name}: {value}")
         
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
