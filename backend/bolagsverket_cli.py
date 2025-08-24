@@ -71,49 +71,237 @@ async def main():
             print(f"💥 Error: {str(e)}")
 
 def display_company_info(company_info):
-    """Display company information in a readable format"""
+    """Display comprehensive company information from Bolagsverket API"""
     if not company_info.get('organisationer'):
         print("❌ No organization data found")
         return
     
     org = company_info['organisationer'][0]
     
-    print("\n🏢 COMPANY INFORMATION")
-    print("=" * 30)
+    print("\n🏢 COMPREHENSIVE COMPANY INFORMATION")
+    print("=" * 50)
     
-    # Basic info
-    if org.get('organisationsnamn', {}).get('organisationsnamnLista'):
-        names = org['organisationsnamn']['organisationsnamnLista']
-        for name_info in names:
-            name_type = name_info.get('organisationsnamntyp', {}).get('klartext', 'Unknown')
-            print(f"📛 {name_type}: {name_info.get('namn', 'N/A')}")
+    # Identity Information
+    print("\n🆔 IDENTITY INFORMATION")
+    print("-" * 25)
+    if org.get('identitet'):
+        identity = org['identitet']
+        print(f"📋 Identity Type: {identity.get('typ', {}).get('klartext', 'N/A')}")
+        print(f"🔢 Identity Number: {identity.get('identitetsbeteckning', 'N/A')}")
+        if identity.get('namnskyddslopnummer'):
+            print(f"🔒 Name Protection Number: {identity.get('namnskyddslopnummer')}")
     
-    # Organization details
-    print(f"🔢 Organization Number: {org.get('organisationsidentitet', {}).get('identitetsbeteckning', 'N/A')}")
-    print(f"📅 Registration Date: {org.get('organisationsdatum', {}).get('registreringsdatum', 'N/A')}")
-    print(f"🏛️  Legal Form: {org.get('organisationsform', {}).get('klartext', 'N/A')}")
+    # Case Information (Arende)
+    if org.get('arende'):
+        print(f"\n📁 LATEST CASE INFORMATION")
+        print("-" * 25)
+        case = org['arende']
+        print(f"📋 Case Number: {case.get('arendenummer', 'N/A')}")
+        print(f"⏰ Completed: {case.get('avslutatTidpunkt', 'N/A')}")
     
-    # Address
-    if org.get('postadressOrganisation', {}).get('postadress'):
-        addr = org['postadressOrganisation']['postadress']
-        print(f"📍 Address: {addr.get('utdelningsadress', 'N/A')}")
-        if addr.get('coAdress'):
-            print(f"   Care of: {addr.get('coAdress')}")
-        print(f"   Postal: {addr.get('postnummer', 'N/A')} {addr.get('postort', 'N/A')}")
+    # Organization Names
+    print(f"\n📛 BUSINESS NAMES")
+    print("-" * 25)
+    if org.get('organisationsnamn'):
+        org_name = org['organisationsnamn']
+        if org_name.get('typ'):
+            print(f"📋 Name Type: {org_name['typ'].get('klartext', 'N/A')}")
+        print(f"🏢 Current Name: {org_name.get('namn', 'N/A')}")
     
-    # Business description
-    if org.get('verksamhetsbeskrivning', {}).get('beskrivning'):
-        desc = org['verksamhetsbeskrivning']['beskrivning']
-        print(f"📋 Business Description: {desc[:100]}{'...' if len(desc) > 100 else ''}")
+    # All organization names (historical)
+    if org.get('samtligaOrganisationsnamn'):
+        print(f"\n📚 ALL REGISTERED NAMES")
+        print("-" * 25)
+        for i, name_info in enumerate(org['samtligaOrganisationsnamn'], 1):
+            print(f"   {i}. {name_info.get('namn', 'N/A')}")
+            if name_info.get('typ'):
+                print(f"      Type: {name_info['typ'].get('klartext', 'N/A')}")
+            if name_info.get('registreringsdatum'):
+                print(f"      Registered: {name_info['registreringsdatum']}")
+            if name_info.get('verksamhetsbeskrivningSarskiltForetagsnamn'):
+                print(f"      Business Description: {name_info['verksamhetsbeskrivningSarskiltForetagsnamn'][:100]}...")
     
-    # Status information
-    if org.get('avregistreradOrganisation'):
-        print(f"⚠️  Status: LIQUIDATED")
-        print(f"   Deregistration Date: {org['avregistreradOrganisation'].get('avregistreringsdatum', 'N/A')}")
-        if org.get('avregistreringsorsak', {}).get('klartext'):
-            print(f"   Reason: {org['avregistreringsorsak']['klartext']}")
-    else:
-        print("✅ Status: ACTIVE")
+    # Legal Form and Status
+    print(f"\n🏛️  LEGAL FORM & STATUS")
+    print("-" * 25)
+    if org.get('organisationsform'):
+        print(f"🏛️  Legal Form: {org['organisationsform'].get('klartext', 'N/A')}")
+    
+    if org.get('organisationsstatusar'):
+        print(f"📊 Organization Statuses:")
+        for status in org['organisationsstatusar']:
+            print(f"   • {status.get('klartext', 'N/A')} ({status.get('kod', 'N/A')})")
+            print(f"     Type: {status.get('typ', 'N/A')}")
+            if status.get('datum'):
+                print(f"     Date: {status['datum']}")
+    
+    # Important Dates
+    print(f"\n📅 IMPORTANT DATES")
+    print("-" * 25)
+    if org.get('organisationsdatum'):
+        dates = org['organisationsdatum']
+        print(f"📅 Registration Date: {dates.get('registreringsdatum', 'N/A')}")
+        print(f"🎂 Founded Date: {dates.get('bildatDatum', 'N/A')}")
+    
+    # Domicile Information
+    if org.get('hemvistkommun'):
+        print(f"\n🏠 DOMICILE")
+        print("-" * 25)
+        domicile = org['hemvistkommun']
+        print(f"🏛️  Type: {domicile.get('typ', 'N/A')}")
+        if domicile.get('lanForHemvistkommun'):
+            print(f"🌍 County: {domicile['lanForHemvistkommun'].get('klartext', 'N/A')} ({domicile['lanForHemvistkommun'].get('kod', 'N/A')})")
+        if domicile.get('kommun'):
+            print(f"🏘️  Municipality: {domicile['kommun'].get('klartext', 'N/A')} ({domicile['kommun'].get('kod', 'N/A')})")
+    
+    # Financial Year
+    if org.get('rakenskapsar'):
+        print(f"\n💰 FINANCIAL YEAR")
+        print("-" * 25)
+        fy = org['rakenskapsar']
+        print(f"📅 Starts: {fy.get('rakenskapsarInleds', 'N/A')}")
+        print(f"📅 Ends: {fy.get('rakenskapsarAvslutas', 'N/A')}")
+    
+    # Business Description
+    if org.get('verksamhetsbeskrivning'):
+        print(f"\n📋 BUSINESS DESCRIPTION")
+        print("-" * 25)
+        desc = org['verksamhetsbeskrivning']
+        print(f"📝 Description: {desc}")
+    
+    # Contact Information
+    if org.get('organisationsadresser'):
+        print(f"\n📬 CONTACT INFORMATION")
+        print("-" * 25)
+        addr_info = org['organisationsadresser']
+        if addr_info.get('postadress'):
+            addr = addr_info['postadress']
+            print(f"📍 Postal Address:")
+            if addr.get('utdelningsadress'):
+                print(f"   Street: {addr['utdelningsadress']}")
+            if addr.get('coAdress'):
+                print(f"   Care of: {addr['coAdress']}")
+            if addr.get('postnummer') or addr.get('postort'):
+                print(f"   Postal: {addr.get('postnummer', '')} {addr.get('postort', '')}")
+        if addr_info.get('epostadress'):
+            print(f"📧 Email: {addr_info['epostadress']}")
+    
+    # Company Officers
+    if org.get('funktionarer'):
+        print(f"\n👥 COMPANY OFFICERS")
+        print("-" * 25)
+        for i, officer in enumerate(org['funktionarer'], 1):
+            print(f"\n   Officer {i}:")
+            
+            # Name (person or organization)
+            if officer.get('personnamn'):
+                name = officer['personnamn']
+                print(f"   👤 Name: {name.get('fornamn', '')} {name.get('efternamn', '')}")
+            elif officer.get('organisationsnamn'):
+                print(f"   🏢 Organization: {officer['organisationsnamn'].get('namn', 'N/A')}")
+            
+            # Identity
+            if officer.get('identitet'):
+                identity = officer['identitet']
+                print(f"   🆔 Identity: {identity.get('identitetsbeteckning', 'N/A')}")
+            
+            # Roles
+            if officer.get('funktionarsroller'):
+                roles = [role.get('klartext', 'N/A') for role in officer['funktionarsroller']]
+                print(f"   💼 Roles: {', '.join(roles)}")
+            
+            # Address
+            if officer.get('postadress'):
+                addr = officer['postadress']
+                print(f"   📍 Address: {addr.get('utdelningsadress', 'N/A')}")
+                print(f"      Postal: {addr.get('postnummer', '')} {addr.get('postort', '')}")
+            
+            # Other info
+            if officer.get('insats'):
+                print(f"   💰 Contribution: {officer['insats']}")
+            if officer.get('anteckning'):
+                print(f"   📝 Notes: {officer['anteckning']}")
+    
+    # Share Capital Information
+    if org.get('aktieinformation'):
+        print(f"\n💼 SHARE CAPITAL INFORMATION")
+        print("-" * 25)
+        share_info = org['aktieinformation']
+        
+        if share_info.get('aktiekapital'):
+            capital = share_info['aktiekapital']
+            print(f"💰 Share Capital: {capital.get('belopp', 'N/A')} {capital.get('valuta', {}).get('klartext', '')}")
+        
+        if share_info.get('antalAktier'):
+            print(f"📊 Number of Shares: {share_info['antalAktier']:,}")
+        
+        if share_info.get('kvotvarde'):
+            quota = share_info['kvotvarde']
+            print(f"💎 Quota Value: {quota.get('belopp', 'N/A')} {quota.get('valuta', {}).get('klartext', '')}")
+        
+        if share_info.get('aktieslag'):
+            print(f"📋 Share Classes:")
+            for share_class in share_info['aktieslag']:
+                print(f"   • {share_class.get('klartext', 'N/A')}")
+        
+        if share_info.get('fritext'):
+            print(f"📝 Additional Info: {share_info['fritext']}")
+        
+        if share_info.get('nedsattningPagar'):
+            print(f"⚠️  Capital Reduction in Progress: {share_info['nedsattningPagar']}")
+    
+    # Signatory Power
+    if org.get('firmateckning'):
+        print(f"\n✍️  SIGNATORY POWER")
+        print("-" * 25)
+        signature = org['firmateckning']
+        if signature.get('klartext'):
+            print(f"📝 Signatory Rules: {signature['klartext']}")
+        if signature.get('prokuratext'):
+            print(f"🔐 Power of Procuration: {signature['prokuratext']}")
+    
+    # Permits
+    if org.get('tillstand'):
+        print(f"\n📋 PERMITS")
+        print("-" * 25)
+        for permit in org['tillstand']:
+            if permit.get('typ'):
+                print(f"📄 Type: {permit['typ'].get('klartext', 'N/A')}")
+            if permit.get('datum'):
+                print(f"📅 Date: {permit['datum']}")
+            if permit.get('aterkallatDatum'):
+                print(f"❌ Withdrawn: {permit['aterkallatDatum']}")
+    
+    # Other Information
+    if org.get('ovrigOrganisationinformation'):
+        print(f"\n📄 OTHER INFORMATION")
+        print("-" * 25)
+        other = org['ovrigOrganisationinformation']
+        if other.get('externaAnteckningar'):
+            print(f"📝 External Notes: {other['externaAnteckningar']}")
+        if other.get('ovrigaRegisteruppgifter'):
+            print(f"📋 Other Registry Data: {other['ovrigaRegisteruppgifter']}")
+        if other.get('organisationsmarkeringar'):
+            print(f"🏷️  Organization Markings:")
+            for marking in other['organisationsmarkeringar']:
+                print(f"   • {marking.get('klartext', 'N/A')} ({marking.get('kod', 'N/A')})")
+    
+    # Financial Reports
+    if org.get('finansiellaRapporter'):
+        print(f"\n📊 FINANCIAL REPORTS")
+        print("-" * 25)
+        for report in org['finansiellaRapporter']:
+            if report.get('arende'):
+                case = report['arende']
+                print(f"📋 Case: {case.get('arendenummer', 'N/A')}")
+                print(f"⏰ Completed: {case.get('avslutatTidpunkt', 'N/A')}")
+            if report.get('rapporter'):
+                print(f"📄 Reports:")
+                for rep in report['rapporter']:
+                    print(f"   • Type: {rep.get('typ', {}).get('klartext', 'N/A')}")
+                    print(f"     Period: {rep.get('rapporteringsperiodFran', 'N/A')} - {rep.get('rapporteringsperiodTom', 'N/A')}")
+    
+    print(f"\n" + "=" * 50)
 
 def display_annual_reports_list(documents):
     """Display annual reports list with selection numbers"""
