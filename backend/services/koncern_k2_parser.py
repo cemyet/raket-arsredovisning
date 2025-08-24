@@ -6,20 +6,30 @@ from collections import defaultdict
 ACK_IMP_PAT = re.compile(r'\b(?:ack(?:[.\s]*nedskr\w*)|ackum\w*|nedskriv\w*)\b', re.IGNORECASE)
 FORDR_PAT   = re.compile(r'\b(fordran|fordringar|lan|lån|ranta|ränta|amort|avbetal)\b', re.IGNORECASE)
 
+# ---- Sale P&L accounts for distinguishing real sales from cash settlements ----
+SALE_PNL = tuple(range(8220, 8230))  # resultat vid försäljning av andelar (BAS 822x)
+
 def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     """
-    KONCERN-note (K2) parser — enhanced with dynamic account classification.
+    KONCERN-note (K2) parser — enhanced with dynamic account classification and HB/KB flow handling.
 
-    Base: Original logic enhanced with dynamic account discovery.
-    Enhancement: Dynamic account classification via account text (#KONTO) to:
-      • Capture custom AAT/Share accounts within 1310–1318
-      • Rescue misplaced AAT/Shares within 1320–1329 (without receivables keywords)
-      • EXCLUDE all receivables completely from parser
+    ENHANCEMENTS:
+    1. Dynamic account classification via account text (#KONTO):
+       • Capture custom AAT/Share accounts within 1310–1318
+       • Rescue misplaced AAT/Shares within 1320–1329 (without receivables keywords)
+       • EXCLUDE all receivables completely from parser
+
+    2. HB/KB two-step flow handling:
+       • Distinguishes real sales (with 822x P&L accounts) from cash settlements
+       • Prevents false "sales" for partnership result share payouts
+       • Handles common pattern: D 1930 / K 1311 (payout) + D 1311 / K 8240 (year-end share)
 
     Key principles:
       - IB/UB for 'koncern_ib', 'koncern_ub' includes both Share and AAT accounts (as acquisition value)
       - Purchase/Sale calculations only from Share accounts (not AAT)
       - AAT given/repaid calculated only from AAT accounts (not via text signal)
+      - Sales require 822x P&L accounts OR explicit sale keywords
+      - Cash settlements (K 131x + only banks, no 822x) treated as negative resultatandel
       - Accumulated impairment of shares (1318 and possibly other 131x with acc/impair text) included
       - 132x used ONLY if account text clearly indicates Shares or AAT AND lacks receivables keywords
 
@@ -286,11 +296,40 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         rem_aat_K   = max(0.0, A_AAT_K   - consume_aat_K)
 
         if rem_andel_K > 0:
-            # allocate impairment reversal to sale if present
-            if IMP_D > 0:
-                aterfor_nedskr_fsg_koncern += IMP_D
-                IMP_D = 0.0
-            fsg_koncern += rem_andel_K
+            # Check for sale P&L accounts to distinguish real sales from cash settlements
+            has_sale_pnl = any(a in SALE_PNL for a,_ in txs)
+            
+            # Analyze other accounts (not shares, AAT, impairment, or result share)
+            other_accts = {a for a,_ in txs if a not in andel_set and a not in aat_set and a not in imp_set and a != RES_SHARE}
+            only_banks  = len(other_accts) > 0 and all(1900 <= a <= 1999 for a in other_accts)
+            bank_debet  = sum(amt for a,amt in txs if amt > 0 and 1900 <= a <= 1999)
+            
+            # Text analysis for transaction type
+            kw_sale      = any(k in text for k in ("försälj", "avyttr", "sale"))
+            kw_settlement= any(k in text for k in ("utbet", "utbetal", "kap andel", "resultatandel", "kb", "hb", "kommandit", "handelsbolag"))
+            
+            if has_sale_pnl:
+                # ✅ Real sale (requires 822x P&L account)
+                if IMP_D > 0:
+                    aterfor_nedskr_fsg_koncern += IMP_D
+                    IMP_D = 0.0
+                fsg_koncern += rem_andel_K
+            else:
+                # No 822x – likely cash settlement of prior year result share
+                is_payout_prior_share = (
+                    RES_D == 0 and RES_K == 0 and IMP_D == 0 and IMP_K == 0
+                    and only_banks and abs(bank_debet - rem_andel_K) < 0.5
+                    and (kw_settlement or not kw_sale)
+                )
+                if is_payout_prior_share:
+                    # Book as negative result share instead of sale
+                    resultatandel_koncern -= rem_andel_K
+                elif kw_sale:
+                    # Optional fallback: text says sale despite missing 822x
+                    fsg_koncern += rem_andel_K
+                else:
+                    # Default: treat as cash settlement (same as above)
+                    resultatandel_koncern -= rem_andel_K
 
         if rem_aat_K > 0:
             # ONLY AAT accounts count as AAT repaid
