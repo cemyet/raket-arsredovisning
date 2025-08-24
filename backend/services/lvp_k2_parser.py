@@ -42,8 +42,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG LVP: Found SRU {account} -> {sru}")
         
         # Parse account descriptions
         m = konto_re.match(s)
@@ -51,8 +49,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             description = m.group(2)
             account_descriptions[account] = description
-            if debug:
-                print(f"DEBUG LVP: Found account {account} -> '{description}'")
 
     # --- CONFIG (K2 – långfristiga värdepapper) ---
     # Use original base logic - no SRU integration here for LVP
@@ -62,9 +58,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     IMPAIR_COST = 7730
     IMPAIR_REV = 7780
     
-    if debug:
-        print(f"DEBUG LVP: Asset ranges: {ASSET_RANGES}")
-        print(f"DEBUG LVP: Impairment accounts: {ACC_IMP_LVP}")
 
     # --- Helpers ---
     def in_lvp_assets(acct: int) -> bool:
@@ -141,8 +134,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     arets_fsg_lang_vardepapper = 0.0
     arets_nedskr_lang_vardepapper = 0.0
 
-    if debug:
-        print(f"DEBUG LVP: vouchers parsed = {len(trans_by_ver)}")
 
     # --- Per voucher classification ---
     for key, txs in trans_by_ver.items():
@@ -156,14 +147,10 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         # 1) Inköp (Debet asset accounts)
         if A_D > 0:
             arets_inkop_lang_vardepapper += A_D
-            if debug:
-                print(f"DEBUG LVP {key}: inköp += {A_D}")
 
         # 2) Försäljning (Kredit asset accounts)
         if A_K > 0:
             arets_fsg_lang_vardepapper += A_K
-            if debug:
-                print(f"DEBUG LVP {key}: försäljning += {A_K}")
 
         # 3) Nedskrivning (D 7730 + K 1358)
         # Only count impairment cost when the voucher actually increases accumulated impairment
@@ -171,8 +158,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             arets_nedskr_lang_vardepapper += sum(
                 amt for a, amt in txs if a == IMPAIR_COST and amt > 0
             )
-            if debug:
-                print(f"DEBUG LVP {key}: nedskrivning += {sum(amt for a, amt in txs if a == IMPAIR_COST and amt > 0)}")
 
     # --- UB formulas ---
     lang_vardepapper_ub = (
@@ -207,12 +192,8 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
                 
                 if "nedskr" in description:  # Contains "nedskr" (nedskrivning, nedskrivningar, etc.)
                     additional_nedskr_ib += account_ib
-                    if debug:
-                        print(f"DEBUG LVP SRU: Adding {account} '{account_descriptions.get(account, '')}' to impairment: {account_ib}")
                 else:  # No special keywords - treat as main asset
                     additional_lvp_ib += account_ib
-                    if debug:
-                        print(f"DEBUG LVP SRU: Adding {account} '{account_descriptions.get(account, '')}' to LVP assets: {account_ib}")
         
         # Add the additional amounts to the results
         if additional_lvp_ib != 0 or additional_nedskr_ib != 0:
@@ -224,8 +205,6 @@ def parse_lvp_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             # Note: ack_nedskr_lang_vardepapper_ub is read directly from UB, no recalculation needed
             red_varde_lang_vardepapper = lang_vardepapper_ub + ack_nedskr_lang_vardepapper_ub
             
-            if debug:
-                print(f"DEBUG LVP SRU: Added totals - Assets: {additional_lvp_ib}, Impairment: {additional_nedskr_ib}")
 
     return {
         # IB/UB assets

@@ -1430,12 +1430,8 @@ class DatabaseParser:
         current_ub, previous_ub, current_ib, previous_ib = self.parse_ib_ub_balances(se_content)
         
         # Get precise KONCERN calculations from transaction analysis
-        print("DEBUG: Starting KONCERN K2 parser...")
         from .koncern_k2_parser import parse_koncern_k2_from_sie_text
-        print("DEBUG: KONCERN K2 parser imported successfully")
-        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: KONCERN K2 data calculated successfully: {len(koncern_k2_data)} variables")
-        print(f"DEBUG: KONCERN K2 data: {koncern_k2_data}")
+        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False)
         
         # Get precise INTRESSEFTG calculations from transaction analysis
         print("DEBUG: Starting INTRESSEFTG K2 parser...")
@@ -1446,44 +1442,24 @@ class DatabaseParser:
         print(f"DEBUG: INTRESSEFTG K2 data: {intresseftg_k2_data}")
         
         # Get precise BYGG calculations from transaction analysis
-        print("DEBUG: Starting BYGG K2 parser...")
         from .bygg_k2_parser import parse_bygg_k2_from_sie_text
-        print("DEBUG: BYGG K2 parser imported successfully")
-        bygg_k2_data = parse_bygg_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: BYGG K2 data calculated successfully: {len(bygg_k2_data)} variables")
-        print(f"DEBUG: BYGG K2 data: {bygg_k2_data}")
+        bygg_k2_data = parse_bygg_k2_from_sie_text(se_content, debug=False)
         
         # Get precise MASKINER calculations from transaction analysis
-        print("DEBUG: Starting MASKINER K2 parser...")
         from .maskiner_k2_parser import parse_maskiner_k2_from_sie_text
-        print("DEBUG: MASKINER K2 parser imported successfully")
-        maskiner_k2_data = parse_maskiner_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: MASKINER K2 data calculated successfully: {len(maskiner_k2_data)} variables")
-        print(f"DEBUG: MASKINER K2 data: {maskiner_k2_data}")
+        maskiner_k2_data = parse_maskiner_k2_from_sie_text(se_content, debug=False)
         
         # Get precise INVENTARIER calculations from transaction analysis
-        print("DEBUG: Starting INVENTARIER K2 parser...")
         from .inventarier_k2_parser import parse_inventarier_k2_from_sie_text
-        print("DEBUG: INVENTARIER K2 parser imported successfully")
-        inventarier_k2_data = parse_inventarier_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: INVENTARIER K2 data calculated successfully: {len(inventarier_k2_data)} variables")
-        print(f"DEBUG: INVENTARIER K2 data: {inventarier_k2_data}")
+        inventarier_k2_data = parse_inventarier_k2_from_sie_text(se_content, debug=False)
         
         # Get precise ÖVRIGA calculations from transaction analysis
-        print("DEBUG: Starting ÖVRIGA K2 parser...")
         from .ovriga_k2_parser import parse_ovriga_k2_from_sie_text
-        print("DEBUG: ÖVRIGA K2 parser imported successfully")
-        ovriga_k2_data = parse_ovriga_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: ÖVRIGA K2 data calculated successfully: {len(ovriga_k2_data)} variables")
-        print(f"DEBUG: ÖVRIGA K2 data: {ovriga_k2_data}")
+        ovriga_k2_data = parse_ovriga_k2_from_sie_text(se_content, debug=False)
         
         # Get precise LVP calculations from transaction analysis
-        print("DEBUG: Starting LVP K2 parser...")
         from .lvp_k2_parser import parse_lvp_k2_from_sie_text
-        print("DEBUG: LVP K2 parser imported successfully")
-        lvp_k2_data = parse_lvp_k2_from_sie_text(se_content, debug=True)
-        print(f"DEBUG: LVP K2 data calculated successfully: {len(lvp_k2_data)} variables")
-        print(f"DEBUG: LVP K2 data: {lvp_k2_data}")
+        lvp_k2_data = parse_lvp_k2_from_sie_text(se_content, debug=False)
         
         # Define all K2 variable names to exclude from database processing
         koncern_variables = set(koncern_k2_data.keys())
@@ -1505,7 +1481,6 @@ class DatabaseParser:
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded KONCERN K2 variable {var_name}: {value}")
             
         for var_name, value in intresseftg_k2_data.items():
             calculated_variables[var_name] = {
@@ -1519,35 +1494,30 @@ class DatabaseParser:
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded BYGG K2 variable {var_name}: {value}")
             
         for var_name, value in maskiner_k2_data.items():
             calculated_variables[var_name] = {
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded MASKINER K2 variable {var_name}: {value}")
             
         for var_name, value in inventarier_k2_data.items():
             calculated_variables[var_name] = {
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded INVENTARIER K2 variable {var_name}: {value}")
             
         for var_name, value in ovriga_k2_data.items():
             calculated_variables[var_name] = {
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded ÖVRIGA K2 variable {var_name}: {value}")
             
         for var_name, value in lvp_k2_data.items():
             calculated_variables[var_name] = {
                 'current': value,
                 'previous': 0.0
             }
-            print(f"DEBUG: Pre-loaded LVP K2 variable {var_name}: {value}")
         
         # Sort mappings by row_id to maintain correct order
         sorted_mappings = sorted(self.noter_mappings, key=lambda x: x.get('row_id', 0))
@@ -1607,8 +1577,6 @@ class DatabaseParser:
                 }
         
         # Build final results (return all rows, let frontend handle filtering like RR/BR do)
-        print(f"DEBUG: Building final results from {len(sorted_mappings)} mappings...")
-        
         for mapping in sorted_mappings:
             try:
                 # Get visibility properties but don't filter here - frontend handles it

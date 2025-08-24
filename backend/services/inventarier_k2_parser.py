@@ -44,8 +44,6 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG INVENTARIER: Found SRU {account} -> {sru}")
 
     # --- CONFIG (K2 – inventarier) ---
     # Base account ranges for inventarier
@@ -97,10 +95,6 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     IMPAIR_COST = 7730
     IMPAIR_REV = 7780
     
-    if debug:
-        print(f"DEBUG INVENTARIER: Filtered asset ranges: {ASSET_RANGES}")
-        print(f"DEBUG INVENTARIER: Filtered depreciation accounts: {ACC_DEP}")
-        print(f"DEBUG INVENTARIER: Filtered impairment accounts: {ACC_IMP}")
 
     # --- Helpers ---
     def in_assets(acct: int) -> bool:
@@ -180,14 +174,11 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     aterfor_nedskr_fsg_inventarier = 0.0
     omklass_nedskr_inventarier = 0.0
 
-    if debug:
-        print(f"DEBUG INVENTARIER K2: vouchers parsed = {len(trans_by_ver)} (sample: {list(trans_by_ver)[:5]})")
 
     # --- Classify vouchers ---
     for key, txs in trans_by_ver.items():
         # Debug inventarier vouchers
         if debug and (any(a in ACC_DEP for a, _ in txs) or any(a in DEPR_COST for a, _ in txs) or any(in_assets(a) for a, _ in txs)):
-            print(f"DEBUG INVENTARIER K2: Checking voucher {key} with transactions: {txs}")
 
         A_D = sum(amt for a, amt in txs if in_assets(a) and amt > 0)
         A_K = sum(-amt for a, amt in txs if in_assets(a) and amt < 0)
@@ -207,37 +198,25 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
             arets_fsg_inventarier += A_K
             aterfor_avskr_fsg_inventarier += DEP_D
             aterfor_nedskr_fsg_inventarier += IMP_D
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: disposal - fsg += {A_K}, aterfor_avskr += {DEP_D}, aterfor_nedskr += {IMP_D}")
 
         # Inköp
         if A_D > 0:
             arets_inkop_inventarier += A_D
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: inkop += {A_D}")
 
         # Depreciations (not in disposal vouchers)
         if DEP_K > 0 and has_depr_cost and not is_disposal:
             arets_avskr_inventarier += DEP_K
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: avskr += {DEP_K}")
 
         # Impairments
         if has_imp_cost and IMP_K > 0:
             arets_nedskr_inventarier += sum(amt for a, amt in txs if a == IMPAIR_COST and amt > 0)
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: nedskr += {sum(amt for a, amt in txs if a == IMPAIR_COST and amt > 0)}")
         if has_imp_rev and IMP_D > 0 and A_K == 0:
             aterfor_nedskr_inventarier += IMP_D
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: aterfor_nedskr += {IMP_D}")
 
         # Omklass (both D & K asset, no signals)
         signals = (DEP_D + DEP_K + IMP_D + IMP_K) > 0 or has_PL_disposal or has_depr_cost or has_imp_cost or has_imp_rev
         if A_D > 0 and A_K > 0 and not signals:
             arets_omklass_inventarier += (A_D - A_K)
-            if debug:
-                print(f"DEBUG INVENTARIER {key}: omklass += {A_D - A_K}")
 
     # --- UB formulas ---
     inventarier_ub = inventarier_ib + arets_inkop_inventarier - arets_fsg_inventarier + arets_omklass_inventarier
@@ -247,8 +226,6 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     # --- Derived ---
     red_varde_inventarier = inventarier_ub + ack_avskr_inventarier_ub + ack_nedskr_inventarier_ub
 
-    if debug:
-        print(f"DEBUG INVENTARIER K2: Final results:")
         print(f"  inventarier_ib: {inventarier_ib}")
         print(f"  arets_inkop_inventarier: {arets_inkop_inventarier}")
         print(f"  arets_fsg_inventarier: {arets_fsg_inventarier}")

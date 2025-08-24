@@ -1,0 +1,39 @@
+row_id,id,row_title,block,+/-,accounts_included,variable_name,text_field,variable_text,ib_ub,calculated,formula,Saldo,always_show,toggle_show,editable,style,item_name,Abstrakt,Datatyp,period_type,block_sub
+206,895,Andelar i koncernföretag,KONCERN,,,,,,,,,,false,,,,NotAndelarKoncernforetag,false,xbrli:stringItemType,duration,
+207,896,Andelar i koncernföretag,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagAbstract,true,xbrli:stringItemType,duration,
+208,897,Ingående anskaffningsvärden,KONCERN,,1310-1317,koncern_ib,,,,,,debit,false,true,,,AndelarKoncernforetagAnskaffningsvarden,false,xbrli:monetaryItemType,instant,
+209,898,Förändringar av anskaffningsvärden,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagForandringAnskaffningsvardenAbstract,true,xbrli:stringItemType,duration,
+210,899,Inköp,KONCERN,+,,inkop_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenInkop,false,xbrli:monetaryItemType,duration,
+211,900,Fusion,KONCERN,+,,fusion_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenFusion,false,xbrli:monetaryItemType,duration,
+212,901,Försäljningar,KONCERN,-,,fsg_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenForsaljningar,false,xbrli:monetaryItemType,duration,
+213,902,Lämnade aktieägartillskott,KONCERN,+,,aktieagartillskott_lamnad_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenLamnadeAktieagartillskott,false,xbrli:monetaryItemType,duration,
+214,903,Återbetalning av lämnat aktieägartillskott,KONCERN,-,,aktieagartillskott_aterbetald_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenAterbetalningLamnatAktieagartillskott,false,xbrli:monetaryItemType,duration,
+215,904,"Tillskott till/uttag från handelsbolag ",KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagForandringAnskaffningsvardenTillskottUttagHandelsbolag,false,xbrli:monetaryItemType,duration,
+216,905,Årets resultatandel,KONCERN,,,resultatandel_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenAretsResultatAndel,false,xbrli:monetaryItemType,duration,
+217,906,Omklassificeringar,KONCERN,,,omklass_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringAnskaffningsvardenOmklassificeringar,false,xbrli:monetaryItemType,duration,
+218,907,Omräkningsdifferenser,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagForandringAnskaffningsvardenOmrakningsdifferenser,false,xbrli:monetaryItemType,duration,
+219,908,Utgående anskaffningsvärden,KONCERN,,,koncern_ub,,,,,,debit,false,true,,,AndelarKoncernforetagAnskaffningsvarden,false,xbrli:monetaryItemType,instant,
+220,909,Ingående nedskrivningar,KONCERN,,1318,ack_nedskr_koncern_ib,,,,,,credit,false,true,,,AndelarKoncernforetagNedskrivningar,false,xbrli:monetaryItemType,instant,NEDSKR
+221,910,Förändringar av nedskrivningar,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagForandringNedskrivningarAbstract,true,xbrli:stringItemType,duration,NEDSKR
+222,911,Fusion,KONCERN,+,,aterfor_nedskr_fusion_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringNedskrivningarFusion,false,xbrli:monetaryItemType,duration,NEDSKR
+223,912,Återförda nedskrivningar vid försäljningar,KONCERN,+,,aterfor_nedskr_fsg_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringNedskrivningarAterfordaNedskrivningarForsaljningar,false,xbrli:monetaryItemType,duration,NEDSKR
+224,913,Återförda nedskrivningar,KONCERN,+,,aterfor_nedskr_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringNedskrivningarAterfordaNedskrivningar,false,xbrli:monetaryItemType,duration,NEDSKR
+225,914,Omklassificeringar,KONCERN,,,omklass_nedskr_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringNedskrivningarAretsOmklassificeringar,false,xbrli:monetaryItemType,duration,NEDSKR
+226,915,Årets nedskrivningar,KONCERN,,,arets_nedskr_koncern,,,,,,,false,true,,,AndelarKoncernforetagForandringNedskrivningarAretsNedskrivningar,false,xbrli:monetaryItemType,duration,NEDSKR
+227,916,Omräkningsdifferenser,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagForandringNedskrivningarAretsOmrakningsdifferenser,false,xbrli:monetaryItemType,duration,NEDSKR
+228,917,Utgående nedskrivningar,KONCERN,,,ack_nedskr_koncern_ub,,,,,,credit,false,true,,,AndelarKoncernforetagNedskrivningar,false,xbrli:monetaryItemType,instant,NEDSKR
+229,918,Redovisat värde,KONCERN,,,red_varde_koncern,,,,,,debit,false,true,,,AndelarKoncernforetag,false,xbrli:monetaryItemType,instant,NEDSKR
+230,919,Kommentar,KONCERN,,,,,,,,,,false,,,,AndelarKoncernforetagKommentar,false,xbrli:stringItemType,duration,NEDSKR
+231,920,Innehav av andelar i koncernföretag,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetag,false,xbrli:stringItemType,duration,
+232,921,Innehav av andelar i koncernföretag,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagInklusiveUppgiftForetagTuple,false,,,
+233,922,Företagets namn,KONCERN,,,,,,,,,,false,,,,ForetagetsNamn,false,xbrli:stringItemType,duration,
+234,923,Organisationsnummer,KONCERN,,,,,,,,,,false,,,,Organisationsnummer,false,xbrli:stringItemType,duration,
+235,924,Säte,KONCERN,,,,,,,,,,false,,,,ForetagetsSate,false,xbrli:stringItemType,duration,
+236,925,Antal andelar,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagAntalAndelar,false,xbrli:sharesItemType,instant,
+237,926,Eget kapital,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagEgetKapital,false,xbrli:monetaryItemType,instant,
+238,927,Årets resultat,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagAretsResultat,false,xbrli:monetaryItemType,duration,
+239,928,Kapitalandel,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagKapitalandel,false,xbrli:pureItemType,instant,
+240,929,Rösträttsandel,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagRostrattsandel,false,xbrli:pureItemType,instant,
+241,930,Redovisat värde,KONCERN,,,,,,,,,debit,false,,,,InnehavAndelarKoncernforetagRedovisatVarde,false,xbrli:monetaryItemType,instant,
+242,931,Kommentar,KONCERN,,,,,,,,,,false,,,,InnehavAndelarKoncernforetagKommentar,false,xbrli:stringItemType,duration,
+243,932,Kommentar till not,KONCERN,,,,,,,,,,false,,,,NotAndelarKoncernforetagKommentar,false,xbrli:stringItemType,duration,

@@ -44,8 +44,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG ÖVRIGA: Found SRU {account} -> {sru}")
         
         # Parse account descriptions
         m = konto_re.match(s)
@@ -53,8 +51,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             description = m.group(2)
             account_descriptions[account] = description
-            if debug:
-                print(f"DEBUG ÖVRIGA: Found account {account} -> '{description}'")
 
     # --- CONFIG (K2 – övriga materiella anläggningstillgångar) ---
     # Use original base logic - no SRU integration here
@@ -67,10 +63,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     IMPAIR_COST = 7730
     IMPAIR_REV = 7780
     
-    if debug:
-        print(f"DEBUG ÖVRIGA: Asset ranges: {ASSET_RANGES}")
-        print(f"DEBUG ÖVRIGA: Depreciation accounts: {ACC_DEP_OVRIGA}")
-        print(f"DEBUG ÖVRIGA: Impairment accounts: {ACC_IMP_OVRIGA}")
 
     # --- Helpers ---
     def in_ovriga_assets(acct: int) -> bool:
@@ -155,8 +147,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     aterfor_nedskr_fsg_ovriga = 0.0
     aterfor_nedskr_ovriga = 0.0
 
-    if debug:
-        print(f"DEBUG ÖVRIGA: vouchers parsed = {len(trans_by_ver)}")
 
     # --- Per voucher classification ---
     for key, txs in trans_by_ver.items():
@@ -193,8 +183,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         # 4) Depreciations (ordinary depreciation, not disposal)
         if DEP_K > 0 and has_depr_cost and not is_disposal:
             arets_avskr_ovriga += DEP_K
-            if debug:
-                print(f"DEBUG ÖVRIGA {key}: avskr += {DEP_K}")
 
         # 5) Impairments (non-disposal)
         if has_imp_cost and IMP_K > 0:
@@ -241,16 +229,10 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
                 
                 if "avskr" in description:  # Contains "avskr" (avskrivning, avskrivningar, etc.)
                     additional_avskr_ib += account_ib
-                    if debug:
-                        print(f"DEBUG ÖVRIGA SRU: Adding {account} '{account_descriptions.get(account, '')}' to depreciation: {account_ib}")
                 elif "nedskr" in description:  # Contains "nedskr" (nedskrivning, nedskrivningar, etc.)
                     additional_nedskr_ib += account_ib
-                    if debug:
-                        print(f"DEBUG ÖVRIGA SRU: Adding {account} '{account_descriptions.get(account, '')}' to impairment: {account_ib}")
                 else:  # No special keywords or "uppskr" - treat as main asset
                     additional_ovriga_ib += account_ib
-                    if debug:
-                        print(f"DEBUG ÖVRIGA SRU: Adding {account} '{account_descriptions.get(account, '')}' to övriga assets: {account_ib}")
         
         # Add the additional amounts to the results
         if additional_ovriga_ib != 0 or additional_avskr_ib != 0 or additional_nedskr_ib != 0:
@@ -264,8 +246,6 @@ def parse_ovriga_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             ack_nedskr_ovriga_ub = ack_nedskr_ovriga_ib + aterfor_nedskr_fsg_ovriga + aterfor_nedskr_ovriga - arets_nedskr_ovriga
             red_varde_ovrmat = ovriga_ub + ack_avskr_ovriga_ub + ack_nedskr_ovriga_ub
             
-            if debug:
-                print(f"DEBUG ÖVRIGA SRU: Added totals - Assets: {additional_ovriga_ib}, Depreciation: {additional_avskr_ib}, Impairment: {additional_nedskr_ib}")
 
     return {
         # IB/UB assets

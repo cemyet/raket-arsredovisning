@@ -47,8 +47,6 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG BYGG: Found SRU {account} -> {sru}")
         
         # Parse account descriptions
         m = konto_re.match(s)
@@ -56,8 +54,6 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             description = m.group(2)
             account_descriptions[account] = description
-            if debug:
-                print(f"DEBUG BYGG: Found account {account} -> '{description}'")
 
     # --- CONFIG (K2 – bygg/mark) ---
     # Use original base logic - no SRU integration here
@@ -71,10 +67,7 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     IMPAIR_COST = 7720
     IMPAIR_REV  = 7770
     
-    if debug:
-        print(f"DEBUG BYGG: Final building asset ranges: {BUILDING_ASSET_RANGES}")
-        print(f"DEBUG BYGG: Final depreciation accounts: {ACC_DEP_BYGG}")
-        print(f"DEBUG BYGG: Final impairment accounts: {ACC_IMP_BYGG}")
+
 
     # --- Helpers ---
     def in_building_assets(acct: int) -> bool:
@@ -164,19 +157,11 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     aterfor_nedskr_bygg        = 0.0
     aterfor_nedskr_fsg_bygg    = 0.0
 
-    if debug:
-        print(f"DEBUG K2: vouchers parsed = {len(trans_by_ver)} (sample: {list(trans_by_ver)[:5]})")
-        # Debug: Look for the specific voucher A 312
-        if ('A', 312) in trans_by_ver:
-            print(f"DEBUG K2: Found voucher A 312: {trans_by_ver[('A', 312)]}")
-        else:
-            print(f"DEBUG K2: Voucher A 312 not found. Available vouchers: {list(trans_by_ver.keys())[:5]}...")
+
 
     # --- Per voucher classification ---
     for key, txs in trans_by_ver.items():
-        # Debug depreciation vouchers
-        if debug and (any(a in ACC_DEP_BYGG for a,_ in txs) or any(a in DEPR_COST for a,_ in txs)):
-            print(f"DEBUG K2: Checking voucher {key} with transactions: {txs}")
+
         # Aggregate per voucher
         A_D  = sum(amt for a,amt in txs if in_building_assets(a) and amt > 0)     # Debet asset
         A_K  = sum(-amt for a,amt in txs if in_building_assets(a) and amt < 0)    # Kredit asset (abs)
@@ -213,14 +198,10 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         if DEP_K > 0 and F2085_D > 0:
             inc = min(DEP_K, F2085_D)
             arets_avskr_uppskr_bygg += inc
-            if debug:
-                print(f"DEBUG {key}: avskr uppskr += {inc} (DEP_K={DEP_K}, F2085_D={F2085_D})")
 
         #    b) Ordinary depreciation (K 1119/1159 + D 78xx, but no D 2085)
         if DEP_K > 0 and has_depr_cost and F2085_D == 0:
             arets_avskr_bygg += DEP_K
-            if debug:
-                print(f"DEBUG {key}: avskr ord += {DEP_K}")
 
         # 4) Impairments (non-disposal)
         if has_imp_cost and IMP_K > 0:
@@ -279,16 +260,10 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
                 
                 if "avskr" in description:  # Contains "avskr" (avskrivning, avskrivningar, etc.)
                     additional_avskr_ib += account_ib
-                    if debug:
-                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to depreciation: {account_ib}")
                 elif "nedskr" in description:  # Contains "nedskr" (nedskrivning, nedskrivningar, etc.)
                     additional_nedskr_ib += account_ib
-                    if debug:
-                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to impairment: {account_ib}")
                 else:  # No special keywords or "uppskr" - treat as main asset
                     additional_bygg_ib += account_ib
-                    if debug:
-                        print(f"DEBUG BYGG SRU: Adding {account} '{account_descriptions.get(account, '')}' to building assets: {account_ib}")
         
         # Add the additional amounts to the results
         if additional_bygg_ib != 0 or additional_avskr_ib != 0 or additional_nedskr_ib != 0:
@@ -301,9 +276,6 @@ def parse_bygg_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             ack_avskr_bygg_ub = ack_avskr_bygg_ib + aterfor_avskr_fsg_bygg - arets_avskr_bygg
             ack_nedskr_bygg_ub = ack_nedskr_bygg_ib + aterfor_nedskr_fsg_bygg + aterfor_nedskr_bygg - arets_nedskr_bygg
             red_varde_bygg = bygg_ub + ack_avskr_bygg_ub + ack_nedskr_bygg_ub + ack_uppskr_bygg_ub
-            
-            if debug:
-                print(f"DEBUG BYGG SRU: Added totals - Assets: {additional_bygg_ib}, Depreciation: {additional_avskr_ib}, Impairment: {additional_nedskr_ib}")
 
     return {
         # IB/UB assets

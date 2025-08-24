@@ -26,8 +26,6 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG MASKINER: Found SRU {account} -> {sru}")
 
     # --- CONFIG (K2 – maskiner) ---
     # Base maskiner account ranges
@@ -78,10 +76,6 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     IMPAIR_COST = 7730
     IMPAIR_REV  = 7780
     
-    if debug:
-        print(f"DEBUG MASKINER: Filtered asset ranges: {ASSET_RANGES}")
-        print(f"DEBUG MASKINER: Filtered depreciation accounts: {ACC_DEP_MASK}")
-        print(f"DEBUG MASKINER: Filtered impairment accounts: {ACC_IMP_MASK}")
 
     # --- Helpers ---
     def in_assets(acct: int) -> bool:
@@ -161,14 +155,11 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     aterfor_nedskr_fsg_maskiner = 0.0
     omklass_nedskr_maskiner     = 0.0
 
-    if debug:
-        print(f"DEBUG MASKINER K2: vouchers parsed = {len(trans_by_ver)} (sample: {list(trans_by_ver)[:5]})")
 
     # --- Classify vouchers ---
     for key, txs in trans_by_ver.items():
         # Debug maskiner vouchers
         if debug and (any(a in ACC_DEP_MASK for a,_ in txs) or any(a in DEPR_COST for a,_ in txs) or any(in_assets(a) for a,_ in txs)):
-            print(f"DEBUG MASKINER K2: Checking voucher {key} with transactions: {txs}")
             
         A_D  = sum(amt for a, amt in txs if in_assets(a) and amt > 0)
         A_K  = sum(-amt for a, amt in txs if in_assets(a) and amt < 0)
@@ -186,37 +177,25 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             arets_fsg_maskiner         += A_K
             aterfor_avskr_fsg_maskiner += DEP_D
             aterfor_nedskr_fsg_maskiner+= IMP_D
-            if debug:
-                print(f"DEBUG MASKINER {key}: disposal - fsg += {A_K}, aterfor_avskr += {DEP_D}, aterfor_nedskr += {IMP_D}")
 
         # Inköp
         if A_D > 0:
             arets_inkop_maskiner += A_D
-            if debug:
-                print(f"DEBUG MASKINER {key}: inkop += {A_D}")
 
         # Depreciations
         if DEP_K > 0 and has_depr_cost:
             arets_avskr_maskiner += DEP_K
-            if debug:
-                print(f"DEBUG MASKINER {key}: avskr += {DEP_K}")
 
         # Impairments
         if has_imp_cost and IMP_K > 0:
             arets_nedskr_maskiner += sum(amt for a, amt in txs if a == IMPAIR_COST and amt > 0)
-            if debug:
-                print(f"DEBUG MASKINER {key}: nedskr += {sum(amt for a, amt in txs if a == IMPAIR_COST and amt > 0)}")
         if has_imp_rev and IMP_D > 0 and A_K == 0:
             aterfor_nedskr_maskiner += IMP_D
-            if debug:
-                print(f"DEBUG MASKINER {key}: aterfor_nedskr += {IMP_D}")
 
         # Omklass
         signals = (DEP_D+DEP_K+IMP_D+IMP_K) > 0 or has_PL_disposal or has_depr_cost or has_imp_cost or has_imp_rev
         if A_D > 0 and A_K > 0 and not signals:
             arets_omklass_maskiner += (A_D - A_K)
-            if debug:
-                print(f"DEBUG MASKINER {key}: omklass += {A_D - A_K}")
 
     # --- UB formulas ---
     maskiner_ub = maskiner_ib + arets_inkop_maskiner - arets_fsg_maskiner + arets_omklass_maskiner
@@ -226,8 +205,6 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     # --- Derived ---
     red_varde_maskiner = maskiner_ub + ack_avskr_maskiner_ub + ack_nedskr_maskiner_ub
 
-    if debug:
-        print(f"DEBUG MASKINER K2: Final results:")
         print(f"  maskiner_ib: {maskiner_ib}")
         print(f"  arets_inkop_maskiner: {arets_inkop_maskiner}")
         print(f"  arets_fsg_maskiner: {arets_fsg_maskiner}")

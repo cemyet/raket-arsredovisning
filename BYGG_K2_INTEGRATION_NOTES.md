@@ -114,3 +114,4 @@ for var_name, value in {**bygg_k2_data, **maskin_k2_data, **inv_k2_data}.items()
 - [ ] Frontend displays calculated values (not 0 kr)
 - [ ] No overwrites in accounts_included logic
 
+

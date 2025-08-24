@@ -30,18 +30,14 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             account = int(m.group(1))
             sru = int(m.group(2))
             sru_codes[account] = sru
-            if debug:
-                print(f"DEBUG KONCERN: Found SRU {account} -> {sru}")
+
 
     # --- CONFIG (K2 – koncern) ---
     ASSET_RANGES = [(1310, 1317)]
     ACC_IMP = {1318}  # Impairment account
     RES_SHARE = 8240  # Result share account
     
-    if debug:
-        print(f"DEBUG KONCERN: Asset ranges: {ASSET_RANGES}")
-        print(f"DEBUG KONCERN: Impairment account: {ACC_IMP}")
-        print(f"DEBUG KONCERN: Result share account: {RES_SHARE}")
+
 
     # --- Helpers ---
     def in_assets(acct: int) -> bool:
@@ -98,8 +94,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             # Extract voucher text (quoted or unquoted)
             voucher_text = mh.group(4) or mh.group(5) or ""
             text_by_ver[current_ver] = voucher_text
-            if debug and voucher_text:
-                print(f"DEBUG KONCERN: Voucher {current_ver} text: '{voucher_text}'")
+
             continue
         if t == "{":
             in_block = True
@@ -134,10 +129,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     aterfor_nedskr_fusion_koncern = 0.0
     omklass_nedskr_koncern = 0.0
 
-    if debug:
-        print(f"DEBUG KONCERN K2: vouchers parsed = {len(trans_by_ver)}")
-        for key, txs in list(trans_by_ver.items())[:3]:  # Show first 3 vouchers
-            print(f"DEBUG KONCERN K2: Voucher {key}: {txs}, text: '{text_by_ver.get(key, '')}'")
+
 
     # --- per voucher classification (SIGNED RESULTATANDEL) ---
     for key, txs in trans_by_ver.items():
@@ -152,8 +144,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         RES_K = sum(-amt for a,amt in txs if a == RES_SHARE and amt < 0)  # |K8240|
         RES_D = sum(amt  for a,amt in txs if a == RES_SHARE and amt > 0)  # D8240
 
-        if debug and (A_D > 0 or A_K > 0 or RES_K > 0 or RES_D > 0 or IMP_D > 0 or IMP_K > 0):
-            print(f"DEBUG KONCERN {key}: A_D={A_D}, A_K={A_K}, RES_K={RES_K}, RES_D={RES_D}, IMP_D={IMP_D}, IMP_K={IMP_K}, text='{text}'")
+
 
         # 1) Resultatandel (signerad):
         #   +  D tillgång + K8240
@@ -162,24 +153,17 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         res_minus = min(A_K, RES_D) if RES_D > 0 and A_K > 0 else 0.0
         resultatandel_koncern += (res_plus - res_minus)
 
-        if debug and (res_plus > 0 or res_minus > 0):
-            print(f"DEBUG KONCERN {key}: resultatandel += {res_plus - res_minus} (res_plus={res_plus}, res_minus={res_minus})")
+
 
         # 2) Inköp = resterande D på tillgång efter resultatandel (+delen)
         inkop_amount = max(0.0, A_D - res_plus)
         if inkop_amount > 0:
             if "fusion" in text:
                 fusion_koncern += inkop_amount
-                if debug:
-                    print(f"DEBUG KONCERN {key}: fusion += {inkop_amount}")
             elif "aktieägartillskott" in text:
                 aktieagartillskott_lamnad_koncern += inkop_amount
-                if debug:
-                    print(f"DEBUG KONCERN {key}: aktieägartillskott += {inkop_amount}")
             else:
                 inkop_koncern += inkop_amount
-                if debug:
-                    print(f"DEBUG KONCERN {key}: inkop += {inkop_amount}")
 
         # 3) Försäljning = resterande K på tillgång efter resultatandel (-delen)
         sale_amount = max(0.0, A_K - res_minus)
@@ -188,33 +172,21 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             if IMP_D > 0:
                 aterfor_nedskr_fsg_koncern += IMP_D
                 IMP_D = 0.0  # consumed
-                if debug:
-                    print(f"DEBUG KONCERN {key}: aterfor_nedskr_fsg += {IMP_D}")
             fsg_koncern += sale_amount
-            if debug:
-                print(f"DEBUG KONCERN {key}: fsg += {sale_amount}")
 
         # 4) Återföring/nedskrivning som inte redan bundits till försäljning
         if IMP_D > 0:
             if "fusion" in text:
                 aterfor_nedskr_fusion_koncern += IMP_D
-                if debug:
-                    print(f"DEBUG KONCERN {key}: aterfor_nedskr_fusion += {IMP_D}")
             else:
                 aterfor_nedskr_koncern += IMP_D
-                if debug:
-                    print(f"DEBUG KONCERN {key}: aterfor_nedskr += {IMP_D}")
         if IMP_K > 0:
             arets_nedskr_koncern += IMP_K
-            if debug:
-                print(f"DEBUG KONCERN {key}: arets_nedskr += {IMP_K}")
 
         # 5) Omklass (tillgång resp. ack nedskr) utan signaler
         asset_signals = (RES_K > 0 or RES_D > 0 or IMP_D > 0 or IMP_K > 0)
         if A_D > 0 and A_K > 0 and not asset_signals:
             omklass_koncern += (A_D - A_K)
-            if debug:
-                print(f"DEBUG KONCERN {key}: omklass += {A_D - A_K}")
         
         # Omklass for nedskrivning accounts separately
         imp_d_orig = sum(amt for a,amt in txs if a in ACC_IMP and amt > 0)
@@ -222,8 +194,6 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         if imp_d_orig > 0 and imp_k_orig > 0 and \
            not (A_D > 0 or A_K > 0 or RES_K > 0 or RES_D > 0):
             omklass_nedskr_koncern += (imp_d_orig - imp_k_orig)
-            if debug:
-                print(f"DEBUG KONCERN {key}: omklass_nedskr += {imp_d_orig - imp_k_orig}")
 
     # --- UB formulas ---
     koncern_ub = koncern_ib + inkop_koncern + fusion_koncern + aktieagartillskott_lamnad_koncern - fsg_koncern + resultatandel_koncern + omklass_koncern
@@ -240,24 +210,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     # --- Derived calculations ---
     red_varde_koncern = koncern_ub + ack_nedskr_koncern_ub
 
-    if debug:
-        print(f"DEBUG KONCERN K2: Final results:")
-        print(f"  koncern_ib: {koncern_ib}")
-        print(f"  inkop_koncern: {inkop_koncern}")
-        print(f"  fusion_koncern: {fusion_koncern}")
-        print(f"  aktieagartillskott_lamnad_koncern: {aktieagartillskott_lamnad_koncern}")
-        print(f"  fsg_koncern: {fsg_koncern}")
-        print(f"  resultatandel_koncern: {resultatandel_koncern}")
-        print(f"  omklass_koncern: {omklass_koncern}")
-        print(f"  koncern_ub: {koncern_ub}")
-        print(f"  ack_nedskr_koncern_ib: {ack_nedskr_koncern_ib}")
-        print(f"  arets_nedskr_koncern: {arets_nedskr_koncern}")
-        print(f"  aterfor_nedskr_koncern: {aterfor_nedskr_koncern}")
-        print(f"  aterfor_nedskr_fsg_koncern: {aterfor_nedskr_fsg_koncern}")
-        print(f"  aterfor_nedskr_fusion_koncern: {aterfor_nedskr_fusion_koncern}")
-        print(f"  omklass_nedskr_koncern: {omklass_nedskr_koncern}")
-        print(f"  ack_nedskr_koncern_ub: {ack_nedskr_koncern_ub}")
-        print(f"  red_varde_koncern: {red_varde_koncern}")
+
 
     return {
         # Asset movements
