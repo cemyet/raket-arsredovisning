@@ -2,6 +2,10 @@ import re
 import unicodedata
 from collections import defaultdict
 
+# ---- Regex patterns for precise matching ----
+ACK_IMP_PAT = re.compile(r'\b(?:ack(?:[.\s]*nedskr\w*)|ackum\w*|nedskriv\w*)\b', re.IGNORECASE)
+FORDR_PAT   = re.compile(r'\b(fordran|fordringar|lan|lån|ranta|ränta|amort|avbetal)\b', re.IGNORECASE)
+
 def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     """
     KONCERN-note (K2) parser — enhanced with dynamic account classification.
@@ -75,18 +79,19 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     # ---------- Classify accounts (dynamic sets) ----------
     # Scope: 1310–1318 primarily; 1320–1329 only if text says Shares/AAT and not receivables
     def is_fordrings_text(t: str) -> bool:
-        return _has(t, "fordran", "fordringar", "lan", "lån", "ranta", "ränta", "amort", "avbetal")
+        return bool(FORDR_PAT.search(t))
 
     def is_aat_text(t: str) -> bool:
-        return _has(t, "aktieagartillskott", "aktieägartillskott", "villkorat", "ovillkorat")
+        return any(w in t for w in ("aktieagartillskott", "aktieägartillskott", "villkorat", "ovillkorat"))
 
     def is_andelar_koncern_text(t: str) -> bool:
-        # broad but safe: requires koncern/dotter and aktie/andel
-        return ( _has(t, "koncern", "koncernforetag", "koncernföretag", "dotter", "subsidiary")
-                 and _has(t, "andel", "andelar", "aktie", "aktier") )
+        # kräver både koncern/dotter OCH andel/aktie
+        return (any(w in t for w in ("koncern", "koncernforetag", "koncernföretag", "dotter", "subsidiary"))
+                and any(w in t for w in ("andel", "andelar", "aktie", "aktier")))
 
     def is_ack_ned_andelar_text(t: str) -> bool:
-        return _has(t, "ack", "ackum", "nedskriv", "nedskr")
+        # Viktigt: träffar INTE på "Holtback" längre
+        return bool(ACK_IMP_PAT.search(t))
 
     # Start with fixed intervals
     base_andel_range = set(a for a in range(1310, 1318+1))
@@ -129,7 +134,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             continue
         t = konto_name.get(acct, "")
         if t and is_ack_ned_andelar_text(t):
-            imp_set.add(acct)
+            imp_set.add(acct)       # endast om NEDSKR/ACKUM finns i texten
 
     # Asset universe used in resultatandel/omklass heuristics etc.
     asset_all_set = andel_set | aat_set
@@ -197,6 +202,20 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     # ---------- IB balances (dynamic sets) ----------
     koncern_ib = get_balance('IB', asset_all_set)
     ack_nedskr_koncern_ib = get_balance('IB', imp_set)
+
+    # Debug output for impairment account classification
+    if debug:
+        debug_imp_ib = {}
+        for raw in lines:
+            m = re.match(r'^#IB\s+0\s+(\d+)\s+(-?[0-9][0-9\s.,]*)', raw.strip())
+            if m:
+                acct = int(m.group(1))
+                if acct in imp_set:
+                    val = float(m.group(2).replace(" ", "").replace(",", "."))
+                    debug_imp_ib[acct] = val
+        print(f"DEBUG KONCERN: Impairment accounts (imp_set): {sorted(imp_set)}")
+        print(f"DEBUG KONCERN: IB values for impairment accounts: {debug_imp_ib}")
+        print(f"DEBUG KONCERN: Total ack_nedskr_koncern_ib: {ack_nedskr_koncern_ib}")
 
     # ---------- Accumulators ----------
     resultatandel_koncern = 0.0
