@@ -177,9 +177,6 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
 
     # --- Classify vouchers ---
     for key, txs in trans_by_ver.items():
-        # Debug inventarier vouchers
-        if debug and (any(a in ACC_DEP for a, _ in txs) or any(a in DEPR_COST for a, _ in txs) or any(in_assets(a) for a, _ in txs)):
-
         A_D = sum(amt for a, amt in txs if in_assets(a) and amt > 0)
         A_K = sum(-amt for a, amt in txs if in_assets(a) and amt < 0)
         DEP_D = sum(amt for a, amt in txs if a in ACC_DEP and amt > 0)
@@ -225,24 +222,6 @@ def parse_inventarier_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
 
     # --- Derived ---
     red_varde_inventarier = inventarier_ub + ack_avskr_inventarier_ub + ack_nedskr_inventarier_ub
-
-        print(f"  inventarier_ib: {inventarier_ib}")
-        print(f"  arets_inkop_inventarier: {arets_inkop_inventarier}")
-        print(f"  arets_fsg_inventarier: {arets_fsg_inventarier}")
-        print(f"  arets_omklass_inventarier: {arets_omklass_inventarier}")
-        print(f"  inventarier_ub: {inventarier_ub}")
-        print(f"  ack_avskr_inventarier_ib: {ack_avskr_inventarier_ib}")
-        print(f"  aterfor_avskr_fsg_inventarier: {aterfor_avskr_fsg_inventarier}")
-        print(f"  omklass_avskr_inventarier: {omklass_avskr_inventarier}")
-        print(f"  arets_avskr_inventarier: {arets_avskr_inventarier}")
-        print(f"  ack_avskr_inventarier_ub: {ack_avskr_inventarier_ub}")
-        print(f"  ack_nedskr_inventarier_ib: {ack_nedskr_inventarier_ib}")
-        print(f"  arets_nedskr_inventarier: {arets_nedskr_inventarier}")
-        print(f"  aterfor_nedskr_inventarier: {aterfor_nedskr_inventarier}")
-        print(f"  aterfor_nedskr_fsg_inventarier: {aterfor_nedskr_fsg_inventarier}")
-        print(f"  omklass_nedskr_inventarier: {omklass_nedskr_inventarier}")
-        print(f"  ack_nedskr_inventarier_ub: {ack_nedskr_inventarier_ub}")
-        print(f"  red_varde_inventarier: {red_varde_inventarier}")
 
     return {
         "inventarier_ib": inventarier_ib,

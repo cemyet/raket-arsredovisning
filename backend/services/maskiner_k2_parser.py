@@ -158,9 +158,7 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
 
     # --- Classify vouchers ---
     for key, txs in trans_by_ver.items():
-        # Debug maskiner vouchers
-        if debug and (any(a in ACC_DEP_MASK for a,_ in txs) or any(a in DEPR_COST for a,_ in txs) or any(in_assets(a) for a,_ in txs)):
-            
+        
         A_D  = sum(amt for a, amt in txs if in_assets(a) and amt > 0)
         A_K  = sum(-amt for a, amt in txs if in_assets(a) and amt < 0)
         DEP_D = sum(amt for a, amt in txs if a in ACC_DEP_MASK and amt > 0)
@@ -204,24 +202,6 @@ def parse_maskiner_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
 
     # --- Derived ---
     red_varde_maskiner = maskiner_ub + ack_avskr_maskiner_ub + ack_nedskr_maskiner_ub
-
-        print(f"  maskiner_ib: {maskiner_ib}")
-        print(f"  arets_inkop_maskiner: {arets_inkop_maskiner}")
-        print(f"  arets_fsg_maskiner: {arets_fsg_maskiner}")
-        print(f"  arets_omklass_maskiner: {arets_omklass_maskiner}")
-        print(f"  maskiner_ub: {maskiner_ub}")
-        print(f"  ack_avskr_maskiner_ib: {ack_avskr_maskiner_ib}")
-        print(f"  aterfor_avskr_fsg_maskiner: {aterfor_avskr_fsg_maskiner}")
-        print(f"  omklass_avskr_maskiner: {omklass_avskr_maskiner}")
-        print(f"  arets_avskr_maskiner: {arets_avskr_maskiner}")
-        print(f"  ack_avskr_maskiner_ub: {ack_avskr_maskiner_ub}")
-        print(f"  ack_nedskr_maskiner_ib: {ack_nedskr_maskiner_ib}")
-        print(f"  arets_nedskr_maskiner: {arets_nedskr_maskiner}")
-        print(f"  aterfor_nedskr_maskiner: {aterfor_nedskr_maskiner}")
-        print(f"  aterfor_nedskr_fsg_maskiner: {aterfor_nedskr_fsg_maskiner}")
-        print(f"  omklass_nedskr_maskiner: {omklass_nedskr_maskiner}")
-        print(f"  ack_nedskr_maskiner_ub: {ack_nedskr_maskiner_ub}")
-        print(f"  red_varde_maskiner: {red_varde_maskiner}")
 
     return {
         "maskiner_ib": maskiner_ib,
