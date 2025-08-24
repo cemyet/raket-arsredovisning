@@ -126,8 +126,8 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     K2 – Andelar i intresseföretag, gemensamt styrda företag och övriga företag (1330–1339)
 
     Policy in this version:
-      • Ignore vouchers that look like 'bortbokning/utrangering/konkurs' for flows
       • Set UB (cost and acc. impairment) from factual #UB, so totals align
+      • Process all vouchers including bortbokning/utrangering transactions
     """
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
@@ -170,11 +170,6 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
 
     for key, txs in trans_by_ver.items():
         text = (text_by_ver.get(key, "") or "").lower()
-        # Ignore bortbokning/utrangering/konkurs in flows
-        if any(w in text for w in ("bortbok", "utrang", "konkurs")):
-            if debug:
-                print(f"DEBUG INTRESSEFTG {key}: IGNORED (bortbok/utrang/konkurs): '{text}'")
-            continue
 
         A_D  = sum(amt  for a,amt in txs if a in ASSET_SET   and amt > 0)
         A_K  = sum(-amt for a,amt in txs if a in ASSET_SET   and amt < 0)
