@@ -49,18 +49,20 @@ async def main():
             display_company_info(company_info)
             
             # 2. Get document list
-            print("\n📄 Getting document list...")
+            print("\n📄 Getting annual reports...")
             document_list = await service.get_document_list(org_number)
             
             if not document_list or not document_list.get('dokument'):
-                print("ℹ️  No documents available for this company")
+                print("ℹ️  No annual reports available for this company")
                 continue
             
-            # Display document list
-            display_document_list(document_list)
+            # Display document list with numbers for selection
+            documents = document_list.get('dokument', [])
+            display_annual_reports_list(documents)
             
-            # 3. Download and extract only the latest document
-            await download_latest_document(service, document_list, org_number)
+            # 3. Ask user which document to download
+            if documents:
+                await interactive_download_selection(service, documents, org_number)
             
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
@@ -113,22 +115,166 @@ def display_company_info(company_info):
     else:
         print("✅ Status: ACTIVE")
 
-def display_document_list(document_list):
-    """Display document list in a readable format"""
-    print("\n📄 AVAILABLE DOCUMENTS")
-    print("=" * 25)
+def display_annual_reports_list(documents):
+    """Display annual reports list with selection numbers"""
+    print("\n📄 AVAILABLE ANNUAL REPORTS")
+    print("=" * 35)
     
-    documents = document_list.get('dokument', [])
     if not documents:
-        print("No documents available")
+        print("No annual reports available")
         return
     
     for i, doc in enumerate(documents, 1):
-        print(f"\n📋 Document {i}:")
-        print(f"   ID: {doc.get('dokumentId', 'N/A')}")
-        print(f"   Format: {doc.get('filformat', 'N/A')}")
-        print(f"   Period End: {doc.get('rapporteringsperiodTom', 'N/A')}")
-        print(f"   Registration: {doc.get('registreringstidpunkt', 'N/A')}")
+        period_end = doc.get('rapporteringsperiodTom', 'N/A')
+        registration = doc.get('registreringstidpunkt', 'N/A')
+        doc_format = doc.get('filformat', 'N/A')
+        
+        # Extract year from period end for cleaner display
+        year = period_end.split('-')[0] if period_end != 'N/A' else 'Unknown'
+        
+        print(f"\n📋 [{i}] Annual Report {year}")
+        print(f"    Period End: {period_end}")
+        print(f"    Registration: {registration}")
+        print(f"    Format: {doc_format}")
+        print(f"    Document ID: {doc.get('dokumentId', 'N/A')}")
+
+async def interactive_download_selection(service, documents, org_number):
+    """Ask user which document to download and process it"""
+    print(f"\n💾 Found {len(documents)} annual report(s)")
+    
+    while True:
+        try:
+            choice = input(f"\n📥 Which report would you like to download? (1-{len(documents)}, or 'skip' to continue): ").strip().lower()
+            
+            if choice in ['skip', 's', 'n', 'no']:
+                print("⏭️  Skipping download")
+                return
+            
+            # Try to parse as number
+            try:
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(documents):
+                    selected_doc = documents[choice_num - 1]
+                    await download_and_extract_document(service, selected_doc, org_number)
+                    
+                    # Ask if they want to download another
+                    if len(documents) > 1:
+                        another = input("\n📥 Download another report? (y/n): ").strip().lower()
+                        if another not in ['y', 'yes']:
+                            break
+                    else:
+                        break
+                else:
+                    print(f"❌ Please enter a number between 1 and {len(documents)}")
+            except ValueError:
+                print("❌ Please enter a valid number or 'skip'")
+                
+        except KeyboardInterrupt:
+            print("\n⏭️  Skipping download")
+            return
+
+async def download_and_extract_document(service, document, org_number):
+    """Download and extract a specific document"""
+    document_id = document.get('dokumentId')
+    period_end = document.get('rapporteringsperiodTom', 'Unknown')
+    registration_date = document.get('registreringstidpunkt', 'Unknown')
+    
+    # Extract year for filename
+    year = period_end.split('-')[0] if period_end != 'Unknown' else 'latest'
+    
+    print(f"\n📥 DOWNLOADING ANNUAL REPORT")
+    print("=" * 35)
+    print(f"📅 Period End: {period_end}")
+    print(f"📅 Registration: {registration_date}")
+    print(f"🆔 Document ID: {document_id}")
+    
+    # Create downloads folder
+    downloads_dir = os.path.expanduser("~/Downloads")
+    if not os.path.exists(downloads_dir):
+        downloads_dir = "./downloads"
+        os.makedirs(downloads_dir, exist_ok=True)
+    
+    print(f"📁 Download folder: {downloads_dir}")
+    
+    try:
+        # Download the document
+        print(f"\n📥 Downloading...")
+        document_data = await service.get_document(document_id)
+        
+        if not document_data or len(document_data) == 0:
+            print(f"❌ Failed to retrieve document or document is empty")
+            return
+        
+        # Determine file extension based on format
+        file_format = document.get('filformat', 'application/zip')
+        if 'zip' in file_format:
+            extension = '.zip'
+        elif 'pdf' in file_format:
+            extension = '.pdf'
+        else:
+            extension = '.bin'
+        
+        # Create filename with year
+        filename = f"{org_number}_{year}{extension}"
+        filepath = os.path.join(downloads_dir, filename)
+        
+        # Save the document
+        if isinstance(document_data, bytes):
+            with open(filepath, 'wb') as f:
+                f.write(document_data)
+        else:
+            print(f"⚠️  Unexpected document data type: {type(document_data)}")
+            return
+        
+        print(f"✅ Downloaded: {filename}")
+        print(f"📏 Size: {os.path.getsize(filepath):,} bytes")
+        
+        # Ask if user wants to extract and analyze
+        if extension == '.zip':
+            extract = input("\n🔍 Extract and analyze the ZIP file? (y/n): ").strip().lower()
+            if extract in ['y', 'yes']:
+                await extract_and_analyze_document(service, document_id, filepath)
+        
+    except Exception as e:
+        print(f"❌ Error downloading document: {str(e)}")
+
+async def extract_and_analyze_document(service, document_id, filepath):
+    """Extract and analyze the downloaded document"""
+    print(f"\n🔍 EXTRACTING AND ANALYZING DOCUMENT")
+    print("=" * 40)
+    
+    extracted_data = await service.get_and_extract_document(document_id)
+    
+    if extracted_data:
+        print(f"✅ Successfully extracted document!")
+        print(f"📁 Extract directory: {extracted_data['extract_dir']}")
+        
+        if 'zip_info' in extracted_data:
+            print(f"📦 ZIP contains {extracted_data['total_files']} files")
+            print(f"📏 Total size: {extracted_data['zip_info']['size']:,} bytes")
+        
+        if 'processed_files' in extracted_data:
+            print(f"📄 Processed {len(extracted_data['processed_files'])} XHTML files:")
+            
+            for j, file_info in enumerate(extracted_data['processed_files'], 1):
+                print(f"\n📋 File {j}: {file_info['filename']}")
+                print(f"   Title: {file_info['title']}")
+                print(f"   📁 Full path: {file_info['filepath']}")
+                
+                # Show content preview
+                preview = file_info['text_content'][:200]
+                print(f"   Preview: {preview}...")
+        
+        print(f"\n💾 Files saved to: {extracted_data['extract_dir']}")
+        print(f"📁 ZIP file saved to: {filepath}")
+        print(f"✅ Extraction completed successfully!")
+        
+        # Ask if user wants detailed analysis
+        show_details = input("\n🔍 Show detailed content analysis? (y/n): ").strip().lower()
+        if show_details in ['y', 'yes']:
+            await show_detailed_analysis(extracted_data)
+    else:
+        print("❌ Failed to extract document")
 
 async def download_latest_document(service, document_list, org_number):
     """Download and extract only the latest document"""
