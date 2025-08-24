@@ -1627,7 +1627,7 @@ class DatabaseParser:
                     'accounts_included': mapping.get('accounts_included', ''),
                     'account_details': self._get_account_details(mapping.get('accounts_included', ''), current_ub) if mapping.get('show_tag', False) else None,
                     'block': mapping.get('block', ''),
-                    'style': mapping.get('style', ''),
+                    'style': mapping.get('style', 'NORMAL'),
                     'always_show': always_show,
                     'toggle_show': toggle_show
                 }
