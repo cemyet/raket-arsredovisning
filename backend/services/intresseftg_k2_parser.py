@@ -2,10 +2,10 @@ import re
 import unicodedata
 from collections import defaultdict
 
-# ---------- utilities ----------
+# ------------------ utils ------------------
 def _norm(s: str) -> str:
     """Normalize names: strip diacritics, lower, keep [a-z0-9 ] only, collapse spaces."""
-    s = unicodedata.normalize("NFKD", s)
+    s = unicodedata.normalize("NFKD", s or "")
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     s = s.lower().replace("\u00A0", " ")
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
@@ -13,7 +13,7 @@ def _norm(s: str) -> str:
     return s
 
 def _to_float(s: str) -> float:
-    return float(s.strip().replace(" ", "").replace(",", "."))
+    return float((s or "0").strip().replace(" ", "").replace(",", "."))
 
 # ---------- discovery step: build dynamic 133x sets ----------
 def discover_equity_account_map_for_range_133x(sie_text: str):
@@ -47,8 +47,8 @@ def discover_equity_account_map_for_range_133x(sie_text: str):
     default_asset  = {1330, 1331, 1333, 1336}
     default_accimp = {1332, 1334, 1337, 1338}
 
-    # Keywords
-    kw_contrib = ("aktieagartillskott", "aktieagar", "agartillskott", "agartill")
+    # Keywords (wide net for tillskott / nedskr)
+    kw_contrib = ("tillsk", "tillskott", "aktieagartillskott", "aktieagar", "agartillskott", "agartill")
     kw_imp     = ("ack", "ackumuler", "nedskr", "vardened", "varde ned", "v neds")
 
     ASSET, ACC_IMP, CONTRIB = set(), set(), set()
@@ -63,11 +63,8 @@ def discover_equity_account_map_for_range_133x(sie_text: str):
         is_imp_sru = (sru is not None and 7200 <= sru < 7300)
 
         if acc not in name_by_acc:
-            # fallback BAS role if account missing in file
-            if acc in default_accimp:
-                ACC_IMP.add(acc)
-            else:
-                ASSET.add(acc)
+            # fallback BAS role
+            (ACC_IMP if acc in default_accimp else ASSET).add(acc)
             continue
 
         if is_contrib:
@@ -81,8 +78,7 @@ def discover_equity_account_map_for_range_133x(sie_text: str):
     ASSET -= CONTRIB
     return {"ASSET": ASSET, "ACC_IMP": ACC_IMP, "CONTRIB": CONTRIB, "names": name_by_acc, "sru": sru_by_acc}
 
-# ---------- helpers for balances & vouchers ----------
-def _get_balance(lines, kind_flag: str, accounts):
+def _get_balance(lines, kind_flag: str, accounts: set[int]) -> float:
     total = 0.0
     bal_re = re.compile(rf'^#(?:{kind_flag})\s+0\s+(\d+)\s+(-?[0-9][0-9\s.,]*)(?:\s+.*)?$')
     for raw in lines:
@@ -129,19 +125,9 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     """
     K2 – Andelar i intresseföretag, gemensamt styrda företag och övriga företag (1330–1339)
 
-    Dynamic classification:
-      ASSET_SET   = investment cost accounts
-      CONTRIB_SET = aktieägartillskott accounts (part of cost roll-forward)
-      ACC_IMP_SET = accumulated impairment accounts
-
-    Rules (signed, per voucher):
-      - Resultatandel = +min(D ASSET, |K8240|) - min(|K ASSET|, D8240)
-      - Inköp         = remaining D ASSET after resultatandel(+)
-      - Försäljning   = -(K ASSET + K CONTRIB); tie D ACC_IMP (same voucher) to aterfor_nedskr_fsg
-      - Tillskott     = +D CONTRIB; återbetalt = -K CONTRIB
-      - Årets nedskr  = K ACC_IMP
-      - Återföring ej fsg = D ACC_IMP (no sale in same voucher)
-      - IB (cost)     = IB of (ASSET_SET ∪ CONTRIB_SET)
+    Policy in this version:
+      • Ignore vouchers that look like 'bortbokning/utrangering/konkurs' for flows
+      • Set UB (cost and acc. impairment) from factual #UB, so totals align
     """
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
     lines = sie_text.splitlines()
@@ -153,45 +139,50 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
     ACC_IMP_SET = m["ACC_IMP"]
 
     if debug:
-        print(f"DEBUG INTRESSEFTG: ASSET_SET={sorted(ASSET_SET)} CONTRIB_SET={sorted(CONTRIB_SET)} ACC_IMP_SET={sorted(ACC_IMP_SET)}")
+        print(f"DEBUG INTRESSEFTG: ASSET={sorted(ASSET_SET)} CONTRIB={sorted(CONTRIB_SET)} ACC_IMP={sorted(ACC_IMP_SET)}")
 
-    # Balances
+    # IB / UB (from SIE)
     intresseftg_ib            = _get_balance(lines, 'IB', ASSET_SET | CONTRIB_SET)
     ack_nedskr_intresseftg_ib = _get_balance(lines, 'IB', ACC_IMP_SET)
 
-    # --- Accumulators ---
-    inkop_intresseftg = 0.0
-    fsg_intresseftg = 0.0
-    fusion_intresseftg = 0.0
-    aktieagartillskott_lamnad_intresseftg = 0.0
+    # factual UB (USED for final results)
+    cost_ub_actual = _get_balance(lines, 'UB', ASSET_SET | CONTRIB_SET)
+    ack_ub_actual  = _get_balance(lines, 'UB', ACC_IMP_SET)
+
+    # Accumulators (flows)
+    inkop_intresseftg                         = 0.0
+    fusion_intresseftg                        = 0.0
+    fsg_intresseftg                           = 0.0  # negative
+    aktieagartillskott_lamnad_intresseftg     = 0.0
     aktieagartillskott_aterbetald_intresseftg = 0.0
-    resultatandel_intresseftg = 0.0
-    omklass_intresseftg = 0.0
-    
-    # Impairment accumulators
-    arets_nedskr_intresseftg = 0.0
-    aterfor_nedskr_intresseftg = 0.0
-    aterfor_nedskr_fsg_intresseftg = 0.0
-    aterfor_nedskr_fusion_intresseftg = 0.0
-    omklass_nedskr_intresseftg = 0.0
+    resultatandel_intresseftg                 = 0.0
+    omklass_intresseftg                       = 0.0
+
+    arets_nedskr_intresseftg                  = 0.0
+    aterfor_nedskr_intresseftg                = 0.0
+    aterfor_nedskr_fsg_intresseftg            = 0.0
+    aterfor_nedskr_fusion_intresseftg         = 0.0
+    omklass_nedskr_intresseftg                = 0.0
 
     # Parse vouchers
     trans_by_ver, text_by_ver = _parse_vouchers(lines)
     RES_SHARE = 8240
 
-    if debug:
-        print(f"DEBUG INTRESSEFTG K2: vouchers parsed = {len(trans_by_ver)}")
-
     for key, txs in trans_by_ver.items():
         text = (text_by_ver.get(key, "") or "").lower()
+        # Ignore bortbokning/utrangering/konkurs in flows
+        if any(w in text for w in ("bortbok", "utrang", "konkurs")):
+            if debug:
+                print(f"DEBUG INTRESSEFTG {key}: IGNORED (bortbok/utrang/konkurs): '{text}'")
+            continue
 
         A_D  = sum(amt  for a,amt in txs if a in ASSET_SET   and amt > 0)
         A_K  = sum(-amt for a,amt in txs if a in ASSET_SET   and amt < 0)
         C_D  = sum(amt  for a,amt in txs if a in CONTRIB_SET and amt > 0)
         C_K  = sum(-amt for a,amt in txs if a in CONTRIB_SET and amt < 0)
 
-        IMP_D = sum(amt  for a,amt in txs if a in ACC_IMP_SET and amt > 0)   # återföring
-        IMP_K = sum(-amt for a,amt in txs if a in ACC_IMP_SET and amt < 0)   # årets nedskr
+        IMP_D = sum(amt  for a,amt in txs if a in ACC_IMP_SET and amt > 0)   # reversal
+        IMP_K = sum(-amt for a,amt in txs if a in ACC_IMP_SET and amt < 0)   # new impair
 
         RES_K = sum(-amt for a,amt in txs if a == RES_SHARE and amt < 0)     # |K8240|
         RES_D = sum(amt  for a,amt in txs if a == RES_SHARE and amt > 0)     # D8240
@@ -207,49 +198,41 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
         if debug and (res_plus > 0 or res_minus > 0):
             print(f"DEBUG INTRESSEFTG {key}: resultatandel += {res_plus - res_minus} (res_plus={res_plus}, res_minus={res_minus})")
 
-        # Inköp (remaining D ASSET after res_plus)
+        # Inköp (remaining D asset after res_plus)
         inc_amount = max(0.0, A_D - res_plus)
         if inc_amount > 0:
             if "fusion" in text:
                 fusion_intresseftg += inc_amount
                 if debug:
                     print(f"DEBUG INTRESSEFTG {key}: fusion += {inc_amount}")
-            elif "aktieägartillskott" in text or "aktieagartillskott" in text:
-                # still count as purchase of shares; actual tillskott handled via CONTRIB
-                inkop_intresseftg += inc_amount
-                if debug:
-                    print(f"DEBUG INTRESSEFTG {key}: inkop (aktieägartillskott text) += {inc_amount}")
             else:
                 inkop_intresseftg += inc_amount
                 if debug:
                     print(f"DEBUG INTRESSEFTG {key}: inkop += {inc_amount}")
 
-        # Tillskott (CONTRIB)
+        # Tillskott
         if C_D > 0:
             aktieagartillskott_lamnad_intresseftg += C_D
             if debug:
                 print(f"DEBUG INTRESSEFTG {key}: aktieägartillskott_lämnad += {C_D}")
 
-        # Disposal / utrangering (sale is negative)
-        sale_amount = (A_K - res_minus) + C_K  # remaining K ASSET after res_minus + all K CONTRIB
+        # Försäljning / återbetalt tillskott
+        sale_amount = (A_K - res_minus) + C_K
         if sale_amount > 0:
-            # Heuristics / tie impairment reversal to sale if present
             if IMP_D > 0:
                 aterfor_nedskr_fsg_intresseftg += IMP_D
                 IMP_D = 0.0
                 if debug:
                     print(f"DEBUG INTRESSEFTG {key}: aterfor_nedskr_fsg += {IMP_D}")
-            fsg_intresseftg -= sale_amount  # negative by convention
+            fsg_intresseftg -= sale_amount
             if debug:
-                print(f"DEBUG INTRESSEFTG {key}: fsg -= {sale_amount} (negative)")
-
-        # Återbetalt tillskott (if not captured in disposal above), still negative
+                print(f"DEBUG INTRESSEFTG {key}: fsg -= {sale_amount}")
         elif C_K > 0:
             aktieagartillskott_aterbetald_intresseftg -= C_K
             if debug:
                 print(f"DEBUG INTRESSEFTG {key}: aktieägartillskott_återbetald -= {C_K}")
 
-        # Remaining impairment movements (not sale-tied)
+        # Nedskrivningar / återföringar (ej försäljning)
         if IMP_D > 0:
             if "fusion" in text:
                 aterfor_nedskr_fusion_intresseftg += IMP_D
@@ -264,13 +247,13 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
             if debug:
                 print(f"DEBUG INTRESSEFTG {key}: arets_nedskr += {IMP_K}")
 
-        # Omklassning: D & K on assets with no other signals
+        # Omklass (assets) – enkel heuristik
         asset_signals = (RES_K > 0 or RES_D > 0 or IMP_D > 0 or IMP_K > 0 or C_D > 0 or C_K > 0)
         if A_D > 0 and A_K > 0 and not asset_signals:
             omklass_intresseftg += (A_D - A_K)
             if debug:
                 print(f"DEBUG INTRESSEFTG {key}: omklass += {A_D - A_K}")
-        # Omklass ack nedskr
+        # Omklass ack nedskr (sällsynt)
         if sum(amt for a,amt in txs if a in ACC_IMP_SET and amt > 0) > 0 and \
            sum(-amt for a,amt in txs if a in ACC_IMP_SET and amt < 0) > 0 and \
            not (A_D > 0 or A_K > 0 or RES_K > 0 or RES_D > 0 or C_D > 0 or C_K > 0):
@@ -278,26 +261,9 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
             if debug:
                 print(f"DEBUG INTRESSEFTG {key}: omklass_nedskr += {IMP_D - IMP_K}")
 
-    # UB & book value
-    intresseftg_ub = (
-        intresseftg_ib
-        + inkop_intresseftg
-        + fusion_intresseftg
-        + fsg_intresseftg  # negative on purpose
-        + aktieagartillskott_lamnad_intresseftg
-        + aktieagartillskott_aterbetald_intresseftg  # negative if any
-        + resultatandel_intresseftg
-        + omklass_intresseftg
-    )
-
-    ack_nedskr_intresseftg_ub = (
-        ack_nedskr_intresseftg_ib
-        + aterfor_nedskr_fsg_intresseftg
-        + aterfor_nedskr_fusion_intresseftg
-        + aterfor_nedskr_intresseftg
-        + omklass_nedskr_intresseftg
-        - arets_nedskr_intresseftg
-    )
+    # ---- Final UB from SIE (#UB) as per policy ----
+    intresseftg_ub = cost_ub_actual
+    ack_nedskr_intresseftg_ub = ack_ub_actual
 
     red_varde_intresseftg = intresseftg_ub + ack_nedskr_intresseftg_ub
 
@@ -322,7 +288,7 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
         print(f"  red_varde_intresseftg: {red_varde_intresseftg}")
 
     return {
-        # Asset movements
+        # Cost roll-forward
         "intresseftg_ib": intresseftg_ib,
         "inkop_intresseftg": inkop_intresseftg,
         "fusion_intresseftg": fusion_intresseftg,
@@ -332,16 +298,16 @@ def parse_intresseftg_k2_from_sie_text(sie_text: str, debug: bool = False) -> di
         "resultatandel_intresseftg": resultatandel_intresseftg,
         "omklass_intresseftg": omklass_intresseftg,
         "intresseftg_ub": intresseftg_ub,
-        
-        # Impairment movements
+
+        # Impairments
         "ack_nedskr_intresseftg_ib": ack_nedskr_intresseftg_ib,
-        "arets_nedskr_intresseftg": arets_nedskr_intresseftg,
-        "aterfor_nedskr_intresseftg": aterfor_nedskr_intresseftg,
         "aterfor_nedskr_fsg_intresseftg": aterfor_nedskr_fsg_intresseftg,
         "aterfor_nedskr_fusion_intresseftg": aterfor_nedskr_fusion_intresseftg,
+        "aterfor_nedskr_intresseftg": aterfor_nedskr_intresseftg,
         "omklass_nedskr_intresseftg": omklass_nedskr_intresseftg,
+        "arets_nedskr_intresseftg": arets_nedskr_intresseftg,
         "ack_nedskr_intresseftg_ub": ack_nedskr_intresseftg_ub,
-        
-        # Derived
+
+        # Book value
         "red_varde_intresseftg": red_varde_intresseftg,
     }
