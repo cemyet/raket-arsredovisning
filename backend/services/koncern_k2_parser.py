@@ -22,7 +22,8 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     2. HB/KB two-step flow handling:
        • Distinguishes real sales (with 822x P&L accounts) from cash settlements
        • Prevents false "sales" for partnership result share payouts
-       • Handles common pattern: D 1930 / K 1311 (payout) + D 1311 / K 8240 (year-end share)
+       • Handles common pattern: D 1930 / K 1311 (payout) + D 1311 / K 8030|8240 (year-end share)
+       • Supports both 8030 (dotterföretag) and 8240 (other companies) result accounts
 
     Key principles:
       - IB/UB for 'koncern_ib', 'koncern_ub' includes both Share and AAT accounts (as acquisition value)
@@ -30,6 +31,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
       - AAT given/repaid calculated only from AAT accounts (not via text signal)
       - Sales require 822x P&L accounts OR explicit sale keywords
       - Cash settlements (K 131x + only banks, no 822x) treated as negative resultatandel
+      - Result shares handled via 8030 (dotterföretag) or 8240 (other companies)
       - Accumulated impairment of shares (1318 and possibly other 131x with acc/impair text) included
       - 132x used ONLY if account text clearly indicates Shares or AAT AND lacks receivables keywords
 
@@ -242,7 +244,11 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
     aterfor_nedskr_fusion_koncern = 0.0
     omklass_nedskr_koncern = 0.0
 
-    RES_SHARE = 8240  # unchanged
+    # --- CONFIG: Result share accounts for different ownership structures ---
+    STRICT_GROUP_RESULT = False  # True => require 8030 only (pure group companies)
+    RES_SHARE_SET = {8030, 8240} if not STRICT_GROUP_RESULT else {8030}
+    # 8030 = Dotterföretag (group-owned HB/KB)
+    # 8240 = Other companies (external partnerships)
 
     # ---------- per voucher classification ----------
     for key, txs in trans_by_ver.items():
@@ -259,8 +265,8 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
         IMP_D = sum(amt  for a,amt in txs if a in imp_set and amt > 0)    # D1318 (+ possibly other 131x w. acc/impair)
         IMP_K = sum(-amt for a,amt in txs if a in imp_set and amt < 0)    # |K1318|
 
-        RES_K = sum(-amt for a,amt in txs if a == RES_SHARE and amt < 0)  # |K8240|
-        RES_D = sum(amt  for a,amt in txs if a == RES_SHARE and amt > 0)  # D8240
+        RES_K = sum(-amt for a,amt in txs if a in RES_SHARE_SET and amt < 0)  # |K 8030/8240|
+        RES_D = sum(amt  for a,amt in txs if a in RES_SHARE_SET and amt > 0)  # D 8030/8240
 
         # 1) Resultatandel, first consume on Share side, then AAT if needed
         res_plus  = min(A_D_total, RES_K) if RES_K > 0 and A_D_total > 0 else 0.0
@@ -300,7 +306,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
             has_sale_pnl = any(a in SALE_PNL for a,_ in txs)
             
             # Analyze other accounts (not shares, AAT, impairment, or result share)
-            other_accts = {a for a,_ in txs if a not in andel_set and a not in aat_set and a not in imp_set and a != RES_SHARE}
+            other_accts = {a for a,_ in txs if a not in andel_set and a not in aat_set and a not in imp_set and a not in RES_SHARE_SET}
             only_banks  = len(other_accts) > 0 and all(1900 <= a <= 1999 for a in other_accts)
             bank_debet  = sum(amt for a,amt in txs if amt > 0 and 1900 <= a <= 1999)
             
