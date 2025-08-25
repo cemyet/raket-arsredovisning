@@ -1465,6 +1465,10 @@ class DatabaseParser:
         from .fordringar_koncern_k2_parser import parse_fordringar_koncern_k2_from_sie_text
         fordrkonc_k2_data = parse_fordringar_koncern_k2_from_sie_text(se_content, debug=False)
         
+        # Get precise FORDRINTRE calculations from transaction analysis
+        from .fordringar_intresseftg_k2_parser import parse_fordringar_intresseftg_k2_from_sie_text
+        fordrintre_k2_data = parse_fordringar_intresseftg_k2_from_sie_text(se_content, debug=False)
+        
         # Define all K2 variable names to exclude from database processing
         koncern_variables = set(koncern_k2_data.keys())
         intresseftg_variables = set(intresseftg_k2_data.keys())
@@ -1474,7 +1478,8 @@ class DatabaseParser:
         ovriga_variables = set(ovriga_k2_data.keys())
         lvp_variables = set(lvp_k2_data.keys())
         fordrkonc_variables = set(fordrkonc_k2_data.keys())
-        k2_variables = koncern_variables | intresseftg_variables | bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables | lvp_variables | fordrkonc_variables
+        fordrintre_variables = set(fordrintre_k2_data.keys())
+        k2_variables = koncern_variables | intresseftg_variables | bygg_variables | maskiner_variables | inventarier_variables | ovriga_variables | lvp_variables | fordrkonc_variables | fordrintre_variables
         
         results = []
         user_toggles = user_toggles or {}
@@ -1525,6 +1530,12 @@ class DatabaseParser:
             }
             
         for var_name, value in fordrkonc_k2_data.items():
+            calculated_variables[var_name] = {
+                'current': value,
+                'previous': 0.0
+            }
+            
+        for var_name, value in fordrintre_k2_data.items():
             calculated_variables[var_name] = {
                 'current': value,
                 'previous': 0.0
