@@ -97,6 +97,9 @@ async def upload_se_file(file: UploadFile = File(...)):
         company_info = parser.extract_company_info(se_content)
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         
+        # Prepare BR overrides for chart-of-accounts customization resilience
+        parser.prepare_br_overrides(se_content)
+        
         # Pass RR data to BR parsing so calculated values from RR are available
         br_data = parser.parse_br_data(current_accounts, previous_accounts, rr_data)
         
@@ -301,6 +304,10 @@ async def test_parser(file: UploadFile = File(...)):
         current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts = parser.parse_account_balances(se_content)
         company_info = parser.extract_company_info(se_content)
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
+        
+        # Prepare BR overrides for chart-of-accounts customization resilience
+        parser.prepare_br_overrides(se_content)
+        
         br_data = parser.parse_br_data(current_accounts, previous_accounts)
         
         print(f"Parsed {len(current_accounts)} current year accounts, {len(previous_accounts)} previous year accounts")

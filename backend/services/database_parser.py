@@ -4,6 +4,8 @@ Replaces hardcoded BR_STRUCTURE and RR_STRUCTURE with database queries
 """
 
 import os
+import re
+import unicodedata
 from typing import Dict, List, Any, Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -16,6 +18,31 @@ supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_ANON_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
+# ---------- BR Override Helper Functions ----------
+def _norm_txt(s: str) -> str:
+    """Normalize text for chart-of-accounts customization detection"""
+    s = unicodedata.normalize("NFKD", s or "")
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = s.lower().replace("\u00a0", " ").strip()
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+def _parse_konto_sru_from_sie(sie_text: str):
+    """Parse account names and SRU codes from SIE text for override detection"""
+    names, sru = {}, {}
+    rx_k = re.compile(r'^#KONTO\s+(\d{4})\s+"(.*)"\s*$', re.I)
+    rx_s = re.compile(r'^#SRU\s+(\d{4})\s+(\d+)\s*$', re.I)
+    for raw in sie_text.splitlines():
+        t = raw.strip()
+        mk = rx_k.match(t)
+        if mk:
+            names[int(mk.group(1))] = _norm_txt(mk.group(2))
+            continue
+        ms = rx_s.match(t)
+        if ms:
+            sru[int(ms.group(1))] = int(ms.group(2))
+    return names, sru
+
 class DatabaseParser:
     """Database-driven parser for financial data"""
     
@@ -26,6 +53,17 @@ class DatabaseParser:
         self.noter_mappings = None
         self.global_variables = None
         self.accounts_lookup = None
+        
+        # BR overrides for chart-of-accounts customization resilience
+        self.br_overrides = {
+            "add_to_koncern_shares": set(),
+            "exclude_from_koncern_fordr": set(),
+            "add_to_intresse_shares": set(),
+            "exclude_from_intresse_fordr": set(),
+            "add_to_ovriga_shares": set(),
+            "exclude_from_ovriga_fordr": set(),
+        }
+        
         self._load_mappings()
     
     def _load_mappings(self):
@@ -95,6 +133,67 @@ class DatabaseParser:
             self.noter_mappings = []
             self.global_variables = {}
             self.accounts_lookup = {}
+    
+    def prepare_br_overrides(self, sie_text: str) -> None:
+        """
+        Discover user-customized accounts and set BR override sets to handle
+        chart-of-accounts customization where users might use:
+        - AAT-like accounts in 132x range (should be treated as koncern shares)
+        - AAT-like accounts in 134x range (should be treated as intresse/övriga shares)
+        
+        This makes the BR parser resilient to customized charts of accounts.
+        """
+        names, sru = _parse_konto_sru_from_sie(sie_text)
+
+        def is_receivable_word(nm: str) -> bool:
+            return any(w in nm for w in ("fordran", "fordringar", "lan", "lån", "ranta", "ränta", "amort"))
+
+        def is_aat_word(nm: str) -> bool:
+            return any(w in nm for w in ("aktieagartillskott", "aktieägartillskott", "tillskott", "villkorat", "ovillkorat"))
+
+        def is_share_word(nm: str) -> bool:
+            return any(w in nm for w in ("andel", "andelar", "aktie", "aktier"))
+
+        # Clear previous overrides
+        for key in self.br_overrides:
+            self.br_overrides[key].clear()
+
+        # --- 132x (koncern receivables range) ---
+        # Look for AAT/shares that ended up in receivables range
+        for a in range(1320, 1330):
+            nm = names.get(a, "")
+            if not nm:
+                continue
+            # If this 132x looks like AAT / shares and NOT a receivable → treat as koncern shares
+            if (is_aat_word(nm) or (is_share_word(nm) and ("koncern" in nm or "dotter" in nm))) and not is_receivable_word(nm):
+                self.br_overrides["add_to_koncern_shares"].add(a)
+                self.br_overrides["exclude_from_koncern_fordr"].add(a)
+
+        # --- 134x (intresse/övriga receivables range) ---
+        # SRU 7232 → intresse/gemensamt, SRU 7235 → övriga
+        for a in range(1340, 1350):
+            nm = names.get(a, "")
+            if not nm:
+                continue
+            looks_like_aat_or_share = is_aat_word(nm) or (is_share_word(nm) and ("intresse" in nm or "gemensamt" in nm or "övriga" in nm or "ovriga" in nm))
+            if looks_like_aat_or_share and not is_receivable_word(nm):
+                if sru.get(a) == 7235:
+                    # övriga företag (normally 1346/1347)
+                    self.br_overrides["add_to_ovriga_shares"].add(a)
+                    self.br_overrides["exclude_from_ovriga_fordr"].add(a)
+                else:
+                    # intresse/gemensamt styrda (normally SRU 7232)
+                    self.br_overrides["add_to_intresse_shares"].add(a)
+                    self.br_overrides["exclude_from_intresse_fordr"].add(a)
+
+    def _mapping_includes_range(self, mapping, lo: int, hi: int) -> bool:
+        """Check if a BR mapping includes a specific account range"""
+        start = mapping.get('accounts_included_start')
+        end   = mapping.get('accounts_included_end')
+        if start and end and int(start) == lo and int(end) == hi:
+            return True
+        inc = (mapping.get('accounts_included') or '').replace(' ', '')
+        return f"{lo}-{hi}" in inc
     
     def parse_account_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
         """Parse account balances from SE file content using the correct format"""
@@ -276,6 +375,39 @@ class DatabaseParser:
                     # Single account
                     if account_spec in accounts:
                         total -= accounts[account_str]
+        
+        # ----- DYNAMIC BR OVERRIDES (chart-of-accounts customization) -----
+        # Note: these apply only to BR lines; harmless if used elsewhere.
+        try:
+            # KONCERN: Andelar (1310–1319) should also include AAT-like 132x
+            if self._mapping_includes_range(mapping, 1310, 1319):
+                for a in self.br_overrides.get("add_to_koncern_shares", set()):
+                    total += float(accounts.get(str(a), 0.0))
+            # KONCERN: Fordringar (1320–1329) must exclude those AAT-like 132x
+            if self._mapping_includes_range(mapping, 1320, 1329):
+                for a in self.br_overrides.get("exclude_from_koncern_fordr", set()):
+                    total -= float(accounts.get(str(a), 0.0))
+
+            # INTRESSE: Andelar (1330–1339) add AAT-like 134x with SRU 7232
+            if self._mapping_includes_range(mapping, 1330, 1339):
+                for a in self.br_overrides.get("add_to_intresse_shares", set()):
+                    total += float(accounts.get(str(a), 0.0))
+            # INTRESSE: Fordringar (1340–1349) exclude those AAT-like 134x (SRU 7232)
+            if self._mapping_includes_range(mapping, 1340, 1349):
+                for a in self.br_overrides.get("exclude_from_intresse_fordr", set()):
+                    total -= float(accounts.get(str(a), 0.0))
+
+            # ÖVRIGA: shares line often targets 1336 (or 1330–1339 bucket); include AAT-like 134x (SRU 7235)
+            inc_str = (mapping.get('accounts_included') or '')
+            if '1336' in inc_str or self._mapping_includes_range(mapping, 1330, 1339):
+                for a in self.br_overrides.get("add_to_ovriga_shares", set()):
+                    total += float(accounts.get(str(a), 0.0))
+            # ÖVRIGA: receivables line typically includes 1346 (or 1340–1349 bucket)
+            if '1346' in inc_str or self._mapping_includes_range(mapping, 1340, 1349):
+                for a in self.br_overrides.get("exclude_from_ovriga_fordr", set()):
+                    total -= float(accounts.get(str(a), 0.0))
+        except Exception:
+            pass
         
         # Apply sign based on SE file data structure
         # All account balances from 2000-8989 need to be reversed regardless of balance_type
