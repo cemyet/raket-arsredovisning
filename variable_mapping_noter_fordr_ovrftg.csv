@@ -1,0 +1,24 @@
+row_id,id,row_title,block,+/-,accounts_included,variable_name,text_field,variable_text,ib_ub,calculated,formula,Saldo,always_show,toggle_show,editable,style,item_name,Abstrakt,Datatyp,period_type,block_sub
+370,1059,Fordringar hos övriga företag som det finns ett ägarintresse i,FORDROVRFTG,,,,,,,,,,false,,,,NotFordringarOvrigaForetagAgarintresse,false,xbrli:stringItemType,duration,
+371,1060,Fordringar hos övriga företag som det finns ett ägarintresse i,FORDROVRFTG,,,,,,,,,,false,,,,FordringarOvrigaForetagAgarintresseAbstract,true,xbrli:stringItemType,duration,
+372,1061,Ingående anskaffningsvärden,FORDROVRFTG,,,fordr_ovrigaftg_ib,,,,,,debit,false,true,,H2,FordringarOvrigaForetagAgarintresseAnskaffningsvarden,false,xbrli:monetaryItemType,instant,
+373,1062,Förändringar av anskaffningsvärden,FORDROVRFTG,,,,,,,,,,false,,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenAbstract,true,xbrli:stringItemType,duration,
+374,1063,Tillkommande fordringar,FORDROVRFTG,,,nya_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenTillkommandeFordringar,false,xbrli:monetaryItemType,duration,
+375,1064,Fusion,FORDROVRFTG,,,fusion_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenFusion,false,xbrli:monetaryItemType,duration,
+376,1065,Reglerade fordringar,FORDROVRFTG,,,reglerade_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenRegleradeFordringar,false,xbrli:monetaryItemType,duration,
+377,1066,Bortskrivna fordringar,FORDROVRFTG,,,bortskrivna_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenBortskrivnafordringar,false,xbrli:monetaryItemType,duration,
+378,1067,Omklassificeringar,FORDROVRFTG,,,omklass_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenOmklassificeringar,false,xbrli:monetaryItemType,duration,
+379,1068,Omräkningsdifferenser,FORDROVRFTG,,,,,,,,,,false,,,,FordringarOvrigaForetagAgarintresseForandringAnskaffningsvardenOmrakningsdifferenser,false,xbrli:monetaryItemType,duration,
+380,1069,Utgående anskaffningsvärden,FORDROVRFTG,,,fordr_ovrigaftg_ub,,,,,,debit,false,true,,,FordringarOvrigaForetagAgarintresseAnskaffningsvarden,false,xbrli:monetaryItemType,instant,
+381,1070,Ingående nedskrivningar,FORDROVRFTG,,,ack_nedskr_fordr_ovrigaftg_ib,,,,,,credit,false,true,,S2,FordringarOvrigaForetagAgarintresseNedskrivningar,false,xbrli:monetaryItemType,instant,NEDSKR
+382,1071,Förändringar av nedskrivningar,FORDROVRFTG,,,,,,,,,,false,,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarAbstract,true,xbrli:stringItemType,duration,NEDSKR
+383,1072,Reglerade fordringar,FORDROVRFTG,,,aterfor_nedskr_reglerade_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarRegleradeFordringar,false,xbrli:monetaryItemType,duration,NEDSKR
+384,1073,Fusion,FORDROVRFTG,,,aterfor_nedskr_fusion_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarFusion,false,xbrli:monetaryItemType,duration,NEDSKR
+385,1074,Återförda nedskrivningar,FORDROVRFTG,,,aterfor_nedskr_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarAterfordaNedskrivningar,false,xbrli:monetaryItemType,duration,NEDSKR
+386,1075,Bortskrivna fordringar,FORDROVRFTG,,,aterfor_nedskr_bortskrivna_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarBortskrivningfordringar,false,xbrli:monetaryItemType,duration,NEDSKR
+387,1076,Omklassificeringar,FORDROVRFTG,,,omklass_nedskr_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarOmklassificeringar,false,xbrli:monetaryItemType,duration,NEDSKR
+388,1077,Årets nedskrivningar,FORDROVRFTG,,,arets_nedskr_fordr_ovrigaftg,,,,,,,false,true,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarAretsNedskrivningar,false,xbrli:monetaryItemType,duration,NEDSKR
+389,1078,Omräkningsdifferenser,FORDROVRFTG,,,,,,,,,,false,,,,FordringarOvrigaForetagAgarintresseForandringNedskrivningarOmrakningsdifferenser,false,xbrli:monetaryItemType,duration,NEDSKR
+390,1079,Utgående nedskrivningar,FORDROVRFTG,,,ack_nedskr_fordr_ovrigaftg_ub,,,,,,credit,false,true,,S2,FordringarOvrigaForetagAgarintresseNedskrivningar,false,xbrli:monetaryItemType,instant,NEDSKR
+391,1080,Redovisat värde,FORDROVRFTG,,,red_varde_fordr_ovrigaftg,,,,,,debit,false,true,,S2,FordringarOvrigaForetagAgarintresseLangfristiga,false,xbrli:monetaryItemType,instant,
+392,1081,Kommentar till not,FORDROVRFTG,,,,,,,,,,false,,,,NotFordringarOvrigaForetagAgarintresseKommentar,false,xbrli:stringItemType,duration,
