@@ -1,1 +1,1 @@
-# Deploy trigger Wed Aug 13 17:40:47 CEST 2025
+# Deploy trigger - Revert to working INK2 version e419504 - Mon Jan 27 2025
