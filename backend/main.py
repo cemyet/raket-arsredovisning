@@ -173,7 +173,7 @@ async def upload_se_file(file: UploadFile = File(...)):
                             subsidiaries = bolagsfakta_info.get('subsidiaries', [])
                             print(f"DEBUG PRECLASS: Found {len(subsidiaries)} subsidiaries:")
                             for i, sub in enumerate(subsidiaries[:5]):  # Show max 5 to avoid spam
-                                print(f"DEBUG PRECLASS:   Subsidiary {i+1}: {sub.get('name', 'No name')} (org: {sub.get('org_number', 'No org'})")
+                                print(f"DEBUG PRECLASS:   Subsidiary {i+1}: {sub.get('name', 'No name')} (org: {sub.get('org_number', 'No org')})")
                             if len(subsidiaries) > 5:
                                 print(f"DEBUG PRECLASS:   ... and {len(subsidiaries) - 5} more subsidiaries")
                     except Exception as e:
