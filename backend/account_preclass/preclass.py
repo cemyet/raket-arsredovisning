@@ -120,7 +120,7 @@ def parse_sie(path: str) -> Dict[str, AccountInfo]:
 
 # --------------- BR mapping (Supabase) ---------------
 
-def load_br_mapping_from_supabase(url: str, key: str, table: str = "br_mapping_rows") -> List[BrRow]:
+def load_br_mapping_from_supabase(url: str, key: str, table: str = "variable_mapping_br") -> List[BrRow]:
     if create_client is None:
         raise RuntimeError("supabase client not available; install `supabase` and set SUPABASE_URL/KEY.")
     sb = create_client(url, key)
