@@ -366,9 +366,9 @@ def preclassify_accounts(
     5) Return per-account mapping, reclass log, and BR totals (UB year0/UB year-1)
     """
     if not supabase_url: supabase_url = os.getenv("SUPABASE_URL")
-    if not supabase_key: supabase_key = os.getenv("SUPABASE_KEY")
+    if not supabase_key: supabase_key = os.getenv("SUPABASE_ANON_KEY")
     if not supabase_url or not supabase_key:
-        raise RuntimeError("Missing Supabase config (SUPABASE_URL/KEY).")
+        raise RuntimeError("Missing Supabase config (SUPABASE_URL/SUPABASE_ANON_KEY).")
 
     accs = parse_sie(sie_path)
     rows = load_br_mapping_from_supabase(supabase_url, supabase_key)
