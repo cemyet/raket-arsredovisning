@@ -330,8 +330,13 @@ class DatabaseParser:
                 if year_key not in preclass_result.br_row_totals[row_id]:
                     year_key = 'current'  # fallback
                 preclass_value = preclass_result.br_row_totals[row_id].get(year_key, 0.0)
-                print(f"BR: Using preclass value {preclass_value} for row {row_id} ({mapping.get('row_title', '')})")
+                print(f"DEBUG BR PARSER: Using NEW preclass value {preclass_value:.2f} for row {row_id} ({mapping.get('row_title', '')[:50]}{'...' if len(mapping.get('row_title', '')) > 50 else ''}) [{year_key} year]")
                 return preclass_value
+            else:
+                print(f"DEBUG BR PARSER: Row {row_id} not found in preclass results, using OLD traditional calculation")
+        else:
+            if not preclass_result:
+                print(f"DEBUG BR PARSER: No preclass results available, using OLD traditional calculation for row {mapping.get('row_id', 'no-id')}")
         
         total = 0.0
         

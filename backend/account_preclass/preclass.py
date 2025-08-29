@@ -199,17 +199,33 @@ def extract_aliases(accs: Dict[str, AccountInfo]) -> PartyAliases:
 def aliases_from_scraper(company_info: dict) -> Tuple[Set[str], Set[str], Set[str]]:
     """Pull alias names from Bolagsfakta scraper output (parent + subsidiaries)."""
     koncern, intresse, ovriga = set(), set(), set()
-    if not company_info: return koncern, intresse, ovriga
+    if not company_info: 
+        print("DEBUG PRECLASS: No company_info provided to aliases_from_scraper")
+        return koncern, intresse, ovriga
+
+    print("DEBUG PRECLASS: Processing company aliases from scraper data...")
 
     # Parent company (treat as koncern alias to catch intercompany items)
     parent = company_info.get("parent_company") or {}
     if parent.get("name"):
-        koncern |= make_alias_variants(parent["name"])
+        parent_variants = make_alias_variants(parent["name"])
+        koncern |= parent_variants
+        print(f"DEBUG PRECLASS: Added parent company aliases: {parent_variants}")
+    else:
+        print("DEBUG PRECLASS: No parent company name found")
 
     # Subsidiaries
-    for sub in company_info.get("subsidiaries") or []:
+    subsidiaries = company_info.get("subsidiaries") or []
+    print(f"DEBUG PRECLASS: Processing {len(subsidiaries)} subsidiaries for aliases...")
+    for i, sub in enumerate(subsidiaries):
         nm = sub.get("name") or ""
-        if nm: koncern |= make_alias_variants(nm)
+        if nm: 
+            sub_variants = make_alias_variants(nm)
+            koncern |= sub_variants
+            print(f"DEBUG PRECLASS: Added subsidiary {i+1} aliases from '{nm}': {sub_variants}")
+
+    print(f"DEBUG PRECLASS: Total koncern aliases from scraper: {len(koncern)} variants")
+    print(f"DEBUG PRECLASS: Koncern aliases: {sorted(list(koncern))}")
 
     # If scraper distinguishes interest or others, add here (kept for future)
     return koncern, intresse, ovriga
@@ -376,6 +392,8 @@ def preclassify_accounts(
 
     log: List[Dict[str, str]] = []
 
+    print(f"DEBUG PRECLASS: Starting account classification for {len([a for a in accs.values() if a.used])} used accounts")
+    
     for a, info in accs.items():
         if not info.used: 
             continue
@@ -391,6 +409,10 @@ def preclassify_accounts(
             info.target_row_title = new_title
             info.reclass_reason = reason
             if drow and drow.row_id != new_id:
+                print(f"DEBUG PRECLASS: RECLASSIFYING Account {a} ({info.name[:30]}{'...' if len(info.name) > 30 else ''})")
+                print(f"DEBUG PRECLASS:   FROM: Row {drow.row_id} ({drow.row_title[:30]}{'...' if len(drow.row_title) > 30 else ''})")
+                print(f"DEBUG PRECLASS:   TO: Row {new_id} ({new_title[:30]}{'...' if len(new_title) > 30 else ''})")
+                print(f"DEBUG PRECLASS:   REASON: {reason}")
                 log.append({
                     "account": a,
                     "name": info.name,
@@ -398,13 +420,17 @@ def preclassify_accounts(
                     "to": f"{new_id}|{new_title}",
                     "reason": reason or "",
                 })
+            else:
+                print(f"DEBUG PRECLASS: Account {a} classified to row {new_id} (same as default or new classification)")
         else:
             if drow:
                 info.target_row_id = drow.row_id
                 info.target_row_title = drow.row_title
+                print(f"DEBUG PRECLASS: Account {a} using default row {drow.row_id}")
             else:
                 info.target_row_id = None
                 info.target_row_title = None
+                print(f"DEBUG PRECLASS: Account {a} has no row assignment")
 
     # BR totals: sum by row
     totals: Dict[int, Dict[str, float]] = {}

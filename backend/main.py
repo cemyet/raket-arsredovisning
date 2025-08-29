@@ -124,7 +124,16 @@ async def upload_se_file(file: UploadFile = File(...)):
         
         # PRELOAD STEP: Account preclassification with Bolagsfakta integration
         preclass_result = None
-        if os.getenv("PRECLASSIFY_ACCOUNTS", "false").lower() == "true":
+        preclassify_enabled = os.getenv("PRECLASSIFY_ACCOUNTS", "false").lower() == "true"
+        k2_preclass_enabled = os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true"
+        strict_mode = os.getenv("PRECLASSIFY_STRICT", "false").lower() == "true"
+        
+        print(f"DEBUG PRECLASS: Feature flags status:")
+        print(f"DEBUG PRECLASS:   PRECLASSIFY_ACCOUNTS = {preclassify_enabled}")
+        print(f"DEBUG PRECLASS:   K2_KONCERN_USE_PRECLASS = {k2_preclass_enabled}")
+        print(f"DEBUG PRECLASS:   PRECLASSIFY_STRICT = {strict_mode}")
+        
+        if preclassify_enabled:
             try:
                 # Get company info from Bolagsfakta scraper
                 bolagsfakta_info = {}
@@ -135,7 +144,23 @@ async def upload_se_file(file: UploadFile = File(...)):
                         company_url = scraper.search_company_by_org_number(org_number)
                         if company_url:
                             bolagsfakta_info = scraper.get_company_info(company_url)
-                            print(f"Retrieved Bolagsfakta info for {org_number}: {bolagsfakta_info.get('company_name', 'Unknown')}")
+                            print(f"DEBUG PRECLASS: Retrieved Bolagsfakta info for {org_number}")
+                            print(f"DEBUG PRECLASS: Company name: {bolagsfakta_info.get('company_name', 'Unknown')}")
+                            
+                            # Debug parent company info
+                            parent = bolagsfakta_info.get('parent_company', {})
+                            if parent:
+                                print(f"DEBUG PRECLASS: Parent company found: {parent.get('name', 'No name')} (org: {parent.get('org_number', 'No org')})")
+                            else:
+                                print("DEBUG PRECLASS: No parent company found")
+                            
+                            # Debug subsidiaries info
+                            subsidiaries = bolagsfakta_info.get('subsidiaries', [])
+                            print(f"DEBUG PRECLASS: Found {len(subsidiaries)} subsidiaries:")
+                            for i, sub in enumerate(subsidiaries[:5]):  # Show max 5 to avoid spam
+                                print(f"DEBUG PRECLASS:   Subsidiary {i+1}: {sub.get('name', 'No name')} (org: {sub.get('org_number', 'No org'})")
+                            if len(subsidiaries) > 5:
+                                print(f"DEBUG PRECLASS:   ... and {len(subsidiaries) - 5} more subsidiaries")
                     except Exception as e:
                         print(f"Warning: Could not retrieve Bolagsfakta info: {e}")
                 
@@ -145,7 +170,6 @@ async def upload_se_file(file: UploadFile = File(...)):
                     temp_sie_path = temp_sie.name
                 
                 # Run preclassification
-                strict_mode = os.getenv("PRECLASSIFY_STRICT", "false").lower() == "true"
                 preclass_result = preclassify_accounts(
                     sie_path=temp_sie_path,
                     company_info=bolagsfakta_info,
@@ -157,12 +181,31 @@ async def upload_se_file(file: UploadFile = File(...)):
                 
                 # Store preclass result in parser for downstream consumption
                 parser.preclass = preclass_result
-                print(f"Preclassification completed: {len(preclass_result.reclass_log)} reclassifications")
+                print(f"DEBUG PRECLASS: Preclassification completed: {len(preclass_result.reclass_log)} reclassifications")
+                
+                # Debug account reclassifications
+                if preclass_result.reclass_log:
+                    print("DEBUG PRECLASS: Account reclassifications:")
+                    for log_entry in preclass_result.reclass_log:
+                        print(f"DEBUG PRECLASS:   Account {log_entry['account']} ({log_entry['name'][:50]}{'...' if len(log_entry['name']) > 50 else ''})")
+                        print(f"DEBUG PRECLASS:     FROM: {log_entry['from']}")
+                        print(f"DEBUG PRECLASS:     TO: {log_entry['to']}")
+                        print(f"DEBUG PRECLASS:     REASON: {log_entry['reason']}")
+                else:
+                    print("DEBUG PRECLASS: No accounts were reclassified")
+                
+                # Debug BR row totals
+                print(f"DEBUG PRECLASS: BR row totals calculated for {len(preclass_result.br_row_totals)} rows:")
+                for row_id, data in list(preclass_result.br_row_totals.items())[:10]:  # Show first 10
+                    print(f"DEBUG PRECLASS:   Row {row_id} ({data.get('row_title', 'No title')[:40]}{'...' if len(data.get('row_title', '')) > 40 else ''}): Current={data.get('current', 0):.2f}, Previous={data.get('previous', 0):.2f}")
+                if len(preclass_result.br_row_totals) > 10:
+                    print(f"DEBUG PRECLASS:   ... and {len(preclass_result.br_row_totals) - 10} more rows")
                 
             except Exception as e:
                 print(f"Warning: Preclassification failed: {e}")
                 parser.preclass = None
         else:
+            print("DEBUG PRECLASS: Preclassification DISABLED by feature flag")
             parser.preclass = None
         
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)

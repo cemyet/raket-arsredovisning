@@ -69,8 +69,8 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False, preclass_
                     and preclass_result is not None)
     
     if use_preclass:
-        if debug:
-            print("K2 KONCERN: Using preclass results instead of old reclass logic")
+        print("DEBUG K2 KONCERN: Using NEW preclass results instead of old reclass logic")
+        print(f"DEBUG K2 KONCERN: Preclass result contains {len(preclass_result.br_row_totals)} BR row totals")
         # Use preclass results for account-to-row assignment
         # The preclass_result.br_row_totals already contains aggregated values by row_id
         # We just need to map these to the koncern variables we expect
@@ -92,13 +92,20 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False, preclass_
                 koncern_totals["koncern_ib"] = current
             # Add more mappings as needed based on your BR row structure
             
-        if debug:
-            print(f"K2 KONCERN: Preclass totals: {koncern_totals}")
-            
+        print(f"DEBUG K2 KONCERN: Mapped preclass totals: {koncern_totals}")
+        print("DEBUG K2 KONCERN: Returning NEW preclass-based results (bypassing old logic)")
+        
         # Return the preclass-based results
         # Note: This is a simplified mapping - you may need to enhance this
         # to properly handle all koncern variables
         return koncern_totals
+
+    # If we reach here, we're using the old logic
+    print("DEBUG K2 KONCERN: Using OLD traditional reclass logic (preclass disabled or unavailable)")
+    if not preclass_result:
+        print("DEBUG K2 KONCERN: No preclass_result provided")
+    else:
+        print(f"DEBUG K2 KONCERN: K2_KONCERN_USE_PRECLASS={os.getenv('K2_KONCERN_USE_PRECLASS', 'not-set')}")
 
     # ---------- Pre-normalize SIE text ----------
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")
