@@ -1,5 +1,6 @@
 import re
 import unicodedata
+import os
 from collections import defaultdict
 
 # ---- Regex patterns for precise matching ----
@@ -9,7 +10,7 @@ FORDR_PAT   = re.compile(r'\b(fordran|fordringar|lan|lån|ranta|ränta|amort|avb
 # ---- Sale P&L accounts for distinguishing real sales from cash settlements ----
 SALE_PNL = tuple(range(8220, 8230))  # resultat vid försäljning av andelar (BAS 822x)
 
-def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
+def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False, preclass_result=None) -> dict:
     """
     KONCERN-note (K2) parser — enhanced with dynamic account classification and HB/KB flow handling.
 
@@ -62,6 +63,42 @@ def parse_koncern_k2_from_sie_text(sie_text: str, debug: bool = False) -> dict:
 
     def _has(text: str, *subs) -> bool:
         return any(sub in text for sub in subs)
+
+    # ---------- Check for preclass feature flag ----------
+    use_preclass = (os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true" 
+                    and preclass_result is not None)
+    
+    if use_preclass:
+        if debug:
+            print("K2 KONCERN: Using preclass results instead of old reclass logic")
+        # Use preclass results for account-to-row assignment
+        # The preclass_result.br_row_totals already contains aggregated values by row_id
+        # We just need to map these to the koncern variables we expect
+        
+        # For now, return the preclass BR totals mapped to expected koncern variable names
+        # This is a simplified implementation - you may need to map specific row_ids 
+        # to specific koncern variables based on your BR row structure
+        
+        # Get koncern-related row totals from preclass
+        koncern_totals = {}
+        for row_id, data in preclass_result.br_row_totals.items():
+            row_title = data.get("row_title", "").lower()
+            current = data.get("current", 0.0)
+            
+            # Map row titles to koncern variables (you may need to adjust these mappings)
+            if "andelar" in row_title and "koncern" in row_title:
+                koncern_totals["koncern_ub"] = current
+            elif "förvärvskostnad" in row_title and "koncern" in row_title:
+                koncern_totals["koncern_ib"] = current
+            # Add more mappings as needed based on your BR row structure
+            
+        if debug:
+            print(f"K2 KONCERN: Preclass totals: {koncern_totals}")
+            
+        # Return the preclass-based results
+        # Note: This is a simplified mapping - you may need to enhance this
+        # to properly handle all koncern variables
+        return koncern_totals
 
     # ---------- Pre-normalize SIE text ----------
     sie_text = sie_text.replace("\u00A0", " ").replace("\t", " ")

@@ -319,6 +319,20 @@ class DatabaseParser:
     
     def calculate_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float]) -> float:
         """Calculate value for a specific variable based on its mapping"""
+        
+        # Check if we should use preclass results instead of traditional account grouping
+        preclass_result = getattr(self, 'preclass', None)
+        if preclass_result and mapping.get('row_id'):
+            row_id = mapping['row_id']
+            if row_id in preclass_result.br_row_totals:
+                # Use preclass results for this row
+                year_key = 'current' if accounts == getattr(self, '_current_accounts_cache', {}) else 'previous'
+                if year_key not in preclass_result.br_row_totals[row_id]:
+                    year_key = 'current'  # fallback
+                preclass_value = preclass_result.br_row_totals[row_id].get(year_key, 0.0)
+                print(f"BR: Using preclass value {preclass_value} for row {row_id} ({mapping.get('row_title', '')})")
+                return preclass_value
+        
         total = 0.0
         
         # Get account ranges to include
@@ -700,6 +714,9 @@ class DatabaseParser:
         """Parse BR (Balansräkning) data using database mappings"""
         if not self.br_mappings:
             return []
+        
+        # Cache current accounts for preclass year detection
+        self._current_accounts_cache = current_accounts
         
         results = []
         
@@ -1563,7 +1580,8 @@ class DatabaseParser:
         
         # Get precise KONCERN calculations from transaction analysis
         from .koncern_k2_parser import parse_koncern_k2_from_sie_text
-        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False)
+        preclass_result = getattr(self, 'preclass', None)
+        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False, preclass_result=preclass_result)
         
         # Get precise INTRESSEFTG calculations from transaction analysis
         print("DEBUG: Starting INTRESSEFTG K2 parser...")

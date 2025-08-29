@@ -15,6 +15,10 @@ from services.supabase_service import SupabaseService
 from services.database_parser import DatabaseParser
 from services.supabase_database import db
 from services.bolagsverket_service import BolagsverketService
+from account_preclass.preclass import preclassify_accounts
+import sys
+sys.path.append('..')
+from bolagsfakta_scraper import BolagsfaktaScraper
 from models.schemas import (
     ReportRequest, ReportResponse, CompanyData, 
     ManagementReportRequest, ManagementReportResponse, 
@@ -62,6 +66,28 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.get("/preclass-audit/{org_number}")
+async def get_preclass_audit(org_number: str):
+    """
+    Retrieve preclassification audit log for a specific organization
+    This endpoint provides explainability for account reclassifications
+    """
+    try:
+        # This is a placeholder - in a full implementation, you would:
+        # 1. Store preclass logs in database with org_number and timestamp
+        # 2. Retrieve historical logs for analysis
+        # 3. Provide detailed reclassification explanations
+        
+        # For now, return a simple response indicating feature availability
+        return {
+            "success": True,
+            "organization_number": org_number,
+            "message": "Preclass audit endpoint available. Logs are returned in upload response.",
+            "note": "Full audit history storage requires database schema extension"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving preclass audit: {str(e)}")
+
 @app.post("/upload-se-file", response_model=dict)
 async def upload_se_file(file: UploadFile = File(...)):
     """
@@ -95,6 +121,50 @@ async def upload_se_file(file: UploadFile = File(...)):
         parser = DatabaseParser()
         current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts = parser.parse_account_balances(se_content)
         company_info = parser.extract_company_info(se_content)
+        
+        # PRELOAD STEP: Account preclassification with Bolagsfakta integration
+        preclass_result = None
+        if os.getenv("PRECLASSIFY_ACCOUNTS", "false").lower() == "true":
+            try:
+                # Get company info from Bolagsfakta scraper
+                bolagsfakta_info = {}
+                org_number = company_info.get('organization_number')
+                if org_number:
+                    try:
+                        scraper = BolagsfaktaScraper()
+                        company_url = scraper.search_company_by_org_number(org_number)
+                        if company_url:
+                            bolagsfakta_info = scraper.get_company_info(company_url)
+                            print(f"Retrieved Bolagsfakta info for {org_number}: {bolagsfakta_info.get('company_name', 'Unknown')}")
+                    except Exception as e:
+                        print(f"Warning: Could not retrieve Bolagsfakta info: {e}")
+                
+                # Write SE content to temporary file for preclassify_accounts
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.se', delete=False) as temp_sie:
+                    temp_sie.write(se_content)
+                    temp_sie_path = temp_sie.name
+                
+                # Run preclassification
+                strict_mode = os.getenv("PRECLASSIFY_STRICT", "false").lower() == "true"
+                preclass_result = preclassify_accounts(
+                    sie_path=temp_sie_path,
+                    company_info=bolagsfakta_info,
+                    strict=strict_mode
+                )
+                
+                # Clean up temp file
+                os.unlink(temp_sie_path)
+                
+                # Store preclass result in parser for downstream consumption
+                parser.preclass = preclass_result
+                print(f"Preclassification completed: {len(preclass_result.reclass_log)} reclassifications")
+                
+            except Exception as e:
+                print(f"Warning: Preclassification failed: {e}")
+                parser.preclass = None
+        else:
+            parser.preclass = None
+        
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         
         # Prepare BR overrides for chart-of-accounts customization resilience
@@ -157,7 +227,9 @@ async def upload_se_file(file: UploadFile = File(...)):
                 "noter_count": len(noter_data),
                 "pension_premier": pension_premier,
                 "sarskild_loneskatt_pension": sarskild_loneskatt_pension,
-                "sarskild_loneskatt_pension_calculated": sarskild_loneskatt_pension_calculated
+                "sarskild_loneskatt_pension_calculated": sarskild_loneskatt_pension_calculated,
+                "preclass_log": preclass_result.reclass_log if preclass_result else [],
+                "preclass_enabled": preclass_result is not None
             },
             "message": "SE-fil laddad framgångsrikt"
         }
@@ -180,8 +252,8 @@ async def generate_report(
     Genererar årsredovisning baserat på .SE-fil och användarinput
     """
     try:
-        # Generera rapport
-        report_data = await report_generator.generate_full_report(request)
+        # Report generator disabled - using DatabaseParser instead
+        raise HTTPException(status_code=501, detail="Report generation feature temporarily disabled. Use /upload-se-file for data parsing.")
         
         # Spara till Supabase (i bakgrunden)
         background_tasks.add_task(
@@ -206,7 +278,8 @@ async def download_report(report_id: str):
     Laddar ner genererad PDF-rapport
     """
     try:
-        file_path = report_generator.get_report_path(report_id)
+        # Report generator disabled - using DatabaseParser instead
+        raise HTTPException(status_code=501, detail="Report download feature temporarily disabled.")
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="Rapport hittades inte")
         
@@ -237,7 +310,13 @@ async def get_company_info(organization_number: str):
     Hämtar företagsinformation från Allabolag.se
     """
     try:
-        company_info = await report_generator.scrape_company_info(organization_number)
+        # Report generator disabled - using BolagsfaktaScraper instead
+        scraper = BolagsfaktaScraper()
+        company_url = scraper.search_company_by_org_number(organization_number)
+        if company_url:
+            company_info = scraper.get_company_info(company_url)
+        else:
+            company_info = {"error": "Company not found"}
         return company_info
         
     except Exception as e:
@@ -373,7 +452,8 @@ async def list_companies_with_data():
     List all companies that have financial data stored
     """
     try:
-        result = supabase.table('financial_data').select('company_id, fiscal_year, report_type').execute()
+        client = get_supabase_client()
+        result = client.table('financial_data').select('company_id, fiscal_year, report_type').execute()
         
         # Group by company
         companies = {}
