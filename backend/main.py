@@ -17,8 +17,23 @@ from services.supabase_database import db
 from services.bolagsverket_service import BolagsverketService
 from account_preclass.preclass import preclassify_accounts
 import sys
-sys.path.append('..')
-from bolagsfakta_scraper import BolagsfaktaScraper
+import os
+
+# Import BolagsfaktaScraper (try local copy first, then parent directory)
+try:
+    from bolagsfakta_scraper import BolagsfaktaScraper
+except ImportError:
+    try:
+        # Try parent directory if local copy not found
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        from bolagsfakta_scraper import BolagsfaktaScraper
+    except ImportError as e:
+        print(f"Warning: Could not import BolagsfaktaScraper: {e}")
+        print("Bolagsfakta integration will be disabled")
+        BolagsfaktaScraper = None
 from models.schemas import (
     ReportRequest, ReportResponse, CompanyData, 
     ManagementReportRequest, ManagementReportResponse, 
@@ -138,7 +153,7 @@ async def upload_se_file(file: UploadFile = File(...)):
                 # Get company info from Bolagsfakta scraper
                 bolagsfakta_info = {}
                 org_number = company_info.get('organization_number')
-                if org_number:
+                if org_number and BolagsfaktaScraper is not None:
                     try:
                         scraper = BolagsfaktaScraper()
                         company_url = scraper.search_company_by_org_number(org_number)
@@ -163,6 +178,8 @@ async def upload_se_file(file: UploadFile = File(...)):
                                 print(f"DEBUG PRECLASS:   ... and {len(subsidiaries) - 5} more subsidiaries")
                     except Exception as e:
                         print(f"Warning: Could not retrieve Bolagsfakta info: {e}")
+                elif org_number and BolagsfaktaScraper is None:
+                    print("DEBUG PRECLASS: BolagsfaktaScraper not available, skipping company info retrieval")
                 
                 # Write SE content to temporary file for preclassify_accounts
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.se', delete=False) as temp_sie:
@@ -354,6 +371,9 @@ async def get_company_info(organization_number: str):
     """
     try:
         # Report generator disabled - using BolagsfaktaScraper instead
+        if BolagsfaktaScraper is None:
+            return {"error": "BolagsfaktaScraper not available"}
+        
         scraper = BolagsfaktaScraper()
         company_url = scraper.search_company_by_org_number(organization_number)
         if company_url:
