@@ -19,21 +19,12 @@ from account_preclass.preclass import preclassify_accounts
 import sys
 import os
 
-# Import BolagsfaktaScraper (try local copy first, then parent directory)
+# Import company group scraper
 try:
-    from bolagsfakta_scraper import BolagsfaktaScraper
-except ImportError:
-    try:
-        # Try parent directory if local copy not found
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-        from bolagsfakta_scraper import BolagsfaktaScraper
-    except ImportError as e:
-        print(f"Warning: Could not import BolagsfaktaScraper: {e}")
-        print("Bolagsfakta integration will be disabled")
-        BolagsfaktaScraper = None
+    from ratsit_scraper import RatsitGroupScraper
+except ImportError as e:
+    print(f"Warning: Could not import RatsitGroupScraper: {e}")
+    RatsitGroupScraper = None
 from models.schemas import (
     ReportRequest, ReportResponse, CompanyData, 
     ManagementReportRequest, ManagementReportResponse, 
@@ -72,6 +63,29 @@ def get_supabase_client():
     if not supabase_service.client:
         raise HTTPException(status_code=500, detail="Supabase client not available")
     return supabase_service.client
+
+def extract_company_name_from_sie(sie_content: str) -> Optional[str]:
+    """Extract company name from SIE file's #FNAMN tag"""
+    try:
+        import re
+        # Look for #FNAMN line with quotes
+        fnamn_pattern = re.compile(r'^#FNAMN\s+"([^"]+)"', re.MULTILINE | re.IGNORECASE)
+        match = fnamn_pattern.search(sie_content)
+        
+        if match:
+            return match.group(1).strip()
+        
+        # Fallback: look for without quotes
+        fnamn_pattern_no_quotes = re.compile(r'^#FNAMN\s+(.+)$', re.MULTILINE | re.IGNORECASE)
+        match = fnamn_pattern_no_quotes.search(sie_content)
+        
+        if match:
+            return match.group(1).strip().strip('"')
+            
+        return None
+    except Exception as e:
+        print(f"Error extracting company name from SIE: {e}")
+        return None
 
 @app.get("/")
 async def root():
@@ -150,17 +164,31 @@ async def upload_se_file(file: UploadFile = File(...)):
         
         if preclassify_enabled:
             try:
-                # Get company info from Bolagsfakta scraper
+                # Get company info using Ratsit scraper
                 bolagsfakta_info = {}
                 org_number = company_info.get('organization_number')
-                if org_number and BolagsfaktaScraper is not None:
+                company_name = extract_company_name_from_sie(se_content)
+                
+                if RatsitGroupScraper is not None and (org_number or company_name):
                     try:
-                        scraper = BolagsfaktaScraper()
-                        company_url = scraper.search_company_by_org_number(org_number)
-                        if company_url:
-                            bolagsfakta_info = scraper.get_company_info(company_url)
-                            print(f"DEBUG PRECLASS: Retrieved Bolagsfakta info for {org_number}")
+                        print(f"DEBUG PRECLASS: Using Ratsit scraper with org_number: {org_number}, company_name: {company_name}")
+                        scraper = RatsitGroupScraper()
+                        scraper_result = scraper.get_company_group_info(
+                            orgnr=org_number,
+                            company_name=company_name
+                        )
+                        if scraper_result and not scraper_result.get('error'):
+                            bolagsfakta_info = {
+                                'company_name': scraper_result.get('company_name', company_name),
+                                'org_number': scraper_result.get('orgnr', org_number),
+                                'parent_company': scraper_result.get('parent_company'),
+                                'subsidiaries': scraper_result.get('subsidiaries', []),
+                                'sources': scraper_result.get('sources', [])
+                            }
+                            
+                            print(f"DEBUG PRECLASS: Retrieved company info via Ratsit scraper")
                             print(f"DEBUG PRECLASS: Company name: {bolagsfakta_info.get('company_name', 'Unknown')}")
+                            print(f"DEBUG PRECLASS: Sources used: {', '.join(bolagsfakta_info.get('sources', []))}")
                             
                             # Debug parent company info
                             parent = bolagsfakta_info.get('parent_company', {})
@@ -176,10 +204,15 @@ async def upload_se_file(file: UploadFile = File(...)):
                                 print(f"DEBUG PRECLASS:   Subsidiary {i+1}: {sub.get('name', 'No name')} (org: {sub.get('org_number', 'No org')})")
                             if len(subsidiaries) > 5:
                                 print(f"DEBUG PRECLASS:   ... and {len(subsidiaries) - 5} more subsidiaries")
+                        else:
+                            print(f"DEBUG PRECLASS: Ratsit scraper failed or returned no data: {scraper_result.get('error', 'Unknown error')}")
+                            
                     except Exception as e:
-                        print(f"Warning: Could not retrieve Bolagsfakta info: {e}")
-                elif org_number and BolagsfaktaScraper is None:
-                    print("DEBUG PRECLASS: BolagsfaktaScraper not available, skipping company info retrieval")
+                        print(f"Warning: Could not retrieve company info via Ratsit scraper: {e}")
+                elif RatsitGroupScraper is None:
+                    print("DEBUG PRECLASS: Ratsit scraper not available, skipping company info retrieval")
+                else:
+                    print("DEBUG PRECLASS: No organization number or company name available for scraping")
                 
                 # Write SE content to temporary file for preclassify_accounts
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.se', delete=False) as temp_sie:
@@ -365,23 +398,22 @@ async def get_user_reports(user_id: str):
         raise HTTPException(status_code=500, detail=f"Fel vid hämtning av rapporter: {str(e)}")
 
 @app.get("/company-info/{organization_number}")
-async def get_company_info(organization_number: str):
+async def get_company_info(organization_number: str, company_name: str = None):
     """
-    Hämtar företagsinformation från Allabolag.se
+    Hämtar företagsinformation med Ratsit-first scraper
     """
     try:
-        # Report generator disabled - using BolagsfaktaScraper instead
-        if BolagsfaktaScraper is None:
-            return {"error": "BolagsfaktaScraper not available"}
-        
-        scraper = BolagsfaktaScraper()
-        company_url = scraper.search_company_by_org_number(organization_number)
-        if company_url:
-            company_info = scraper.get_company_info(company_url)
+        if not RatsitGroupScraper:
+            return {"error": "Scraper not available"}
+        scraper = RatsitGroupScraper()
+        company_info = scraper.get_company_group_info(
+            orgnr=organization_number,
+            company_name=company_name
+        )
+        if company_info and not company_info.get('error'):
+            return company_info
         else:
-            company_info = {"error": "Company not found"}
-        return company_info
-        
+            return {"error": "Company not found or scraper failed"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fel vid hämtning av företagsinfo: {str(e)}")
 

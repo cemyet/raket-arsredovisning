@@ -98,4 +98,4 @@ venv.bak/
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db backend/.env

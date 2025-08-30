@@ -392,7 +392,8 @@ def preclassify_accounts(
 
     log: List[Dict[str, str]] = []
 
-    print(f"DEBUG PRECLASS: Starting account classification for {len([a for a in accs.values() if a.used])} used accounts")
+    total_used = len([a for a in accs.values() if a.used])
+    print(f"DEBUG PRECLASS: Starting account classification for {total_used} used accounts")
     
     for a, info in accs.items():
         if not info.used: 
@@ -420,17 +421,14 @@ def preclassify_accounts(
                     "to": f"{new_id}|{new_title}",
                     "reason": reason or "",
                 })
-            else:
-                print(f"DEBUG PRECLASS: Account {a} classified to row {new_id} (same as default or new classification)")
+            # Silently keep same classification - no debug spam
         else:
             if drow:
                 info.target_row_id = drow.row_id
                 info.target_row_title = drow.row_title
-                print(f"DEBUG PRECLASS: Account {a} using default row {drow.row_id}")
             else:
                 info.target_row_id = None
                 info.target_row_title = None
-                print(f"DEBUG PRECLASS: Account {a} has no row assignment")
 
     # BR totals: sum by row
     totals: Dict[int, Dict[str, float]] = {}
@@ -440,6 +438,11 @@ def preclassify_accounts(
         d = totals.setdefault(info.target_row_id, {"row_title": info.target_row_title or "", "current": 0.0, "previous": 0.0})
         d["current"]  += info.ub0
         d["previous"] += info.ub_1
+
+    # Summary
+    print(f"DEBUG PRECLASS: SUMMARY - {len(log)} accounts reclassified out of {total_used} total accounts")
+    if len(log) == 0:
+        print("DEBUG PRECLASS: No reclassifications needed - all accounts using optimal default mappings")
 
     return PreclassResult(per_account=accs, br_row_totals=totals, reclass_log=log)
 

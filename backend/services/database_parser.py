@@ -320,23 +320,19 @@ class DatabaseParser:
     def calculate_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float]) -> float:
         """Calculate value for a specific variable based on its mapping"""
         
-        # Check if we should use preclass results instead of traditional account grouping
+        # Check for preclass account reclassifications that affect this row
         preclass_result = getattr(self, 'preclass', None)
         if preclass_result and mapping.get('row_id'):
             row_id = mapping['row_id']
-            if row_id in preclass_result.br_row_totals:
-                # Use preclass results for this row
-                year_key = 'current' if accounts == getattr(self, '_current_accounts_cache', {}) else 'previous'
-                if year_key not in preclass_result.br_row_totals[row_id]:
-                    year_key = 'current'  # fallback
-                preclass_value = preclass_result.br_row_totals[row_id].get(year_key, 0.0)
-                print(f"DEBUG BR PARSER: Using NEW preclass value {preclass_value:.2f} for row {row_id} ({mapping.get('row_title', '')[:50]}{'...' if len(mapping.get('row_title', '')) > 50 else ''}) [{year_key} year]")
-                return preclass_value
-            else:
-                print(f"DEBUG BR PARSER: Row {row_id} not found in preclass results, using OLD traditional calculation")
-        else:
-            if not preclass_result:
-                print(f"DEBUG BR PARSER: No preclass results available, using OLD traditional calculation for row {mapping.get('row_id', 'no-id')}")
+            # Check if any accounts were reclassified TO this row
+            reclassified_accounts = []
+            for account, info in preclass_result.per_account.items():
+                if info.target_row_id == row_id and info.reclass_reason:
+                    reclassified_accounts.append(account)
+            
+            if reclassified_accounts:
+                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} reclassified accounts: {reclassified_accounts}")
+                # Continue with traditional calculation but note the reclassification
         
         total = 0.0
         
@@ -344,11 +340,19 @@ class DatabaseParser:
         start = mapping.get('accounts_included_start')
         end = mapping.get('accounts_included_end')
         
-        # Include accounts in range
+        # Include accounts in range (with preclass override check)
         if start and end:
             for account_id in range(start, end + 1):
                 account_str = str(account_id)
                 if account_str in accounts:
+                    # Check if this account was reclassified away from this row
+                                            if preclass_result and account_str in preclass_result.per_account:
+                            account_info = preclass_result.per_account[account_str]
+                            if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
+                                # Account was reclassified to a different row, skip it
+                                account_value = accounts[account_str]
+                                print(f"DEBUG BR PARSER: Skipping account {account_str} (value: {account_value:.2f}) - reclassified from row {mapping.get('row_id')} to row {account_info.target_row_id}")
+                                continue
                     total += accounts[account_str]
         
         # Include additional specific accounts
@@ -366,6 +370,13 @@ class DatabaseParser:
                 else:
                     # Single account
                     if account_spec in accounts:
+                        # Check if this account was reclassified away from this row
+                        if preclass_result and account_spec in preclass_result.per_account:
+                            account_info = preclass_result.per_account[account_spec]
+                            if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
+                                # Account was reclassified to a different row, skip it
+                                print(f"DEBUG BR PARSER: Skipping account {account_spec} (reclassified to row {account_info.target_row_id})")
+                                continue
                         total += accounts[account_spec]
         
         # Exclude accounts in range
@@ -394,6 +405,17 @@ class DatabaseParser:
                     # Single account
                     if account_spec in accounts:
                         total -= accounts[account_str]
+        
+        # Add accounts that were reclassified TO this row
+        if preclass_result and mapping.get('row_id'):
+            current_row_id = mapping['row_id']
+            for account, info in preclass_result.per_account.items():
+                if info.reclass_reason and info.target_row_id == current_row_id:
+                    # This account was reclassified to this row
+                    if account in accounts:
+                        account_value = accounts[account]
+                        print(f"DEBUG BR PARSER: Adding reclassified account {account} (value: {account_value:.2f}) to row {current_row_id} (reason: {info.reclass_reason})")
+                        total += accounts[account]
         
         # ----- DYNAMIC BR OVERRIDES (chart-of-accounts customization) -----
         # Note: these apply only to BR lines; harmless if used elsewhere.
@@ -470,6 +492,10 @@ class DatabaseParser:
             elif s == '-':
                 total = -abs(total)
 
+        # Debug output for rows with reclassifications
+        if preclass_result and mapping.get('row_id') and reclassified_accounts:
+            print(f"DEBUG BR PARSER: Row {mapping['row_id']} ({mapping.get('row_title', '')[:30]}...) final total: {total:.2f} (after reclassifications)")
+        
         if should_reverse:
             return -total
         else:
