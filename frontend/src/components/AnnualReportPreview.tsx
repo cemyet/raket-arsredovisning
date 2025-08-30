@@ -10,6 +10,7 @@ import { calculateRRSums, extractKeyMetrics, formatAmount, type SEData } from '@
 import { apiService } from '@/services/api';
 import { Periodiseringsfonder } from './Periodiseringsfonder';
 import { Noter } from './Noter';
+import { K2KoncernComparison } from './K2KoncernComparison';
 
 interface CompanyData {
   results?: string;
@@ -960,6 +961,12 @@ export function AnnualReportPreview({ companyData, currentStep, editableAmounts 
             previousYear={companyData.fiscalYear ? companyData.fiscalYear - 1 : undefined}
           />
         )}
+
+        {/* K2 Koncern Logic Comparison - Debug Component */}
+        <K2KoncernComparison 
+          companyId={companyData.seFileData?.company_id || 'unknown'}
+          seFileData={companyData.seFileData}
+        />
 
         {/* Significant Events Section */}
         {currentStep >= 2 && (

@@ -401,6 +401,60 @@ async def get_user_reports(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fel vid hämtning av rapporter: {str(e)}")
 
+@app.get("/k2-koncern-comparison/{company_id}")
+async def get_k2_koncern_comparison(company_id: str):
+    """
+    Compare K2 koncern results between current logic and original pre-preclass logic
+    """
+    try:
+        from services.koncern_k2_parser import parse_koncern_k2_from_sie_text
+        from services.original_koncern_k2_parser import parse_koncern_k2_from_sie_text_original
+        
+        # Get the SIE file content for this company
+        # For now, we'll use a test SIE content - in production this would come from database
+        test_sie_content = '''#KONTO 1310 "Andelar i koncernföretag"
+#KONTO 1311 "Andelar i dotterföretag"
+#IB 0 1310 80000.00
+#UB 0 1310 100000.00
+#IB 0 1311 50000.00
+#UB 0 1311 60000.00
+#TRANS 20240101 {} 1310 20000.00
+#TRANS 20240601 {} 1311 10000.00'''
+
+        print(f"\\n=== K2 KONCERN COMPARISON FOR COMPANY {company_id} ===")
+        
+        # Run current logic
+        print("\\n--- Running CURRENT logic ---")
+        current_result = parse_koncern_k2_from_sie_text(test_sie_content, preclass_result=None, debug=True)
+        
+        # Run original logic
+        print("\\n--- Running ORIGINAL logic ---")
+        original_result = parse_koncern_k2_from_sie_text_original(test_sie_content, debug=True)
+        
+        print("\\n=== COMPARISON COMPLETE ===\\n")
+        
+        return {
+            "current_logic": {
+                "koncern_ib": current_result.get("koncern_ib", 0.0),
+                "koncern_ub": current_result.get("koncern_ub", 0.0),
+                "inkop_koncern": current_result.get("inkop_koncern", 0.0),
+                "red_varde_koncern": current_result.get("red_varde_koncern", 0.0),
+                "source": "current_with_preclass_integration"
+            },
+            "original_logic": {
+                "koncern_ib": original_result.get("koncern_ib", 0.0),
+                "koncern_ub": original_result.get("koncern_ub", 0.0),
+                "inkop_koncern": original_result.get("inkop_koncern", 0.0),
+                "red_varde_koncern": original_result.get("red_varde_koncern", 0.0),
+                "source": "original_pre_preclass"
+            }
+        }
+    except Exception as e:
+        print(f"Error in K2 koncern comparison: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error comparing K2 koncern logic: {str(e)}")
+
 @app.get("/company-info/{organization_number}")
 async def get_company_info(organization_number: str, company_name: str = None):
     """

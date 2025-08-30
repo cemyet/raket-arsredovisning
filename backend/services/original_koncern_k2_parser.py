@@ -1,6 +1,5 @@
 import re
 import unicodedata
-import os
 from collections import defaultdict
 
 # ---- Regex patterns for precise matching ----
@@ -10,95 +9,13 @@ FORDR_PAT   = re.compile(r'\b(fordran|fordringar|lan|lån|ranta|ränta|amort|avb
 # ---- Sale P&L accounts for distinguishing real sales from cash settlements ----
 SALE_PNL = tuple(range(8220, 8230))  # resultat vid försäljning av andelar (BAS 822x)
 
-def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: bool = False) -> dict:
+def parse_koncern_k2_from_sie_text_original(sie_text: str, debug: bool = True) -> dict:
     """
-    KONCERN-note (K2) parser — enhanced with dynamic account classification and HB/KB flow handling.
-    
-    Now supports optional preclass integration via feature flag K2_KONCERN_USE_PRECLASS.
-
-    ENHANCEMENTS:
-    1. Dynamic account classification via account text (#KONTO):
-       • Capture custom AAT/Share accounts within 1310–1318
-       • Rescue misplaced AAT/Shares within 1320–1329 (without receivables keywords)
-       • EXCLUDE all receivables completely from parser
-
-    2. HB/KB two-step flow handling:
-       • Distinguishes real sales (with 822x P&L accounts) from cash settlements
-       • Prevents false "sales" for partnership result share payouts
-       • Handles common pattern: D 1930 / K 1311 (payout) + D 1311 / K 8030|8240 (year-end share)
-       • Supports both 8030 (dotterföretag) and 8240 (other companies) result accounts
-
-    Key principles:
-      - IB/UB for 'koncern_ib', 'koncern_ub' includes both Share and AAT accounts (as acquisition value)
-      - Purchase/Sale calculations only from Share accounts (not AAT)
-      - AAT given/repaid calculated only from AAT accounts (not via text signal)
-      - Sales require 822x P&L accounts OR explicit sale keywords
-      - Cash settlements (K 131x + only banks, no 822x) treated as negative resultatandel
-      - Result shares handled via 8030 (dotterföretag) or 8240 (other companies)
-      - Accumulated impairment of shares (1318 and possibly other 131x with acc/impair text) included
-      - 132x used ONLY if account text clearly indicates Shares or AAT AND lacks receivables keywords
-
-    Unchanged keys:
-      koncern_ib, inkop_koncern, fusion_koncern, aktieagartillskott_lamnad_koncern,
-      fsg_koncern, resultatandel_koncern, omklass_koncern, koncern_ub,
-      ack_nedskr_koncern_ib, arets_nedskr_koncern, aterfor_nedskr_koncern,
-      aterfor_nedskr_fsg_koncern, aterfor_nedskr_fusion_koncern, omklass_nedskr_koncern,
-      ack_nedskr_koncern_ub, red_varde_koncern
-
-    New key (non-breaking):
-      aktieagartillskott_aterbetald_koncern
+    ORIGINAL KONCERN-note (K2) parser from before preclass implementation.
+    This is the exact version that was working correctly.
     """
 
-    # ---------- Check for preclass feature flag ----------
-    use_preclass = (os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true" 
-                    and preclass_result is not None)
-    
-    if use_preclass:
-        print("DEBUG K2 KONCERN: Using NEW preclass logic")
-        # Use preclass BR row totals to populate K2 koncern variables
-        br_totals = preclass_result.br_row_totals
-        
-        # Map BR row IDs to K2 koncern variables based on row titles
-        koncern_ib = 0.0
-        koncern_ub = 0.0
-        
-        for row_id, data in br_totals.items():
-            row_title = data.get('row_title', '').lower()
-            current = data.get('current', 0.0)
-            previous = data.get('previous', 0.0)
-            
-            # Map based on row titles (simplified mapping for now)
-            if 'andelar i koncern' in row_title:
-                koncern_ub = current
-                koncern_ib = previous
-                print(f"DEBUG K2 KONCERN: Mapped row {row_id} '{data.get('row_title', '')}' -> koncern shares: current={current}, previous={previous}")
-        
-        # Return simplified result using preclass data
-        return {
-            "koncern_ib": koncern_ib,
-            "inkop_koncern": 0.0,
-            "fusion_koncern": 0.0,
-            "aktieagartillskott_lamnad_koncern": 0.0,
-            "aktieagartillskott_aterbetald_koncern": 0.0,
-            "fsg_koncern": 0.0,
-            "resultatandel_koncern": 0.0,
-            "omklass_koncern": 0.0,
-            "koncern_ub": koncern_ub,
-            "ack_nedskr_koncern_ib": 0.0,
-            "arets_nedskr_koncern": 0.0,
-            "aterfor_nedskr_koncern": 0.0,
-            "aterfor_nedskr_fsg_koncern": 0.0,
-            "aterfor_nedskr_fusion_koncern": 0.0,
-            "omklass_nedskr_koncern": 0.0,
-            "ack_nedskr_koncern_ub": 0.0,
-            "red_varde_koncern": koncern_ub,
-        }
-    else:
-        print("DEBUG K2 KONCERN: Using OLD traditional K2 logic")
-        debug = True  # Enable debug for comparison
-
-    # ---------- ORIGINAL K2 LOGIC FROM BEFORE PRECLASS ----------
-    # Utils
+    # ---------- Utils ----------
     def _normalize(s: str) -> str:
         """Normalize text for comparison."""
         s = unicodedata.normalize('NFKD', s)
@@ -189,25 +106,45 @@ def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: b
                 transactions.append({"account": acct, "amount": amount})
 
     # ---------- Calculate movements ----------
+    if debug:
+        print("=== ORIGINAL K2 KONCERN DEBUG ===")
+        print(f"Found {len(balances)} accounts with balances:")
+        for acct, bal in balances.items():
+            if is_share_account(acct):
+                print(f"  Account {acct} ({konto_name.get(acct, 'Unknown')}): IB={bal['ib']:.2f}, UB={bal['ub']:.2f}")
+        
+        print(f"Found {len(transactions)} transactions:")
+        for i, trans in enumerate(transactions[:10]):  # Show first 10
+            acct = trans["account"]
+            print(f"  Trans {i+1}: Account {acct} ({konto_name.get(acct, 'Unknown')}): {trans['amount']:.2f}")
+        if len(transactions) > 10:
+            print(f"  ... and {len(transactions) - 10} more transactions")
+
     # IB/UB totals (all share accounts)
     koncern_ib = sum(bal["ib"] for acct, bal in balances.items() if is_share_account(acct))
     koncern_ub = sum(bal["ub"] for acct, bal in balances.items() if is_share_account(acct))
     
     if debug:
-        print("=== CURRENT K2 KONCERN DEBUG ===")
-        print(f"Found {len(balances)} accounts with balances:")
-        for acct, bal in balances.items():
-            if is_share_account(acct):
-                print(f"  Account {acct} ({konto_name.get(acct, 'Unknown')}): IB={bal['ib']:.2f}, UB={bal['ub']:.2f}")
-        print(f"CURRENT: koncern_ib = {koncern_ib:.2f} (sum of IB for share accounts)")
-        print(f"CURRENT: koncern_ub = {koncern_ub:.2f} (sum of UB for share accounts)")
+        print(f"ORIGINAL: koncern_ib = {koncern_ib:.2f} (sum of IB for share accounts)")
+        print(f"ORIGINAL: koncern_ub = {koncern_ub:.2f} (sum of UB for share accounts)")
 
     # Purchases (positive movements in share accounts, excluding AAT)
     inkop_koncern = 0.0
+    purchase_details = []
     for trans in transactions:
         acct = trans["account"]
         if is_share_account(acct) and not is_aat_account(acct) and trans["amount"] > 0:
             inkop_koncern += trans["amount"]
+            purchase_details.append(f"Account {acct} ({konto_name.get(acct, 'Unknown')}): +{trans['amount']:.2f}")
+    
+    if debug:
+        print(f"ORIGINAL: inkop_koncern = {inkop_koncern:.2f}")
+        if purchase_details:
+            print("  Purchase details:")
+            for detail in purchase_details:
+                print(f"    {detail}")
+        else:
+            print("  No purchases found")
 
     # Sales (negative movements in share accounts with P&L accounts)
     fsg_koncern = 0.0
@@ -266,13 +203,13 @@ def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: b
     red_varde_koncern = koncern_ub - ack_nedskr_koncern_ub
 
     if debug:
-        print(f"CURRENT: red_varde_koncern = {red_varde_koncern:.2f} (koncern_ub - ack_nedskr_koncern_ub)")
-        print("=== CURRENT K2 KONCERN FINAL RESULTS ===")
+        print(f"ORIGINAL: red_varde_koncern = {red_varde_koncern:.2f} (koncern_ub - ack_nedskr_koncern_ub)")
+        print("=== ORIGINAL K2 KONCERN FINAL RESULTS ===")
         print(f"  koncern_ib: {koncern_ib:.2f}")
         print(f"  koncern_ub: {koncern_ub:.2f}")
         print(f"  inkop_koncern: {inkop_koncern:.2f}")
         print(f"  red_varde_koncern: {red_varde_koncern:.2f}")
-        print("=== END CURRENT DEBUG ===")
+        print("=== END ORIGINAL DEBUG ===")
 
     return {
         # Asset movements
