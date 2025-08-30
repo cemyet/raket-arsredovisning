@@ -35,21 +35,30 @@ export function K2KoncernComparison({ companyId, seFileData }: K2KoncernComparis
   };
 
   const fetchComparison = async () => {
-    if (!companyId || companyId === 'unknown') return;
+    console.log('🔍 K2KoncernComparison: fetchComparison called with companyId:', companyId);
+    
+    if (!companyId || companyId === 'unknown') {
+      console.log('⚠️ K2KoncernComparison: Using fallback company_id due to unknown/missing ID');
+      // Use a fallback ID for testing
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`/api/k2-koncern-comparison/${companyId}`);
+      const actualCompanyId = companyId === 'unknown' ? 'test-company' : companyId;
+      console.log('🌐 K2KoncernComparison: Making API call to:', `/api/k2-koncern-comparison/${actualCompanyId}`);
+      
+      const response = await fetch(`/api/k2-koncern-comparison/${actualCompanyId}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
+      console.log('✅ K2KoncernComparison: API response received:', data);
       setComparisonData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-      console.error('Error fetching K2 koncern comparison:', err);
+      console.error('❌ K2KoncernComparison: Error fetching comparison:', err);
     } finally {
       setLoading(false);
     }
@@ -72,9 +81,12 @@ export function K2KoncernComparison({ companyId, seFileData }: K2KoncernComparis
     return diff > 0 ? `+${formatAmount(diff)}` : formatAmount(diff);
   };
 
-  if (!companyId || companyId === 'unknown') {
-    return null;
-  }
+  console.log('🎨 K2KoncernComparison: Rendering with companyId:', companyId, 'seFileData:', !!seFileData);
+
+  // Always render for debugging purposes
+  // if (!companyId || companyId === 'unknown') {
+  //   return null;
+  // }
 
   return (
     <Card className="w-full">
