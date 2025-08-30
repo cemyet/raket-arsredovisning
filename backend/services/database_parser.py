@@ -1581,13 +1581,28 @@ class DatabaseParser:
         
         # Get precise KONCERN calculations from transaction analysis
         from .koncern_k2_parser import parse_koncern_k2_from_sie_text
-        preclass_result = getattr(self, 'preclass', None)
-        new_preclass_result = getattr(self, 'new_preclass', None)
-        
-        # Use new preclassifier if available, otherwise fall back to old preclass
-        effective_preclass_result = new_preclass_result if new_preclass_result else preclass_result
-        
-        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False, preclass_result=effective_preclass_result)
+        preclass_result = getattr(self, 'preclass', None)          # old preclass object (optional)
+        new_preclass_result = getattr(self, 'new_preclass', None)  # new preclass with .account_sets (preferred)
+        effective_preclass_result = new_preclass_result or preclass_result
+
+        # OPTIONAL — only if you already called the scraper elsewhere
+        # Expected dict fields: parent_company {name}, subsidiaries [{name},...]
+        group_info = getattr(self, 'group_info', None)  # wherever you store it
+        scraper_names = []
+        if group_info:
+            if group_info.get("parent_company", {}).get("name"):
+                scraper_names.append(group_info["parent_company"]["name"])
+            for s in group_info.get("subsidiaries", []):
+                nm = s.get("name")
+                if nm:
+                    scraper_names.append(nm)
+
+        koncern_k2_data = parse_koncern_k2_from_sie_text(
+            se_content,
+            preclass_result=effective_preclass_result,  # sets only
+            debug=(os.getenv("K2_KONCERN_DEBUG","0") == "1"),
+            scraper_companies=scraper_names  # optional
+        )
         
         # Get precise INTRESSEFTG calculations from transaction analysis
         print("DEBUG: Starting INTRESSEFTG K2 parser...")
