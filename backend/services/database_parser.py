@@ -66,6 +66,35 @@ class DatabaseParser:
         
         self._load_mappings()
     
+    def resolve_br_hint_to_row_id(self, br_hint: str) -> Optional[str]:
+        """
+        Resolve a BR hint string to the exact row ID via Supabase query.
+        This replaces the placeholder function in preclass_reclassifier.py
+        """
+        if not br_hint or br_hint == "(Unmapped)":
+            return None
+        
+        try:
+            # Query br_rows table for matching row title
+            response = supabase.table('variable_mapping_br').select('row_id, row_title').eq('row_title', br_hint).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]['row_id']
+            
+            # Fallback: try partial matching for similar titles
+            response = supabase.table('variable_mapping_br').select('row_id, row_title').ilike('row_title', f'%{br_hint}%').execute()
+            
+            if response.data and len(response.data) > 0:
+                print(f"BR HINT RESOLVE: Partial match for '{br_hint}' -> '{response.data[0]['row_title']}' (ID: {response.data[0]['row_id']})")
+                return response.data[0]['row_id']
+            
+            print(f"BR HINT RESOLVE: No match found for '{br_hint}'")
+            return None
+            
+        except Exception as e:
+            print(f"BR HINT RESOLVE: Error resolving '{br_hint}': {e}")
+            return None
+    
     def _load_mappings(self):
         """Load variable mappings from database"""
         try:
@@ -320,7 +349,36 @@ class DatabaseParser:
     def calculate_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float]) -> float:
         """Calculate value for a specific variable based on its mapping"""
         
-        # Check for preclass account reclassifications that affect this row
+        # NEW PRECLASSIFIER: Check for centralized reclassification results
+        new_preclass_result = getattr(self, 'new_preclass', None)
+        use_new_preclass = os.getenv("USE_PRECLASS_RECLASSIFIER", "false").lower() == "true"
+        
+        if use_new_preclass and new_preclass_result and mapping.get('row_id'):
+            row_id = mapping['row_id']
+            row_title = mapping.get('row_title', '')
+            
+            # Check if this row has preclass totals available
+            if row_title in new_preclass_result.br_row_totals:
+                # Determine if we're calculating current or previous year
+                is_current_year = accounts == getattr(self, '_current_accounts_cache', {})
+                
+                preclass_total = new_preclass_result.br_row_totals[row_title]
+                value = preclass_total.get('current' if is_current_year else 'previous', 0.0)
+                
+                print(f"BR PARSER: Using NEW preclass value for row '{row_title}' ({row_id}): {value:.2f} ({'current' if is_current_year else 'previous'} year)")
+                return value
+            
+            # Check if any accounts were reclassified TO this row by BR hint resolution
+            reclassified_accounts = []
+            for _, row in new_preclass_result.used_accounts_df.iterrows():
+                br_hint = row.get('BR Hint', '')
+                if br_hint and self.resolve_br_hint_to_row_id(br_hint) == row_id:
+                    reclassified_accounts.append(int(row['Account']))
+            
+            if reclassified_accounts:
+                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} NEW reclassified accounts: {reclassified_accounts}")
+        
+        # Check for OLD preclass account reclassifications that affect this row
         preclass_result = getattr(self, 'preclass', None)
         if preclass_result and mapping.get('row_id'):
             row_id = mapping['row_id']
@@ -331,7 +389,7 @@ class DatabaseParser:
                     reclassified_accounts.append(account)
             
             if reclassified_accounts:
-                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} reclassified accounts: {reclassified_accounts}")
+                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} OLD reclassified accounts: {reclassified_accounts}")
                 # Continue with traditional calculation but note the reclassification
         
         total = 0.0
@@ -1612,7 +1670,12 @@ class DatabaseParser:
         # Get precise KONCERN calculations from transaction analysis
         from .koncern_k2_parser import parse_koncern_k2_from_sie_text
         preclass_result = getattr(self, 'preclass', None)
-        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False, preclass_result=preclass_result)
+        new_preclass_result = getattr(self, 'new_preclass', None)
+        
+        # Use new preclassifier if available, otherwise fall back to old preclass
+        effective_preclass_result = new_preclass_result if new_preclass_result else preclass_result
+        
+        koncern_k2_data = parse_koncern_k2_from_sie_text(se_content, debug=False, preclass_result=effective_preclass_result)
         
         # Get precise INTRESSEFTG calculations from transaction analysis
         print("DEBUG: Starting INTRESSEFTG K2 parser...")

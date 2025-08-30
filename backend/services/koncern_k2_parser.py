@@ -49,12 +49,22 @@ def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: b
       aktieagartillskott_aterbetald_koncern
     """
 
-    # ---------- Check for preclass feature flag ----------
-    use_preclass = (os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true" 
-                    and preclass_result is not None)
+    # ---------- Check for NEW preclassifier feature flag ----------
+    use_new_preclass = (os.getenv("K2_KONCERN_USE_PRECLASS_SETS", "false").lower() == "true" 
+                        and preclass_result is not None 
+                        and hasattr(preclass_result, 'account_sets'))
     
-    if use_preclass:
-        print("DEBUG K2 KONCERN: Using NEW preclass logic")
+    # ---------- Check for OLD preclass feature flag ----------
+    use_old_preclass = (os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true" 
+                        and preclass_result is not None)
+    
+    if use_new_preclass:
+        print("DEBUG K2 KONCERN: Using NEW PRECLASSIFIER account sets")
+        # This is the new implementation that only changes which accounts are classified as shares/AAT/impairment
+        # All movement logic remains the same as the original parser
+        pass  # Continue to original logic but with preclass account sets
+    elif use_old_preclass:
+        print("DEBUG K2 KONCERN: Using OLD preclass logic")
         # Use preclass BR row totals to populate K2 koncern variables
         br_totals = preclass_result.br_row_totals
         
@@ -94,7 +104,7 @@ def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: b
             "red_varde_koncern": koncern_ub,
         }
     else:
-        print("DEBUG K2 KONCERN: Using OLD traditional K2 logic")
+        print("DEBUG K2 KONCERN: Using traditional K2 logic")
         debug = True  # Enable debug for comparison
 
     # ---------- ORIGINAL K2 LOGIC FROM BEFORE PRECLASS ----------
@@ -134,34 +144,57 @@ def parse_koncern_k2_from_sie_text(sie_text: str, preclass_result=None, debug: b
                 sru_codes[acct] = sru
 
     # ---------- Account classification ----------
-    def is_share_account(acct: str) -> bool:
-        """Check if account is a share account (not receivables)."""
-        if acct in konto_name:
-            name = konto_name[acct]
-            # Exclude receivables
-            if FORDR_PAT.search(name):
-                return False
-            # Include shares/AAT keywords
-            if _has(name, "andel", "aktie", "tillskott", "aat"):
-                return True
-        # Default ranges
-        return acct.startswith("131")
+    if use_new_preclass:
+        # Use preclass account sets when enabled
+        andel_set = preclass_result.account_sets.get("koncern_share_accounts", set())
+        aat_set = preclass_result.account_sets.get("aat_accounts", set())
+        imp_set = preclass_result.account_sets.get("impairment_accounts", set())
+        
+        if debug:
+            print("K2-KONCERN using NEW PRECLASS sets:",
+                  "andel:", sorted(andel_set), "aat:", sorted(aat_set), "imp:", sorted(imp_set))
+        
+        def is_share_account(acct: str) -> bool:
+            """Check if account is a share account using preclass results."""
+            return int(acct) in andel_set
+        
+        def is_aat_account(acct: str) -> bool:
+            """Check if account is specifically for AAT using preclass results."""
+            return int(acct) in aat_set
+        
+        def is_impairment_account(acct: str) -> bool:
+            """Check if account tracks accumulated impairment using preclass results."""
+            return int(acct) in imp_set
+    else:
+        # Fallback: original dynamic classification (unchanged)
+        def is_share_account(acct: str) -> bool:
+            """Check if account is a share account (not receivables)."""
+            if acct in konto_name:
+                name = konto_name[acct]
+                # Exclude receivables
+                if FORDR_PAT.search(name):
+                    return False
+                # Include shares/AAT keywords
+                if _has(name, "andel", "aktie", "tillskott", "aat"):
+                    return True
+            # Default ranges
+            return acct.startswith("131")
 
-    def is_aat_account(acct: str) -> bool:
-        """Check if account is specifically for AAT (aktieägartillskott)."""
-        if acct in konto_name:
-            name = konto_name[acct]
-            if _has(name, "tillskott", "aat"):
-                return True
-        return False
+        def is_aat_account(acct: str) -> bool:
+            """Check if account is specifically for AAT (aktieägartillskott)."""
+            if acct in konto_name:
+                name = konto_name[acct]
+                if _has(name, "tillskott", "aat"):
+                    return True
+            return False
 
-    def is_impairment_account(acct: str) -> bool:
-        """Check if account tracks accumulated impairment."""
-        if acct in konto_name:
-            name = konto_name[acct]
-            if ACK_IMP_PAT.search(name):
-                return True
-        return acct == "1318"  # Standard accumulated impairment
+        def is_impairment_account(acct: str) -> bool:
+            """Check if account tracks accumulated impairment."""
+            if acct in konto_name:
+                name = konto_name[acct]
+                if ACK_IMP_PAT.search(name):
+                    return True
+            return acct == "1318"  # Standard accumulated impairment
 
     # ---------- Parse transactions ----------
     transactions = []

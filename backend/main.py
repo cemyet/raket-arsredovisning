@@ -16,6 +16,7 @@ from services.database_parser import DatabaseParser
 from services.supabase_database import db
 from services.bolagsverket_service import BolagsverketService
 from account_preclass.preclass import preclassify_accounts
+from preclass_reclassifier import run_preclass, PreclassResult
 import sys
 import os
 
@@ -161,10 +162,15 @@ async def upload_se_file(file: UploadFile = File(...)):
         k2_preclass_enabled = os.getenv("K2_KONCERN_USE_PRECLASS", "false").lower() == "true"
         strict_mode = os.getenv("PRECLASSIFY_STRICT", "false").lower() == "true"
         
+        # NEW PRECLASSIFIER: Centralized reclassification (opt-in)
+        new_preclass_result = None
+        use_new_preclass = os.getenv("USE_PRECLASS_RECLASSIFIER", "false").lower() == "true"
+        
         print(f"DEBUG PRECLASS: Feature flags status:")
         print(f"DEBUG PRECLASS:   PRECLASSIFY_ACCOUNTS = {preclassify_enabled}")
         print(f"DEBUG PRECLASS:   K2_KONCERN_USE_PRECLASS = {k2_preclass_enabled}")
         print(f"DEBUG PRECLASS:   PRECLASSIFY_STRICT = {strict_mode}")
+        print(f"DEBUG PRECLASS:   USE_PRECLASS_RECLASSIFIER = {use_new_preclass}")
         
         if preclassify_enabled:
             try:
@@ -262,6 +268,60 @@ async def upload_se_file(file: UploadFile = File(...)):
             print("DEBUG PRECLASS: Preclassification DISABLED by feature flag")
             parser.preclass = None
         
+        # NEW PRECLASSIFIER: Run centralized reclassification if enabled
+        if use_new_preclass:
+            try:
+                print("DEBUG NEW_PRECLASS: Running centralized preclassifier...")
+                
+                # Get external group info from Ratsit scraper if available
+                external_group_info = None
+                org_number = company_info.get('organization_number')
+                company_name = extract_company_name_from_sie(se_content)
+                
+                if RatsitGroupScraper is not None and (org_number or company_name):
+                    try:
+                        print(f"DEBUG NEW_PRECLASS: Using Ratsit scraper with org_number: {org_number}, company_name: {company_name}")
+                        scraper = RatsitGroupScraper()
+                        scraper_result = scraper.get_company_group_info(
+                            orgnr=org_number,
+                            company_name=company_name
+                        )
+                        if scraper_result and not scraper_result.get('error'):
+                            external_group_info = scraper_result
+                            print(f"DEBUG NEW_PRECLASS: Retrieved external group info via Ratsit scraper")
+                        else:
+                            print(f"DEBUG NEW_PRECLASS: Ratsit scraper returned error or no data")
+                    except Exception as e:
+                        print(f"DEBUG NEW_PRECLASS: Ratsit scraper failed: {e}")
+                
+                # Run the new preclassifier
+                new_preclass_result = run_preclass(se_content, external_group_info)
+                
+                # Store result for downstream consumption
+                parser.new_preclass = new_preclass_result
+                
+                print(f"DEBUG NEW_PRECLASS: Centralized preclassification completed")
+                print(f"DEBUG NEW_PRECLASS: Found {len(new_preclass_result.used_accounts_df)} used accounts")
+                print(f"DEBUG NEW_PRECLASS: Generated {len(new_preclass_result.br_row_totals)} BR row totals")
+                print(f"DEBUG NEW_PRECLASS: Account sets - koncern_shares: {len(new_preclass_result.account_sets.get('koncern_share_accounts', set()))}, AAT: {len(new_preclass_result.account_sets.get('aat_accounts', set()))}, impairment: {len(new_preclass_result.account_sets.get('impairment_accounts', set()))}")
+                
+                # Debug sample of reclassified accounts
+                reclassed = new_preclass_result.used_accounts_df[new_preclass_result.used_accounts_df['GroupMatch'] != '']
+                if len(reclassed) > 0:
+                    print(f"DEBUG NEW_PRECLASS: Sample reclassified accounts:")
+                    for _, row in reclassed.head(5).iterrows():
+                        print(f"DEBUG NEW_PRECLASS:   Account {row['Account']} ({row['Name'][:50]}{'...' if len(str(row['Name'])) > 50 else ''})")
+                        print(f"DEBUG NEW_PRECLASS:     Group: {row['GroupMatch']}, BR Hint: {row['BR Hint']}")
+                else:
+                    print("DEBUG NEW_PRECLASS: No accounts were reclassified")
+                
+            except Exception as e:
+                print(f"Warning: New preclassifier failed: {e}")
+                parser.new_preclass = None
+        else:
+            print("DEBUG NEW_PRECLASS: Centralized preclassifier DISABLED by feature flag")
+            parser.new_preclass = None
+        
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         
         # Prepare BR overrides for chart-of-accounts customization resilience
@@ -326,7 +386,11 @@ async def upload_se_file(file: UploadFile = File(...)):
                 "sarskild_loneskatt_pension": sarskild_loneskatt_pension,
                 "sarskild_loneskatt_pension_calculated": sarskild_loneskatt_pension_calculated,
                 "preclass_log": preclass_result.reclass_log if preclass_result else [],
-                "preclass_enabled": preclass_result is not None
+                "preclass_enabled": preclass_result is not None,
+                "new_preclass_enabled": new_preclass_result is not None,
+                "new_preclass_accounts": new_preclass_result.used_accounts_df.to_dict('records') if new_preclass_result else [],
+                "new_preclass_br_totals": new_preclass_result.br_row_totals if new_preclass_result else {},
+                "new_preclass_account_sets": new_preclass_result.account_sets if new_preclass_result else {}
             },
             "message": "SE-fil laddad framgångsrikt"
         }
