@@ -297,172 +297,161 @@ class DatabaseParser:
     
     def calculate_variable_value(self, mapping: Dict[str, Any], accounts: Dict[str, float]) -> float:
         """Calculate value for a specific variable based on its mapping"""
-        
-        # NEW PRECLASSIFIER: Check for centralized reclassification results
+        # NEW: keep using per-account preclass info, but NEVER consume preclass br_row_totals here.
         new_preclass_result = getattr(self, 'new_preclass', None)
-        use_new_preclass = os.getenv("USE_PRECLASS_RECLASSIFIER", "false").lower() == "true"
-        
-        if use_new_preclass and new_preclass_result and mapping.get('row_id'):
-            row_id = mapping['row_id']
-            row_title = mapping.get('row_title', '')
-            
-            # Check if this row has preclass totals available
-            if row_title in new_preclass_result.br_row_totals:
-                # Determine if we're calculating current or previous year
-                is_current_year = accounts == getattr(self, '_current_accounts_cache', {})
-                
-                preclass_total = new_preclass_result.br_row_totals[row_title]
-                value = preclass_total.get('current' if is_current_year else 'previous', 0.0)
-                
-                print(f"BR PARSER: Using NEW preclass value for row '{row_title}' ({row_id}): {value:.2f} ({'current' if is_current_year else 'previous'} year)")
-                return value
-            
-            # Check if any accounts were reclassified TO this row by BR hint resolution
-            reclassified_accounts = []
-            for _, row in new_preclass_result.used_accounts_df.iterrows():
-                br_hint = row.get('BR Hint', '')
-                if br_hint and self.resolve_br_hint_to_row_id(br_hint) == row_id:
-                    reclassified_accounts.append(int(row['Account']))
-            
-            if reclassified_accounts:
-                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} NEW reclassified accounts: {reclassified_accounts}")
-        
-        # Check for OLD preclass account reclassifications that affect this row
         preclass_result = getattr(self, 'preclass', None)
-        if preclass_result and mapping.get('row_id'):
-            row_id = mapping['row_id']
-            # Check if any accounts were reclassified TO this row
-            reclassified_accounts = []
-            for account, info in preclass_result.per_account.items():
-                if info.target_row_id == row_id and info.reclass_reason:
-                    reclassified_accounts.append(account)
-            
-            if reclassified_accounts:
-                print(f"DEBUG BR PARSER: Row {row_id} has {len(reclassified_accounts)} OLD reclassified accounts: {reclassified_accounts}")
-                # Continue with traditional calculation but note the reclassification
-        
+
         total = 0.0
-        
-        # Get account ranges to include
+        counted_accounts: set[str] = set()  # de-dup safety so we never count an account twice
+
+        # Get account ranges to include (robust cast)
         start = mapping.get('accounts_included_start')
-        end = mapping.get('accounts_included_end')
-        
-        # Include accounts in range (with preclass override check)
-        if start and end:
-            for account_id in range(start, end + 1):
+        end   = mapping.get('accounts_included_end')
+        try:
+            start_i = int(start) if start is not None else None
+            end_i   = int(end)   if end   is not None else None
+        except Exception:
+            start_i, end_i = None, None
+
+        # Include accounts in range (respect old preclass "moved away")
+        if start_i is not None and end_i is not None:
+            for account_id in range(start_i, end_i + 1):
                 account_str = str(account_id)
-                if account_str in accounts:
-                    # Check if this account was reclassified away from this row
-                    if preclass_result and account_str in preclass_result.per_account:
-                        account_info = preclass_result.per_account[account_str]
-                        if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
-                            # Account was reclassified to a different row, skip it
-                            account_value = accounts[account_str]
-                            print(f"DEBUG BR PARSER: Skipping account {account_str} (value: {account_value:.2f}) - reclassified from row {mapping.get('row_id')} to row {account_info.target_row_id}")
-                            continue
-                    total += accounts[account_str]
-        
-        # Include additional specific accounts
+                if account_str not in accounts:
+                    continue
+                # If old preclass moved this account to a different row, skip it
+                if preclass_result and account_str in getattr(preclass_result, 'per_account', {}):
+                    info = preclass_result.per_account[account_str]
+                    if getattr(info, 'reclass_reason', None) and info.target_row_id != mapping.get('row_id'):
+                        continue
+                total += accounts[account_str]
+                counted_accounts.add(account_str)
+
+        # Include additional specific accounts/ranges
         additional_accounts = mapping.get('accounts_included')
         if additional_accounts:
-            for account_spec in additional_accounts.split(';'):
-                account_spec = account_spec.strip()
-                if '-' in account_spec:
-                    # Range specification (e.g., "4910-4931")
-                    range_start, range_end = map(int, account_spec.split('-'))
-                    for account_id in range(range_start, range_end + 1):
+            for account_spec in additional_accounts.replace(',', ';').split(';'):
+                spec = account_spec.strip()
+                if not spec:
+                    continue
+                if '-' in spec:
+                    try:
+                        rs, re_ = map(lambda x: int(x.strip()), spec.split('-'))
+                    except Exception:
+                        continue
+                    for account_id in range(rs, re_ + 1):
                         account_str = str(account_id)
-                        if account_str in accounts:
-                            total += accounts[account_str]
-                else:
-                    # Single account
-                    if account_spec in accounts:
-                        # Check if this account was reclassified away from this row
-                        if preclass_result and account_spec in preclass_result.per_account:
-                            account_info = preclass_result.per_account[account_spec]
-                            if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
-                                # Account was reclassified to a different row, skip it
-                                print(f"DEBUG BR PARSER: Skipping account {account_spec} (reclassified to row {account_info.target_row_id})")
+                        if account_str not in accounts or account_str in counted_accounts:
+                            continue
+                        if preclass_result and account_str in getattr(preclass_result, 'per_account', {}):
+                            info = preclass_result.per_account[account_str]
+                            if getattr(info, 'reclass_reason', None) and info.target_row_id != mapping.get('row_id'):
                                 continue
-                        total += accounts[account_spec]
-        
+                        total += accounts[account_str]
+                        counted_accounts.add(account_str)
+                else:
+                    account_str = spec
+                    if account_str in accounts and account_str not in counted_accounts:
+                        if preclass_result and account_str in getattr(preclass_result, 'per_account', {}):
+                            info = preclass_result.per_account[account_str]
+                            if getattr(info, 'reclass_reason', None) and info.target_row_id != mapping.get('row_id'):
+                                continue
+                        total += accounts[account_str]
+                        counted_accounts.add(account_str)
+
         # Exclude accounts in range
         exclude_start = mapping.get('accounts_excluded_start')
-        exclude_end = mapping.get('accounts_excluded_end')
-        
-        if exclude_start and exclude_end:
-            for account_id in range(exclude_start, exclude_end + 1):
+        exclude_end   = mapping.get('accounts_excluded_end')
+        try:
+            ex_s = int(exclude_start) if exclude_start is not None else None
+            ex_e = int(exclude_end)   if exclude_end   is not None else None
+        except Exception:
+            ex_s, ex_e = None, None
+
+        if ex_s is not None and ex_e is not None:
+            for account_id in range(ex_s, ex_e + 1):
                 account_str = str(account_id)
                 if account_str in accounts:
                     total -= accounts[account_str]
-        
+                    # do NOT remove from counted_accounts; we want raw math (include - exclude)
+
         # Exclude additional specific accounts
         excluded_accounts = mapping.get('accounts_excluded')
         if excluded_accounts:
-            for account_spec in excluded_accounts.split(';'):
-                account_spec = account_spec.strip()
-                if '-' in account_spec:
-                    # Range specification
-                    range_start, range_end = map(int, account_spec.split('-'))
-                    for account_id in range(range_start, range_end + 1):
+            for account_spec in excluded_accounts.replace(',', ';').split(';'):
+                spec = account_spec.strip()
+                if not spec:
+                    continue
+                if '-' in spec:
+                    try:
+                        rs, re_ = map(lambda x: int(x.strip()), spec.split('-'))
+                    except Exception:
+                        continue
+                    for account_id in range(rs, re_ + 1):
                         account_str = str(account_id)
                         if account_str in accounts:
                             total -= accounts[account_str]
                 else:
-                    # Single account
-                    if account_spec in accounts:
+                    account_str = spec
+                    if account_str in accounts:
                         total -= accounts[account_str]
-        
-        # Add accounts that were reclassified TO this row
-        if preclass_result and mapping.get('row_id'):
-            current_row_id = mapping['row_id']
-            for account, info in preclass_result.per_account.items():
-                if info.reclass_reason and info.target_row_id == current_row_id:
-                    # This account was reclassified to this row
-                    if account in accounts:
-                        account_value = accounts[account]
-                        print(f"DEBUG BR PARSER: Adding reclassified account {account} (value: {account_value:.2f}) to row {current_row_id} (reason: {info.reclass_reason})")
-                        total += accounts[account]
-        
-        # ----- DYNAMIC BR OVERRIDES (chart-of-accounts customization) -----
-        # Note: these apply only to BR lines; harmless if used elsewhere.
+
+        # ----- DYNAMIC BR OVERRIDES (132x/134x rescue) -----
         try:
-            # KONCERN: Andelar (1310–1319) should also include AAT-like 132x
             if self._mapping_includes_range(mapping, 1310, 1319):
                 for a in self.br_overrides.get("add_to_koncern_shares", set()):
-                    total += float(accounts.get(str(a), 0.0))
-            # KONCERN: Fordringar (1320–1329) must exclude those AAT-like 132x
+                    a_str = str(a)
+                    if a_str in accounts and a_str not in counted_accounts:
+                        total += float(accounts[a_str]); counted_accounts.add(a_str)
+
             if self._mapping_includes_range(mapping, 1320, 1329):
                 for a in self.br_overrides.get("exclude_from_koncern_fordr", set()):
-                    total -= float(accounts.get(str(a), 0.0))
+                    a_str = str(a)
+                    if a_str in accounts:
+                        total -= float(accounts[a_str])
 
-            # INTRESSE: Andelar (1330–1339) add AAT-like 134x with SRU 7232
             if self._mapping_includes_range(mapping, 1330, 1339):
                 for a in self.br_overrides.get("add_to_intresse_shares", set()):
-                    total += float(accounts.get(str(a), 0.0))
-            # INTRESSE: Fordringar (1340–1349) exclude those AAT-like 134x (SRU 7232)
+                    a_str = str(a)
+                    if a_str in accounts and a_str not in counted_accounts:
+                        total += float(accounts[a_str]); counted_accounts.add(a_str)
+
             if self._mapping_includes_range(mapping, 1340, 1349):
                 for a in self.br_overrides.get("exclude_from_intresse_fordr", set()):
-                    total -= float(accounts.get(str(a), 0.0))
+                    a_str = str(a)
+                    if a_str in accounts:
+                        total -= float(accounts[a_str])
 
-            # ÖVRIGA: shares line often targets 1336 (or 1330–1339 bucket); include AAT-like 134x (SRU 7235)
             inc_str = (mapping.get('accounts_included') or '')
             if '1336' in inc_str or self._mapping_includes_range(mapping, 1330, 1339):
                 for a in self.br_overrides.get("add_to_ovriga_shares", set()):
-                    total += float(accounts.get(str(a), 0.0))
-            # ÖVRIGA: receivables line typically includes 1346 (or 1340–1349 bucket)
+                    a_str = str(a)
+                    if a_str in accounts and a_str not in counted_accounts:
+                        total += float(accounts[a_str]); counted_accounts.add(a_str)
+
             if '1346' in inc_str or self._mapping_includes_range(mapping, 1340, 1349):
                 for a in self.br_overrides.get("exclude_from_ovriga_fordr", set()):
-                    total -= float(accounts.get(str(a), 0.0))
+                    a_str = str(a)
+                    if a_str in accounts:
+                        total -= float(accounts[a_str])
         except Exception:
             pass
-        
-        # Final sign handling based on mapping balance_type (DB-driven, not hardcoded ranges)
+
+        # Add accounts that were reclassified TO this row (avoid double count)
+        if preclass_result and mapping.get('row_id'):
+            current_row_id = mapping['row_id']
+            for account, info in getattr(preclass_result, 'per_account', {}).items():
+                acct_str = str(account)
+                if getattr(info, 'reclass_reason', None) and info.target_row_id == current_row_id:
+                    if acct_str in accounts and acct_str not in counted_accounts:
+                        total += accounts[acct_str]
+                        counted_accounts.add(acct_str)
+
+        # Final sign handling
         balance_type = (mapping.get('balance_type') or 'DEBIT').upper()
         if balance_type == 'CREDIT':
             total = -total
 
-        # Optional explicit +/- override from mapping still respected
         sign_override = mapping.get('+/-') or mapping.get('sign') or mapping.get('plus_minus')
         if sign_override:
             s = str(sign_override).strip()
@@ -711,11 +700,17 @@ class DatabaseParser:
         
         return 0
     
-    def parse_br_data(self, current_accounts: Dict[str, float], previous_accounts: Dict[str, float] = None, rr_data: List[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def parse_br_data(self, current_accounts: Dict[str, float], previous_accounts: Dict[str, float] = None, rr_data: List[Dict[str, Any]] = None, sie_text: Optional[str] = None) -> List[Dict[str, Any]]:
         """Parse BR (Balansräkning) data using database mappings"""
         if not self.br_mappings:
             return []
-        
+        # NEW: build dynamic override sets from the SIE content
+        if sie_text:
+            try:
+                self.prepare_br_overrides(sie_text)
+            except Exception as e:
+                print(f"BR overrides preparation failed: {e}")
+
         # Cache current accounts for preclass year detection
         self._current_accounts_cache = current_accounts
         

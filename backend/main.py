@@ -324,11 +324,9 @@ async def upload_se_file(file: UploadFile = File(...)):
         
         rr_data = parser.parse_rr_data(current_accounts, previous_accounts)
         
-        # Prepare BR overrides for chart-of-accounts customization resilience
-        parser.prepare_br_overrides(se_content)
-        
         # Pass RR data to BR parsing so calculated values from RR are available
-        br_data = parser.parse_br_data(current_accounts, previous_accounts, rr_data)
+        # BR overrides are now prepared inside parse_br_data when sie_text is provided
+        br_data = parser.parse_br_data(current_accounts, previous_accounts, rr_data, sie_text=se_content)
         
         # Parse INK2 data (tax calculations) - pass RR data for variable references - restored to working version
         ink2_data = parser.parse_ink2_data(current_accounts, company_info.get('fiscal_year'), rr_data)
