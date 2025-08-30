@@ -22,8 +22,12 @@ import os
 # Import company group scraper
 try:
     from ratsit_scraper import RatsitGroupScraper
+    print("Successfully imported RatsitGroupScraper")
 except ImportError as e:
     print(f"Warning: Could not import RatsitGroupScraper: {e}")
+    RatsitGroupScraper = None
+except Exception as e:
+    print(f"Error importing RatsitGroupScraper: {e}")
     RatsitGroupScraper = None
 from models.schemas import (
     ReportRequest, ReportResponse, CompanyData, 
@@ -1137,10 +1141,22 @@ async def submit_management_report(report_request: ManagementReportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    import uvicorn
-    import os
-    
-    # Get port from environment variable (Railway sets this)
-    port = int(os.environ.get("PORT", 8080))
-    
-    uvicorn.run(app, host="0.0.0.0", port=port) 
+    try:
+        import uvicorn
+        import os
+        
+        print("Starting application...")
+        print(f"Environment variables: PORT={os.environ.get('PORT', 'not set')}")
+        print(f"SUPABASE_URL={'set' if os.environ.get('SUPABASE_URL') else 'not set'}")
+        print(f"SUPABASE_ANON_KEY={'set' if os.environ.get('SUPABASE_ANON_KEY') else 'not set'}")
+        
+        # Get port from environment variable (Railway sets this)
+        port = int(os.environ.get("PORT", 8080))
+        
+        print(f"Starting server on port {port}")
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception as e:
+        print(f"FATAL ERROR starting application: {e}")
+        import traceback
+        traceback.print_exc()
+        raise 
