@@ -425,11 +425,21 @@ async def get_k2_koncern_comparison(company_id: str):
         
         # Run current logic
         print("\\n--- Running CURRENT logic ---")
-        current_result = parse_koncern_k2_from_sie_text(test_sie_content, preclass_result=None, debug=True)
+        try:
+            current_result = parse_koncern_k2_from_sie_text(test_sie_content, preclass_result=None, debug=True)
+            print(f"✅ Current logic completed successfully")
+        except Exception as e:
+            print(f"❌ Current logic failed: {e}")
+            raise
         
         # Run original logic
         print("\\n--- Running ORIGINAL logic ---")
-        original_result = parse_koncern_k2_from_sie_text_original(test_sie_content, debug=True)
+        try:
+            original_result = parse_koncern_k2_from_sie_text_original(test_sie_content, debug=True)
+            print(f"✅ Original logic completed successfully")
+        except Exception as e:
+            print(f"❌ Original logic failed: {e}")
+            raise
         
         print("\\n=== COMPARISON COMPLETE ===\\n")
         
