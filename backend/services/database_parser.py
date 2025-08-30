@@ -225,79 +225,28 @@ class DatabaseParser:
         return f"{lo}-{hi}" in inc
     
     def parse_account_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
-        """Parse account balances from SE file content using the correct format"""
+        """Return UB-only for BR, plus IB for notes. No #RES here."""
         current_accounts = {}
         previous_accounts = {}
-        current_ib_accounts = {}  # Incoming balances for current year
-        previous_ib_accounts = {}  # Incoming balances for previous year
-        
-        # Parse SE file content to extract account balances
-        lines = se_content.split('\n')
-        
-        for line in lines:
-            line = line.strip()
-            
-            # Handle BR accounts: #UB (Uppgjord Balans) - both years
+        current_ib_accounts = {}
+        previous_ib_accounts = {}
+
+        for raw in se_content.splitlines():
+            line = raw.strip()
             if line.startswith('#UB '):
                 parts = line.split()
                 if len(parts) >= 4:
-                    try:
-                        fiscal_year = int(parts[1])
-                        account_id = parts[2]
-                        balance = float(parts[3])
-                        
-                        if fiscal_year == 0:  # Current year
-                            current_accounts[account_id] = balance
-                        elif fiscal_year == -1:  # Previous year
-                            previous_accounts[account_id] = balance
-                    except (ValueError, TypeError):
-                        continue
-            
-            # Handle IB accounts: #IB (Ingående Balans) - both years
-            if line.startswith('#IB '):
-                parts = line.split()
-                if len(parts) >= 4:
-                    try:
-                        fiscal_year = int(parts[1])
-                        account_id = parts[2]
-                        balance = float(parts[3])
-                        
-                        if fiscal_year == 0:  # Current year
-                            current_ib_accounts[account_id] = balance
-                        elif fiscal_year == -1:  # Previous year
-                            previous_ib_accounts[account_id] = balance
-                    except (ValueError, TypeError):
-                        continue
-                        
-            # Handle RR accounts: #RES (Resultat) - both years
-            elif line.startswith('#RES '):
-                parts = line.split()
-                if len(parts) >= 4:
-                    try:
-                        fiscal_year = int(parts[1])
-                        account_id = parts[2]
-                        balance = float(parts[3])
-                        
-                        if fiscal_year == 0:  # Current year
-                            current_accounts[account_id] = balance
-                        elif fiscal_year == -1:  # Previous year
-                            previous_accounts[account_id] = balance
-                    except (ValueError, TypeError):
-                        continue
-                        
-            # Handle legacy #VER format (fallback)
-            elif line.startswith('#VER'):
-                parts = line.split()
-                if len(parts) >= 3:
-                    account_id = parts[1]
-                    try:
-                        balance = float(parts[2])
-                        current_accounts[account_id] = balance
-                    except ValueError:
-                        continue
-        
+                    fy = int(parts[1]); acct = parts[2]; val = float(parts[3].replace(' ', '').replace(',', '.'))
+                    if fy == 0:  current_accounts[acct] = val
+                    elif fy == -1: previous_accounts[acct] = val
 
-        
+            elif line.startswith('#IB '):
+                parts = line.split()
+                if len(parts) >= 4:
+                    fy = int(parts[1]); acct = parts[2]; val = float(parts[3].replace(' ', '').replace(',', '.'))
+                    if fy == 0:  current_ib_accounts[acct] = val
+                    elif fy == -1: previous_ib_accounts[acct] = val
+
         return current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts
     
     def parse_ib_ub_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
@@ -508,56 +457,19 @@ class DatabaseParser:
         except Exception:
             pass
         
-        # Apply sign based on SE file data structure
-        # All account balances from 2000-8989 need to be reversed regardless of balance_type
-        
-        # Check if any accounts in the 2000-8989 range are being used
-        should_reverse = False
-        
-        # Check account range
-        start = mapping.get('accounts_included_start')
-        end = mapping.get('accounts_included_end')
-        if start and end and 2000 <= start <= 8989:
-            should_reverse = True
-        
-        # Check additional specific accounts
-        additional_accounts = mapping.get('accounts_included')
-        if additional_accounts:
-            for account_spec in additional_accounts.split(';'):
-                account_spec = account_spec.strip()
-                if '-' in account_spec:
-                    # Range specification
-                    range_start, range_end = map(int, account_spec.split('-'))
-                    if 2000 <= range_start <= 8989:
-                        should_reverse = True
-                        break
-                else:
-                    # Single account
-                    try:
-                        account_id = int(account_spec)
-                        if 2000 <= account_id <= 8989:
-                            should_reverse = True
-                            break
-                    except ValueError:
-                        continue
-        
-        # Optional explicit sign override from mapping column (e.g., '+/-' or 'sign')
+        # Final sign handling based on mapping balance_type (DB-driven, not hardcoded ranges)
+        balance_type = (mapping.get('balance_type') or 'DEBIT').upper()
+        if balance_type == 'CREDIT':
+            total = -total
+
+        # Optional explicit +/- override from mapping still respected
         sign_override = mapping.get('+/-') or mapping.get('sign') or mapping.get('plus_minus')
         if sign_override:
             s = str(sign_override).strip()
-            if s == '+':
-                total = abs(total)
-            elif s == '-':
-                total = -abs(total)
+            if s == '+': total = abs(total)
+            elif s == '-': total = -abs(total)
 
-        # Debug output for rows with reclassifications
-        if preclass_result and mapping.get('row_id') and reclassified_accounts:
-            print(f"DEBUG BR PARSER: Row {mapping['row_id']} ({mapping.get('row_title', '')[:30]}...) final total: {total:.2f} (after reclassifications)")
-        
-        if should_reverse:
-            return -total
-        else:
-            return total
+        return total
     
     def calculate_formula_value(self, mapping: Dict[str, Any], accounts: Dict[str, float], existing_results: List[Dict[str, Any]], use_previous_year: bool = False, rr_data: List[Dict[str, Any]] = None) -> float:
         """Calculate value using a formula that references variable names"""
