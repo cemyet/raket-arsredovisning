@@ -225,27 +225,37 @@ class DatabaseParser:
         return f"{lo}-{hi}" in inc
     
     def parse_account_balances(self, se_content: str) -> tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
-        """Return UB-only for BR, plus IB for notes. No #RES here."""
-        current_accounts = {}
-        previous_accounts = {}
-        current_ib_accounts = {}
-        previous_ib_accounts = {}
+        """Return UB + RES for RR, and IB for notes."""
+        current_accounts: Dict[str, float] = {}
+        previous_accounts: Dict[str, float] = {}
+        current_ib_accounts: Dict[str, float] = {}
+        previous_ib_accounts: Dict[str, float] = {}
+
+        def _f(x: str) -> float:
+            return float(x.replace(' ', '').replace(',', '.'))
 
         for raw in se_content.splitlines():
             line = raw.strip()
             if line.startswith('#UB '):
                 parts = line.split()
                 if len(parts) >= 4:
-                    fy = int(parts[1]); acct = parts[2]; val = float(parts[3].replace(' ', '').replace(',', '.'))
-                    if fy == 0:  current_accounts[acct] = val
+                    fy = int(parts[1]); acct = parts[2]; val = _f(parts[3])
+                    if fy == 0: current_accounts[acct] = val
                     elif fy == -1: previous_accounts[acct] = val
 
             elif line.startswith('#IB '):
                 parts = line.split()
                 if len(parts) >= 4:
-                    fy = int(parts[1]); acct = parts[2]; val = float(parts[3].replace(' ', '').replace(',', '.'))
-                    if fy == 0:  current_ib_accounts[acct] = val
+                    fy = int(parts[1]); acct = parts[2]; val = _f(parts[3])
+                    if fy == 0: current_ib_accounts[acct] = val
                     elif fy == -1: previous_ib_accounts[acct] = val
+
+            elif line.startswith('#RES '):  # <-- restore RR parsing
+                parts = line.split()
+                if len(parts) >= 4:
+                    fy = int(parts[1]); acct = parts[2]; val = _f(parts[3])
+                    if fy == 0: current_accounts[acct] = val
+                    elif fy == -1: previous_accounts[acct] = val
 
         return current_accounts, previous_accounts, current_ib_accounts, previous_ib_accounts
     
@@ -789,8 +799,16 @@ class DatabaseParser:
         # Sort results by ID to ensure correct order
         results.sort(key=lambda x: int(x['id']))
         
+        # If BR "Årets resultat" row is empty, pull it from RR
+        if rr_data:
+            rr_sum = next((r.get('current_amount') or 0.0 for r in rr_data if r.get('variable_name') in ('SumAretsResultat','SumÅretsResultat')), 0.0)
+            for r in results:
+                if (r.get('variable_name') in ('AretsResultat','ÅretsResultat') or
+                    'årets resultat' in (r.get('label') or '').lower()):
+                    if (r['current_amount'] is None) or (abs(r['current_amount']) < 1e-6):
+                        r['current_amount'] = rr_sum
+                    break
 
-        
         return results
     
     def _get_level_from_style(self, style: str) -> int:
@@ -1662,6 +1680,10 @@ class DatabaseParser:
                 'current': value,
                 'previous': 0.0
             }
+
+        # compatibility aliases if DB mapping expects different names
+        if 'resultatandel_koncern' in calculated_variables and 'arets_resultatandel_koncern' not in calculated_variables:
+            calculated_variables['arets_resultatandel_koncern'] = calculated_variables['resultatandel_koncern']
             
         for var_name, value in intresseftg_k2_data.items():
             calculated_variables[var_name] = {
