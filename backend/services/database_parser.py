@@ -346,13 +346,13 @@ class DatabaseParser:
                 account_str = str(account_id)
                 if account_str in accounts:
                     # Check if this account was reclassified away from this row
-                                            if preclass_result and account_str in preclass_result.per_account:
-                            account_info = preclass_result.per_account[account_str]
-                            if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
-                                # Account was reclassified to a different row, skip it
-                                account_value = accounts[account_str]
-                                print(f"DEBUG BR PARSER: Skipping account {account_str} (value: {account_value:.2f}) - reclassified from row {mapping.get('row_id')} to row {account_info.target_row_id}")
-                                continue
+                    if preclass_result and account_str in preclass_result.per_account:
+                        account_info = preclass_result.per_account[account_str]
+                        if account_info.reclass_reason and account_info.target_row_id != mapping.get('row_id'):
+                            # Account was reclassified to a different row, skip it
+                            account_value = accounts[account_str]
+                            print(f"DEBUG BR PARSER: Skipping account {account_str} (value: {account_value:.2f}) - reclassified from row {mapping.get('row_id')} to row {account_info.target_row_id}")
+                            continue
                     total += accounts[account_str]
         
         # Include additional specific accounts
